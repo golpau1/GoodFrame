@@ -1,0 +1,1370 @@
+@import url('https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;600;700&display=swap');
+
+/* Migrated from page head styles */
+
+/* Fat Molly Font */
+
+@font-face {
+            font-family: 'Fat Molly';
+            src: url('../Homepage/assets/fonts/Fat Molly/FatMolly-Regular.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: block;
+        }
+
+/* Cooper Light Font */
+
+@font-face {
+            font-family: 'Cooper Light';
+            src: url('../Homepage/assets/fonts/Cooper/cooperl.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: block;
+        }
+
+@font-face {
+            font-family: 'Trolleybus Trial';
+            src: url('../Homepage/assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: block;
+        }
+
+@font-face {
+            font-family: 'Even Mono Trial';
+            src: url('../Homepage/assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: block;
+        }
+
+@font-face {
+            font-family: 'NType82';
+            src: url('../Assets/NType82-Regular.otf') format('opentype');
+            font-weight: 300;
+            font-style: normal;
+            font-display: block;
+        }
+
+:root {
+            /* Color Palette */
+            --text-primary: #2D3748;
+            --text-secondary: #718096;
+            --background-primary: #ffffff;
+            --background-secondary: #ffffff;
+            --border-color: #E2E8F0;
+            --accent-color: #070707; /* Changed to black for underline effect */
+
+            /* Layout & Sizing */
+            --container-gap: 50px;
+            --control-radius: 12px;
+
+            /* Typography */
+            --font-family: 'Roboto Mono', 'monospace';
+
+            /* --- Refined Spacing & Radii --- */
+            --spacing-unit: 8px;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+
+            /* --- Softened Shadows --- */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-accent: 0 4px 14px 0 rgba(8, 127, 140, 0.25);
+
+            /* Additional colors for cart functionality */
+            --accent-hover: #065F69;
+            --danger-color: #D32F2F;
+        }
+
+/*
+         * =========================================
+         * BASE & TYPOGRAPHY STYLES
+         * =========================================
+         */
+
+* {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+body {
+            font-family: var(--font-family);
+            background: var(--background-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+/*
+         * =========================================
+         * MAIN CART PAGE
+         * =========================================
+         */
+
+main.cart-page-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 48px auto 60px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 40px;
+            align-items: flex-start;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+
+main.cart-page-container.cart-empty {
+            grid-template-columns: 1fr;
+            max-width: 800px;
+            /* This makes the single column not too wide on large screens */
+        }
+
+.cart-items-column {
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+.cart-page-title {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 30px;
+            text-align: left;
+            letter-spacing: -0.02em;
+        }
+
+.cart-items-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            background-color: var(--border-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+.cart-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 24px;
+            background-color: var(--background-secondary);
+            position: relative;
+        }
+
+.cart-item-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: var(--radius-md);
+            margin-right: 20px;
+        }
+
+.cart-item-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+.cart-item-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            font-family: 'Cooper Light', serif;
+            font-style: normal;
+        }
+
+.cart-item-meta {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-family: 'Cooper Light', serif;
+            font-style: normal;
+        }
+
+.cart-item-price {
+            font-weight: 600;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            margin-left: 20px;
+            font-family: 'Cooper Light', serif;
+            font-style: normal;
+        }
+
+.remove-item {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.25rem;
+            line-height: 1;
+            border-radius: 50%;
+            transition: color 0.2s ease, background-color 0.2s ease;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+.remove-item:hover {
+            color: var(--danger-color);
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+/*
+         * =========================================
+         * WHITE FRAME POSITIONING FOR SCREENSHOTS
+         * =========================================
+         */
+        
+        /* Desktop white frame positioning rules */
+
+.white-frame #uploadedImage {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            max-width: 81% !important;
+            max-height: 81% !important;
+            object-fit: contain !important;
+            z-index: 2 !important;
+        }
+
+.white-frame #uploadedImagePortrait {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            max-width: 65% !important;
+            max-height: 65% !important;
+            object-fit: contain !important;
+            z-index: 2 !important;
+        }
+
+/* White frame border mode positioning with 3px offset */
+
+.white-frame #uploadedImage.add-border {
+            top: calc(50% + 3px) !important;
+            left: calc(50% + 3px) !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+.white-frame #uploadedImagePortrait.add-border {
+            top: calc(50% + 3px) !important;
+            left: calc(50% + 3px) !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+/* Mobile responsive white frame positioning */
+
+.empty-cart-message {
+            text-align: center;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            padding: 80px 40px;
+            font-weight: 500;
+            background-color: var(--background-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+        }
+
+/*
+         * =========================================
+         * CART SUMMARY SIDEBAR
+         * =========================================
+         */
+
+.cart-summary {
+            position: sticky;
+            top: 40px;
+            background: var(--background-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow-md);
+        }
+
+.cart-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1rem;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+            font-family: 'Cooper Light', serif;
+            font-style: normal;
+        }
+
+.cart-total span:last-child {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-family: 'Cooper Light', serif;
+            font-style: normal;
+        }
+
+.cart-total.grand-total {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+.cart-total.grand-total span {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'Cooper Light', serif;
+            font-style: normal;
+        }
+
+.cart-total.grand-total span:last-child {
+            color: var(--text-primary);
+            font-family: 'Cooper Light', serif;
+            font-style: normal;
+        }
+
+/*
+         * =========================================
+         * BUTTONS & ACTIONS
+         * =========================================
+         */
+
+.cart-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+.cart-button {
+            width: 100%;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            font-weight: 300;
+            font-size: 1rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease-in-out;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            font-family: 'Lexend', sans-serif;
+        }
+
+.cart-button:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+        }
+
+.checkout-button {
+            background: #070707;
+            color: #ffffff;
+            box-shadow: var(--shadow-md);
+        }
+
+.checkout-button:hover {
+            background: #070707;
+            box-shadow: var(--shadow-lg);
+        }
+
+.continue-shopping {
+            background: var(--background-secondary);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+.continue-shopping:hover {
+            border-color: var(--text-secondary);
+            background: var(--background-primary);
+        }
+
+/* Responsive mobile nav sizing - match pricing.css */
+        
+
+        
+
+        
+
+        /*
+         * =========================================
+         * FOOTER
+         * =========================================
+         */
+
+.footer {
+            background: #070707;
+            color: #ffffff;
+            padding: 40px 20px 20px 20px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 16px;
+            margin-top: auto;
+            width: 100%;
+        }
+
+.footer-content {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 120px;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+.footer-col {
+            min-width: 180px;
+            text-align: center;
+        }
+
+.footer-col h3 {
+            font-size: 18px;
+            font-weight: 300;
+            margin-bottom: 16px;
+            font-family: 'Lexend', sans-serif;
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+.footer-col ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+.footer-col ul li {
+            margin-bottom: 8px;
+        }
+
+.footer-col a {
+            color: #ffffff;
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 300;
+        }
+
+.footer-col ul a:hover {
+            font-weight: bold;
+        }
+
+/* Prevent layout shift by using invisible bold text to reserve space */
+
+.footer-col p a {
+            position: relative;
+            font-weight: 300;
+        }
+
+.footer-col p a::after {
+            content: "Goodframe@gmail.com";
+            font-weight: bold;
+            height: 0;
+            visibility: hidden;
+            overflow: hidden;
+            user-select: none;
+            pointer-events: none;
+            display: block;
+        }
+
+.footer-col p a:hover {
+            font-weight: bold;
+        }
+
+.footer-col p {
+            margin: 0 0 8px 0;
+            color: #ffffff;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 400;
+        }
+
+/*
+         * =========================================
+         * RESPONSIVE ADJUSTMENTS
+         * =========================================
+         */
+
+@media (max-width: 900px) {
+            .legacy-secondary-header {
+                padding: 0 20px;
+                height: 60px;
+            }
+
+.legacy-header-title {
+                font-size: 1.5rem;
+            }
+
+.legacy-nav {
+                display: none;
+            }
+
+main.cart-page-container {
+                grid-template-columns: 1fr;
+                margin: 30px auto;
+                padding: 0 20px;
+                gap: 30px;
+            }
+
+.cart-page-title {
+                font-size: 2rem;
+            }
+
+.cart-summary {
+                position: static;
+                top: auto;
+            }
+        }
+
+/* Homepage footer match */
+
+.footer {
+            background: #070707 !important;
+            color: #fcfcfa !important;
+            padding: 40px 28px !important;
+            font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important;
+            font-size: 16px !important;
+            margin-top: 0 !important;
+            width: 100% !important;
+        }
+
+.footer,
+.footer * {
+            color: #fcfcfa !important;
+        }
+
+.footer-content {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(180px, 1fr)) !important;
+            align-items: flex-start !important;
+            gap: 32px 72px !important;
+            max-width: 980px !important;
+            margin: 0 auto !important;
+        }
+
+.footer-col {
+            min-width: 0 !important;
+            text-align: center !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 14px !important;
+        }
+
+.footer-col h3,
+.footer-title {
+            font-size: 18px !important;
+            font-weight: 400 !important;
+            margin-bottom: 0 !important;
+            font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+            letter-spacing: 0.05em !important;
+            line-height: 1.1 !important;
+            color: #fcfcfa !important;
+            text-decoration: none !important;
+        }
+
+.footer-col ul {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+
+.footer-col ul li {
+            margin-bottom: 0 !important;
+            padding: 0 !important;
+        }
+
+.footer-col a,
+.footer-col p,
+.footer-col p a {
+            color: #fcfcfa !important;
+            text-decoration: none !important;
+            transition: color 0.3s ease !important;
+            font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+            font-weight: 400 !important;
+            letter-spacing: -0.05em !important;
+            line-height: 1.35 !important;
+        }
+
+.footer-col p,
+.footer-col p a {
+            margin: 0 !important;
+        }
+
+.footer-col p a::after {
+            display: none !important;
+            content: none !important;
+        }
+
+/* Exact homepage footer */
+
+.footer {
+            background: #070707 !important;
+            color: #f9f2e6 !important;
+            padding: 40px 28px !important;
+            font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important;
+            font-size: 16px !important;
+            margin-top: 0 !important;
+            width: 100% !important;
+        }
+
+.footer,
+.footer * {
+            color: #f9f2e6 !important;
+        }
+
+.footer-content {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(180px, 1fr)) !important;
+            align-items: flex-start !important;
+            gap: 32px 72px !important;
+            max-width: 980px !important;
+            margin: 0 auto !important;
+        }
+
+.footer-col {
+            min-width: 0 !important;
+            text-align: center !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 14px !important;
+        }
+
+.footer-col h3,
+.footer h3,
+.footer-title {
+            font-size: 18px !important;
+            font-weight: 300 !important;
+            margin-bottom: 0 !important;
+            font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+            letter-spacing: 0.05em !important;
+            line-height: 1.1 !important;
+            color: #f9f2e6 !important;
+            text-decoration: none !important;
+        }
+
+.footer-col ul {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+
+.footer-col ul li {
+            margin-bottom: 0 !important;
+        }
+
+.footer a,
+.footer p,
+.footer li,
+.footer-col a,
+.footer-col p,
+.footer-col p a {
+            color: #f9f2e6 !important;
+            text-decoration: none !important;
+            font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+            font-weight: 400 !important;
+            letter-spacing: -0.05em !important;
+            line-height: 1.1 !important;
+        }
+
+.footer-col p,
+.footer-col p a {
+            margin: 0 !important;
+        }
+
+.footer-col p a::after {
+            display: none !important;
+            content: none !important;
+        }
+
+@font-face { font-family: 'Trolleybus Trial'; src: url('../Homepage/assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype'); }
+
+@font-face { font-family: 'Even Mono Trial'; src: url('../Homepage/assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype'); }
+
+.legacy-top-banner { text-align: center !important; height: 40px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 1rem !important; font-weight: 300 !important; font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important; font-variant-caps: small-caps !important; color: #f9f2e6 !important; background-color: #070707 !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
+
+.legacy-page-header { background: #ffffff !important; width: 100% !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important; position: sticky !important; top: 0 !important; z-index: 1000 !important; }
+
+.legacy-secondary-header { display: grid !important; grid-template-columns: 1fr auto 1fr !important; align-items: center !important; height: 72px !important; padding: 0 40px !important; background: #ffffff !important; }
+
+.legacy-header-title { justify-self: start !important; font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; font-size: 2.35rem !important; letter-spacing: 0.05em !important; line-height: 1 !important; font-weight: 400 !important; color: #070707 !important; text-decoration: none !important; }
+
+.legacy-nav { display: flex !important; gap: 40px !important; justify-self: center !important; }
+
+.legacy-nav a { color: #3b3b3b !important; text-decoration: none !important; font-size: 1.08rem !important; font-weight: 400 !important; font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; letter-spacing: -0.05em !important; line-height: 1 !important; position: relative !important; padding: 8px 4px !important; transition: color 0.3s ease !important; }
+
+.legacy-nav a::after { content: '' !important; position: absolute !important; bottom: 0 !important; left: 0 !important; width: 100% !important; height: 2px !important; background: #070707 !important; transform: scaleX(0) !important; transform-origin: center !important; transition: transform 0.3s cubic-bezier(0.19,1,0.22,1) !important; }
+
+.legacy-nav a:hover { color: #070707 !important; }
+
+.legacy-nav a:hover::after { transform: scaleX(1) !important; }
+
+.legacy-cart-nav { justify-self: end !important; display: flex !important; align-items: center !important; gap: 6px !important; text-decoration: none !important; }
+
+.legacy-cart-nav svg { width: 22px !important; height: 22px !important; stroke: #070707 !important; stroke-width: 2 !important; }
+
+.legacy-cart-nav .cart-count { color: #070707 !important; background: transparent !important; font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; font-size: 0.9rem !important; font-weight: 400 !important; letter-spacing: -0.05em !important; line-height: 1.1 !important; min-width: auto !important; height: auto !important; padding: 0 !important; }
+
+.footer {
+                background: #070707 !important;
+                color: #f9f2e6 !important;
+                padding: 40px 28px !important;
+                font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important;
+                font-size: 16px !important;
+                margin-top: 0 !important;
+                width: 100% !important;
+            }
+
+.footer,
+.footer * {
+                color: #f9f2e6 !important;
+            }
+
+.footer-content {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(180px, 1fr)) !important;
+                align-items: flex-start !important;
+                gap: 32px 72px !important;
+                max-width: 980px !important;
+                margin: 0 auto !important;
+            }
+
+.footer-col {
+                min-width: 0 !important;
+                text-align: center !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 14px !important;
+            }
+
+.footer-col h3,
+.footer-title {
+                font-size: 18px !important;
+                font-weight: 400 !important;
+                margin-bottom: 0 !important;
+                font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+                letter-spacing: 0.05em !important;
+                line-height: 1.1 !important;
+                color: #f9f2e6 !important;
+                text-decoration: none !important;
+            }
+
+.footer-col ul {
+                list-style: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+.footer-col ul li {
+                margin-bottom: 0 !important;
+            }
+
+.footer a,
+.footer p,
+.footer li,
+.footer-col a,
+.footer-col p {
+                font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+                font-weight: 400 !important;
+                letter-spacing: -0.05em !important;
+                line-height: 1.1 !important;
+                text-decoration: none !important;
+                color: #f9f2e6 !important;
+            }
+
+.footer-col p {
+                margin: 0 !important;
+            }
+
+.footer-dropdown-header,
+.footer-dropdown-content,
+.footer-dropdown-arrow {
+                display: none !important;
+            }
+
+.legacy-top-banner {
+                font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+                font-weight: 400 !important;
+                letter-spacing: 0.05em !important;
+                line-height: 1.1 !important;
+                font-variant-caps: normal !important;
+            }
+
+.legacy-secondary-header {
+                height: 72px !important;
+                padding: 0 40px !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
+.legacy-header-title,
+.legacy-nav,
+.legacy-cart-nav {
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
+.legacy-secondary-header {
+  padding: 0 40px !important;
+  height: 72px !important;
+  margin: 0 !important;
+}
+
+/* Final homepage desktop header override */
+@media (min-width: 769px) {
+    .top-banner {
+        text-align: center !important;
+        height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1rem !important;
+        font-weight: 400 !important;
+        font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+        font-variant-caps: small-caps !important;
+        color: #f9f2e6 !important;
+        background-color: #070707 !important;
+        border-bottom: 1px solid #E2E8F0 !important;
+        letter-spacing: 0.05em !important;
+        line-height: 1.1 !important;
+    }
+
+    header {
+        background: #ffffff !important;
+        width: 100% !important;
+        border-bottom: 1px solid #E2E8F0 !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1000 !important;
+    }
+
+    .secondary-header {
+        display: grid !important;
+        grid-template-columns: 1fr auto 1fr !important;
+        align-items: center !important;
+        height: auto !important;
+        padding: 10px 40px !important;
+    }
+
+    .header-title {
+        justify-self: start !important;
+        font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+        font-size: 2.35rem !important;
+        letter-spacing: 0.05em !important;
+        line-height: 1 !important;
+        font-weight: 400 !important;
+        font-variant-caps: normal !important;
+        text-transform: none !important;
+        color: #070707 !important;
+        text-decoration: none !important;
+        transition: all 0.3s ease !important;
+        position: relative !important;
+    }
+
+    .nav {
+        display: flex !important;
+        gap: 40px !important;
+        justify-self: center !important;
+    }
+
+    .nav a {
+        color: #070707 !important;
+        text-decoration: none !important;
+        font-size: 1.08rem !important;
+        font-weight: 400 !important;
+        font-family: 'NType82', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+        font-variant-caps: normal !important;
+        text-transform: none !important;
+        letter-spacing: -0.05em !important;
+        line-height: 1 !important;
+        position: relative !important;
+        padding: 8px 4px !important;
+        transition: color 0.3s ease !important;
+    }
+
+    .nav a::after {
+        content: '' !important;
+        position: absolute !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 2px !important;
+        background: #070707 !important;
+        transform: scaleX(0) !important;
+        transform-origin: center !important;
+        transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1) !important;
+    }
+
+    .nav a:hover {
+        color: #2D3748 !important;
+    }
+
+    .nav a:hover::after {
+        transform: scaleX(1) !important;
+    }
+
+    .cart-nav {
+        justify-self: end !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        cursor: pointer !important;
+        text-decoration: none !important;
+    }
+
+    .cart-nav:hover svg {
+        stroke: #070707 !important;
+    }
+
+    .cart-nav:hover .cart-count {
+        color: #070707 !important;
+    }
+
+    .cart-nav svg {
+        width: 22px !important;
+        height: 22px !important;
+        stroke: #2D3748 !important;
+        stroke-width: 2 !important;
+        transition: stroke 0.2s ease !important;
+    }
+
+    .cart-nav .cart-count {
+        font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+        font-size: 0.9rem !important;
+        font-weight: 400 !important;
+        letter-spacing: -0.05em !important;
+        line-height: 1.1 !important;
+        font-variant-caps: normal !important;
+    }
+
+    .cart-nav .cart-count {
+        color: #2D3748 !important;
+        background: transparent !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        min-width: auto !important;
+        height: auto !important;
+        padding: 0 !important;
+        transition: color 0.2s ease !important;
+    }
+}
+
+/* Desktop-only: keep mobile navigation UI hidden here. */
+
+.burger-menu,
+.legacy-burger-menu,
+.mobile-nav,
+.legacy-mobile-nav,
+.mobile-nav-overlay,
+.legacy-mobile-nav-overlay,
+.mobile-nav-close,
+.legacy-mobile-nav-close,
+.legacy-mobile-nav-toggle {
+  display: none !important;
+}
+
+.cart-button,
+.checkout-button,
+.continue-shopping,
+.remove-item {
+    font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+    letter-spacing: 0.05em !important;
+}
+
+.cart-actions .checkout-button,
+.cart-actions .continue-shopping {
+    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+    text-transform: none !important;
+    font-variant-caps: normal !important;
+    letter-spacing: 0 !important;
+}
+
+/* Shared desktop header */
+header,
+.legacy-page-header {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  margin: 0 !important;
+  background: #ffffff !important;
+  color: #070707 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+}
+
+.top-banner,
+.legacy-top-banner {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-height: 40px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 8px 20px !important;
+  background: #070707 !important;
+  background-color: #070707 !important;
+  color: #f9f2e6 !important;
+  border: 0 !important;
+  text-align: center !important;
+  font-family: 'NType82', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 1rem !important;
+  font-weight: 300 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+}
+
+.secondary-header,
+.legacy-secondary-header {
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: 1fr auto 1fr !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 10px 40px !important;
+  background: #ffffff !important;
+  color: #070707 !important;
+  border: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  position: relative !important;
+  z-index: 999 !important;
+}
+
+.header-title,
+.legacy-header-title {
+  justify-self: start !important;
+  margin: 0 !important;
+  color: #070707 !important;
+  text-decoration: none !important;
+  font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 2.35rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1 !important;
+}
+
+.header-title:hover,
+.legacy-header-title:hover {
+  color: #070707 !important;
+  text-decoration: none !important;
+}
+
+.nav,
+.legacy-nav {
+  display: flex !important;
+  align-items: center !important;
+  justify-self: center !important;
+  gap: 40px !important;
+  margin: 0 !important;
+}
+
+.nav a,
+.legacy-nav a {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 8px 4px !important;
+  color: #070707 !important;
+  text-decoration: none !important;
+  font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 1.08rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1 !important;
+  transition: color 0.3s ease !important;
+}
+
+.nav a::after,
+.legacy-nav a::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 2px !important;
+  background: #070707 !important;
+  transform: scaleX(0) !important;
+  transform-origin: center !important;
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1) !important;
+}
+
+.nav a:hover,
+.legacy-nav a:hover {
+  color: #2D3748 !important;
+}
+
+.nav a:hover::after,
+.legacy-nav a:hover::after {
+  transform: scaleX(1) !important;
+}
+
+.cart-nav,
+.legacy-cart-nav {
+  justify-self: end !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  color: #2D3748 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.cart-nav svg,
+.legacy-cart-nav svg {
+  width: 22px !important;
+  height: 22px !important;
+  stroke: #2D3748 !important;
+  stroke-width: 2 !important;
+  transition: stroke 0.2s ease !important;
+}
+
+.cart-count,
+.cart-nav .cart-count,
+.legacy-cart-nav .cart-count {
+  min-width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  color: #2D3748 !important;
+  background: transparent !important;
+  font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 0.9rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1.1 !important;
+  transition: color 0.2s ease !important;
+}
+
+.cart-nav:hover,
+.legacy-cart-nav:hover,
+.cart-nav:hover .cart-count,
+.legacy-cart-nav:hover .cart-count {
+  color: #070707 !important;
+}
+
+.cart-nav:hover svg,
+.legacy-cart-nav:hover svg {
+  stroke: #070707 !important;
+}
+
+.burger-menu,
+.legacy-burger-menu,
+.mobile-nav,
+.legacy-mobile-nav,
+.mobile-nav-overlay,
+.legacy-mobile-nav-overlay,
+.mobile-nav-close,
+.legacy-mobile-nav-close,
+.legacy-mobile-nav-toggle {
+  display: none !important;
+}
+
+/* Shared desktop footer */
+.footer {
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  margin-top: auto !important;
+  padding: 40px 28px !important;
+  background: #070707 !important;
+  color: #f9f2e6 !important;
+  border: 0 !important;
+  font-size: 16px !important;
+}
+
+.footer,
+.footer * {
+  color: #f9f2e6 !important;
+}
+
+.footer-content {
+  box-sizing: border-box !important;
+  width: min(980px, 100%) !important;
+  max-width: 980px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(180px, 1fr)) !important;
+  align-items: flex-start !important;
+  gap: 32px 72px !important;
+}
+
+.footer-col {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  text-align: center !important;
+}
+
+.footer-col h3,
+.footer h3,
+.footer-title {
+  margin: 0 !important;
+  color: #f9f2e6 !important;
+  font-family: 'Trolleybus Trial' !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1.1 !important;
+  text-decoration: none !important;
+}
+
+.footer-col ul {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.footer-col li {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.footer a,
+.footer p,
+.footer li,
+.footer-col a,
+.footer-col p {
+  margin: 0 !important;
+  color: #f9f2e6 !important;
+  font-family: 'Cutive Mono' !important;
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1.35 !important;
+  text-decoration: none !important;
+}
+
+.footer-col a:hover {
+  color: #f9f2e6 !important;
+  font-weight: 400 !important;
+  text-decoration: none !important;
+}
+
+.footer-dropdown-header,
+.footer-dropdown-content,
+.footer-dropdown-arrow {
+  display: none !important;
+}
+
+/* Shared desktop body font spacing */
+:root {
+  --body-font-spacing: -0.05em;
+}
+
+body,
+p,
+li,
+label,
+input,
+select,
+textarea,
+.nav a,
+.legacy-nav a,
+.cart-count,
+.cart-nav .cart-count,
+.legacy-cart-nav .cart-count,
+.footer a,
+.footer p,
+.footer li,
+.footer-col a,
+.footer-col p {
+  letter-spacing: var(--body-font-spacing) !important;
+}
+
+/* Shared desktop title and subheading spacing */
+:root {
+  --title-font-spacing: 0.05em;
+  --subheading-font-spacing: 0;
+  --homepage-font-title-spacing: var(--title-font-spacing);
+  --homepage-font-subheading-spacing: var(--subheading-font-spacing);
+}
+
+h1,
+h2,
+h3,
+.header-title,
+.legacy-header-title,
+.footer-col h3,
+.footer h3,
+.footer-title,
+.intro h2,
+.price-item h3,
+.about-intro h1,
+.about-panel-copy h2,
+.editorial-index,
+.editorial-heading h1,
+.editorial-card h2,
+.section-header h2,
+.card-body h3,
+.stat-number,
+.frame-guide-title,
+.frame-guide-box h3,
+.text-content h2,
+.upload-container h2,
+.cart-header h2,
+.cart-item-title {
+  letter-spacing: var(--title-font-spacing) !important;
+}
+
+.top-banner,
+.legacy-top-banner,
+.info-bar,
+.info-bar div,
+.hero-left h1,
+.hero-section.reverse .hero-right h1,
+.mobile-section-content h2,
+[class*="kicker"],
+[class*="label"],
+[class*="badge"],
+[class*="tag"],
+[class*="eyebrow"],
+[class*="subheading"],
+[class*="subtitle"] {
+  letter-spacing: var(--subheading-font-spacing) !important;
+}

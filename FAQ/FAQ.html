@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - Good Frame</title>
+    <link rel="stylesheet" href="desktop.css?v=20260423-sitewide-button-font" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260427-pricing-footer-layout" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="../Shared/logo.css?v=20260601-faq-nav-titlecase">
+</head>
+<body>
+  <header>
+    <div class="top-banner">
+      Free Shipping Over $100 - Frame Now
+    </div>
+  </header>
+
+  <div class="secondary-header">
+    <a href="../Homepage/Homepage.html" class="header-title">Good Frame</a>
+
+    <nav class="nav">
+      <a href="../Print-Frame/print-frame.html">Print & Frame</a>
+      <a href="../Pricing/pricing.html">Pricing</a>
+      <a href="../About Us/AboutUs.html">About Us</a>
+      <a href="../FAQ/FAQ.html">FAQ</a>
+    </nav>
+
+    <!-- Mobile Burger Menu Button -->
+    <div class="burger-menu" id="burgerMenu">
+      <div class="burger-line"></div>
+      <div class="burger-line"></div>
+      <div class="burger-line"></div>
+    </div>
+
+    <a href="http://localhost:3000/" class="cart-nav" id="cartNav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <span class="cart-count">0</span>
+    </a>
+  </div>
+
+  <!-- Mobile navigation overlay and panel -->
+  <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+  <div class="mobile-nav" id="mobileNav">
+    <div class="mobile-nav-close" id="mobileNavClose">&times;</div>
+    <a href="../Homepage/Homepage.html">Home</a>
+    <a href="../Print-Frame/print-frame.html">Print & Frame</a>
+    <a href="../Pricing/pricing.html">Pricing</a>
+    <a href="../About Us/AboutUs.html">About Us</a>
+    <a href="../FAQ/FAQ.html">FAQ</a>
+  </div>
+
+<div class="faq-section">
+    <h1 class="faq-girthquake" style="font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important; letter-spacing: 0 !important;">CONTACT US + FAQ</h1>
+  <p>The best way to contact us is via email <span class="faq-email-highlight">contact.goodframe@gmail.com</span></p>
+    <p>Before you do, have a quick look at our extensive FAQ</p>
+
+    <div class="faq-nav">
+        <button class="nav-btn" data-category="artwork" style="text-transform: none !important; font-variant-caps: normal !important;">artwork</button>
+        <button class="nav-btn active" data-category="printing" style="text-transform: none !important; font-variant-caps: normal !important;">printing</button>
+        <button class="nav-btn" data-category="materials" style="text-transform: none !important; font-variant-caps: normal !important;">materials</button>
+        <button class="nav-btn" data-category="shipping" style="text-transform: none !important; font-variant-caps: normal !important;">shipping</button>
+    </div>
+
+    <div class="faq-container" id="artwork-faq" style="display: none;">
+        <div class="faq-item">
+            <h3>Why do you only offer set sizes?</h3>
+          <p>We use standard sizes that suit most needs and help us keep prices affordable.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Do you frame existing artwork?</h3>
+          <p>No. We focus on printing, framing, and delivering new artwork.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Is my file big enough?</h3>
+          <p>Our uploader checks your file quality and only enables sizes that will print clearly.</p>
+        </div>
+    </div>
+
+    <div class="faq-container" id="printing-faq">
+        <div class="faq-item">
+            <h3>What is a giclée print?</h3>
+        <p>A giclée print is a high quality fine art print made using archival inks and paper. It is the industry standard for galleries and museums and is designed to last for decades without fading.</p>
+        </div>
+        <div class="faq-item">
+            <h3>What type of printer do you use?</h3>
+        <p>We use professional Epson printer with genuine archival inks to produce consistent, gallery quality results.</p>
+        </div>
+        <div class="faq-item">
+            <h3>What type of paper do you use?</h3>
+        <p>We print on 310 gsm 100 percent cotton rag paper as our standard, chosen for its durability, texture, and archival quality.</p>
+        </div>
+    </div>
+
+    <div class="faq-container" id="materials-faq" style="display: none;">
+        <div class="faq-item">
+            <h3>Do you use real timber moulding?</h3>
+        <p>Yes. We use genuine timber sourced locally from sustainable suppliers, including Victorian Ash and Tasmanian Oak.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Are the frames mass produced?</h3>
+        <p>No. Every frame is hand cut and assembled by our team in our Burleigh Heads workshop.</p>
+        </div>
+    </div>
+
+    <div class="faq-container" id="shipping-faq" style="display: none;">
+        <div class="faq-item">
+            <h3>How long will delivery take?</h3>
+        <p>Your order will arrive within approximately 2-3 weeks.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Where is my order shipped from?</h3>
+        <p>All orders are shipped from our workshop in Burleigh Heads on the Gold Coast.</p>
+        </div>
+        <div class="faq-item">
+            <h3>How much does shipping cost?</h3>
+        <p>We offer Australia wide shipping. Costs may vary depending on your order.</p>
+        </div>
+        <div class="faq-item">
+            <h3>How are the frames shipped?</h3>
+        <p>Frames are carefully bubble wrapped and packed in custom made, double wall cardboard boxes. All shipments are insured against loss or damage.</p>
+        </div>
+        <div class="faq-item">
+            <h3>How can I track my order?</h3>
+        <p>You will receive an email with your tracking number once your order has been dispatched, typically 10 to 12 days after placing your order.</p>
+        </div>
+        <div class="faq-item">
+            <h3>How can I change my address after purchasing?</h3>
+        <p>You can contact us to update your address as long as your order has not yet been shipped. After dispatch, you can contact the courier directly using the details provided in your tracking email.</p>
+        </div>
+    </div>
+</div>
+
+  <footer class="footer" style="background: #070707; color: #f9f2e6;">
+    <div class="footer-content">
+      <div class="footer-col">
+        <h3 class="footer-title footer-girthquake" style="font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important; letter-spacing: 0 !important;">Navigation</h3>
+        <ul>
+          <li><a href="../Print-Frame/print-frame.html">Print & Frame</a></li>
+          <li><a href="../Pricing/pricing.html">Pricing</a></li>
+          <li><a href="../About Us/AboutUs.html">Contact Us</a></li>
+          <li><a href="../FAQ/FAQ.html">FAQ</a></li>
+          <li><a href="../About Us/AboutUs.html">About Us</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h3 class="footer-title footer-girthquake" style="font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important; letter-spacing: 0 !important;">Contact</h3>
+        <p><a href="mailto:Goodframe@gmail.com">Goodframe@gmail.com</a></p>
+        <p>0483238896</p>
+      </div>
+
+      <div class="footer-col">
+        <h3 class="footer-title footer-girthquake" style="font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important; letter-spacing: 0 !important;">Social</h3>
+        <ul>
+          <li><a href="#">Instagram</a></li>
+          <li><a href="#">Facebook</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      function updateCartCount() {
+        const visualCart = JSON.parse(localStorage.getItem('myAppVisualCart') || '[]');
+        const cartCountSpan = document.querySelector('.cart-nav .cart-count');
+        if (cartCountSpan) {
+          cartCountSpan.textContent = visualCart.length;
+        }
+      }
+
+      updateCartCount();
+
+      window.addEventListener('storage', function(e) {
+        if (e.key === 'myAppVisualCart') {
+          updateCartCount();
+        }
+      });
+
+      const burgerMenu = document.getElementById('burgerMenu');
+      const mobileNav = document.getElementById('mobileNav');
+      const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+      const mobileNavClose = document.getElementById('mobileNavClose');
+
+      function toggleMobileNav() {
+        burgerMenu.classList.toggle('active');
+        mobileNav.classList.toggle('active');
+        mobileNavOverlay.style.display = mobileNavOverlay.style.display === 'block' ? 'none' : 'block';
+      }
+
+      function closeMobileNav() {
+        burgerMenu.classList.remove('active');
+        mobileNav.classList.remove('active');
+        mobileNavOverlay.style.display = 'none';
+      }
+
+      if (burgerMenu) {
+        burgerMenu.addEventListener('click', toggleMobileNav);
+      }
+
+      if (mobileNavOverlay) {
+        mobileNavOverlay.addEventListener('click', closeMobileNav);
+      }
+
+      if (mobileNavClose) {
+        mobileNavClose.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeMobileNav();
+        });
+      }
+
+      document.querySelectorAll('.mobile-nav a').forEach(link => {
+        link.addEventListener('click', closeMobileNav);
+      });
+    })();
+  </script>
+
+  <script>
+    function initFAQNavigation() {
+      const navButtons = document.querySelectorAll('.nav-btn');
+      const faqContainers = document.querySelectorAll('.faq-container');
+
+      navButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const category = this.getAttribute('data-category');
+
+          navButtons.forEach(btn => btn.classList.remove('active'));
+          this.classList.add('active');
+
+          faqContainers.forEach(container => {
+            container.style.display = 'none';
+          });
+
+          const targetContainer = document.getElementById(category + '-faq');
+          if (targetContainer) {
+            targetContainer.style.display = 'block';
+          }
+        });
+      });
+    }
+
+    initFAQNavigation();
+  </script>
+
+</body>
+</html>

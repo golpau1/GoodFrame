@@ -1,0 +1,2064 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Upload Image</title>
+
+    <link href="https://unpkg.com/filepond@^4/dist/filepond.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.css"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="desktop.css" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="../Shared/logo.css?v=20260601-button-titlecase">
+
+
+
+
+</head>
+
+<body>
+    <header>
+        <div class="top-banner">
+            Free Shipping Over $100 - Frame Now
+        </div>
+    </header>
+
+    <div class="secondary-header">
+        <a href="../Homepage/Homepage.html" class="header-title">Good Frame</a>
+
+        <nav class="nav">
+            <a href="../Print-Frame/print-frame.html">Print & Frame</a>
+            <a href="../Pricing/pricing.html">Pricing</a>
+            <a href="../About Us/AboutUs.html">About Us</a>
+            <a href="../FAQ/FAQ.html">FAQ</a>
+        </nav>
+
+        <!-- Mobile Burger Menu Button -->
+        <div class="burger-menu" id="burgerMenu">
+            <div class="burger-line"></div>
+            <div class="burger-line"></div>
+            <div class="burger-line"></div>
+        </div>
+
+        <a href="http://localhost:3000/" class="cart-nav" id="cartNav">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span class="cart-count">0</span>
+        </a>
+    </div>
+
+    <!-- Mobile navigation overlay and panel -->
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <div class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-close" id="mobileNavClose">&times;</div>
+        <a href="../Homepage/Homepage.html">Home</a>
+        <a href="../Print-Frame/print-frame.html">Print & Frame</a>
+        <a href="../Pricing/pricing.html">Pricing</a>
+        <a href="../About Us/AboutUs.html">About Us</a>
+        <a href="../FAQ/FAQ.html">FAQ</a>
+    </div>
+
+    <div class="container">
+        <div class="frame-container" id="frameContainer">
+            <div class="frame-image-window" id="frameImageWindow">
+                <img alt="" id="uploadedImage">
+                <img alt="" id="uploadedImagePortrait">
+            </div>
+            <img src="https://static.wixstatic.com/media/4db74a_aca803f39a194834a0f785ee0ed9829e~mv2.png" alt="Frame"
+                class="frame-overlay" id="frameOverlay" crossorigin="anonymous">
+        </div>
+
+        <div class="upload-container">
+            <input type="file" id="fileUpload">
+
+            <button id="reopenCropperButton" style="display: none;">Edit Crop</button>
+
+            <select id="orientationDropdown" class="dropdown">
+                <option value="Landscape" selected>Landscape</option>
+                <option value="Portrait" disabled>Portrait</option>
+            </select>
+
+            <select id="sizeDropdown" class="dropdown">
+                <option value="">Select Size</option>
+                <option value="300x200mm" disabled>300x200mm</option>
+                <option value="600x400mm" disabled>600x400mm</option>
+                <option value="900x600mm" disabled>900x600mm</option>
+                <option value="1200x800mm" disabled>1200x800mm</option>
+            </select>
+
+            <select id="borderDropdown" class="dropdown">
+                <option value="Full Image" selected>Full Image</option>
+                <option value="Add Border">Add Border</option>
+            </select>
+
+            <div class="color-picker">
+                <div class="color-button" data-color="Black" style="background-color: #070707;"></div>
+                <div class="color-button" data-color="Natural" style="background-color: #BE9044;"></div>
+                <div class="color-button" data-color="White" style="background-color: #ffffff;"></div>
+            </div>
+
+            <p id="priceDisplay">Price: $0</p>
+            <button id="addToCartButton" disabled>Add to cart</button>
+        </div>
+    </div>
+
+    <div id="cropperOverlay">
+        <div id="cropperContainer">
+            <button id="cropperCancelButton" type="button" aria-label="Cancel crop" title="Cancel crop">x</button>
+            <div id="cropperResizeHandle" aria-hidden="true"></div>
+            <!-- Top Button Row -->
+            <div class="cropper-top-controls">
+                <div class="zoom-control">
+                    <label for="zoomSlider">Crop Size</label>
+                    <input type="range" id="zoomSlider" min="0.8" max="1.0" step="0.01" value="1.0" />
+                </div>
+            </div>
+            
+            <!-- Image Container -->
+            <div class="cropper-image-container">
+                <div class="cropper-image-wrapper">
+                    <img id="cropperImage" src="" alt="Image to Crop">
+                </div>
+            </div>
+            
+            <!-- Bottom Button Row -->
+            <div class="cropper-bottom-controls">
+                <button id="saveCropButton">Save Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cartLightbox">
+        <div id="cartContainer">
+            <div class="cart-header">
+                <h2>Your Cart</h2>
+                <button class="close-cart">×</button>
+            </div>
+            <div class="cart-items" id="cartItems">
+                <div class="empty-cart-message">Your cart is empty</div>
+            </div>
+            <div class="cart-footer">
+                <div class="cart-total">
+                    <span>Total:</span>
+                    <span id="cartTotal">$0</span>
+                </div>
+                <div class="cart-actions">
+                    <button class="cart-button continue-shopping">Continue shopping</button>
+                    <button class="cart-button checkout-button">Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="product-info-section">
+        <div class="product-info-container">
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Size Options</h3>
+                    <div class="size-details">
+                        <p><strong>300x200mm:</strong> $99</p>
+                        <p><strong>600x400mm:</strong> $235</p>
+                        <p><strong>900x600mm:</strong> $350</p>
+                        <p><strong>1200x800mm:</strong> $700</p>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <h3>Premium Materials</h3>
+                    <ul class="materials-list">
+                        <li>High-quality wood frames</li>
+                        <li>UV-resistant glass</li>
+                        <li>Acid-free matting</li>
+                        <li>Professional mounting</li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h3>Why Choose Us</h3>
+                    <ul class="benefits-list">
+                        <li>Free shipping over $100</li>
+                        <li>30-day money back guarantee</li>
+                        <li>Expert craftsmanship</li>
+                        <li>Fast turnaround time</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="feature-section">
+        <div class="feature-item reverse">
+            <div class="text-content">
+                <h2>Professional Quality Printing</h2>
+                <p>Our state-of-the-art printing technology ensures your memories are captured with stunning clarity and vibrant colors that last a lifetime.</p>
+                <p>Using premium archival inks and museum-quality paper, every print is crafted to professional standards that exceed your expectations.</p>
+            </div>
+            <div class="image-content">
+                <img src="../Homepage/assets/FormatFraming-AmeliaStanwix-Web-1.webp" alt="Professional Quality Printing">
+            </div>
+        </div>
+
+        <div class="feature-item reverse">
+            <div class="text-content">
+                <h2>Handcrafted Frames</h2>
+                <p>Each frame is carefully handcrafted using premium materials and traditional techniques that ensure durability and elegance.</p>
+                <p>Our skilled artisans pay attention to every detail, from the precise mitering of corners to the perfect finish that complements your artwork.</p>
+            </div>
+            <div class="image-content">
+                <img src="../Homepage/assets/Size_40x60_edited.jpg" alt="Handcrafted Frames">
+            </div>
+        </div>
+
+        <div class="feature-item reverse">
+            <div class="text-content">
+                <h2>Fast & Secure Delivery</h2>
+                <p>Your framed artwork is carefully packaged and delivered with tracking, ensuring it arrives safely at your door.</p>
+                <p>We offer fast turnaround times without compromising on quality, so you can enjoy your custom framed prints sooner.</p>
+            </div>
+            <div class="image-content">
+                <img src="../Homepage/assets/El+Framo+Picture+Framing+-+Low+Res+(4+of+48)_edited_edited.jpg" alt="Fast Secure Delivery">
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer" style="background: #070707; color: #f9f2e6;">
+        <div class="footer-content">
+            <div class="footer-col">
+                <h3 class="footer-title footer-girthquake" style="font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important; letter-spacing: 0 !important;">Navigation</h3>
+                <ul>
+                    <li><a href="../Print-Frame/print-frame.html">Print & Frame</a></li>
+                    <li><a href="../Pricing/pricing.html">Pricing</a></li>
+                    <li><a href="../About Us/AboutUs.html">Contact Us</a></li>
+                    <li><a href="../FAQ/FAQ.html">FAQ</a></li>
+                    <li><a href="../About Us/AboutUs.html">About Us</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h3 class="footer-title footer-girthquake" style="font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important; letter-spacing: 0 !important;">Contact</h3>
+                <p><a href="mailto:Goodframe@gmail.com">Goodframe@gmail.com</a></p>
+                <p>0483238896</p>
+            </div>
+
+            <div class="footer-col">
+                <h3 class="footer-title footer-girthquake" style="font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important; letter-spacing: 0 !important;">Social</h3>
+                <ul>
+                    <li><a href="#">Instagram</a></li>
+                    <li><a href="#">Facebook</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/filepond@^4/dist/filepond.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // ✅ NEW: Global zoom prevention for entire document
+            
+            // Prevent pinch-to-zoom on the entire document
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // Prevent Ctrl/Cmd + scroll zoom on the entire document
+            document.addEventListener('wheel', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            
+            // ✅ SIMPLE CROPPER: Basic configuration
+            function removeCropperGeneratedControls() {
+                const cropperOverlay = document.getElementById('cropperOverlay');
+                if (!cropperOverlay) return;
+
+                const selectors = [
+                    '.cropper-close',
+                    '.cropper-modal button',
+                    '.cropper-container button:not(#saveCropButton)',
+                    'button[data-method="destroy"]',
+                    '*[aria-label*="close"]',
+                    '*[title*="close"]'
+                ];
+
+                selectors.forEach(selector => {
+                    cropperOverlay.querySelectorAll(selector).forEach(btn => {
+                        if (btn.id !== 'saveCropButton') {
+                            btn.remove();
+                        }
+                    });
+                });
+            }
+
+            const MIN_CROP_BOX_SCALE = 0.8;
+            const MAX_CROP_BOX_SCALE = 1;
+            const INITIAL_CROP_BOX_SCALE = 1;
+            let cropBoxLimitAnimationFrame = null;
+            let cropBoxHandleAnimationFrame = null;
+            let isLimitingCropBox = false;
+            let activeCropResize = null;
+
+            function getCropBoxDataForScale(cropperInstance, scale) {
+                const containerData = cropperInstance.getContainerData();
+                const containerWidth = containerData.width || window.innerWidth;
+                const containerHeight = containerData.height || window.innerHeight;
+                const aspectRatio = cropperInstance.options.aspectRatio || 1;
+                const maxWidth = containerWidth * scale;
+                const maxHeight = containerHeight * scale;
+
+                if (maxWidth / aspectRatio <= maxHeight) {
+                    return {
+                        width: maxWidth,
+                        height: maxWidth / aspectRatio,
+                        containerWidth,
+                        containerHeight
+                    };
+                }
+
+                return {
+                    width: maxHeight * aspectRatio,
+                    height: maxHeight,
+                    containerWidth,
+                    containerHeight
+                };
+            }
+
+            function updateCropBoxMinOptions(cropperInstance) {
+                if (!cropperInstance) return;
+
+                const minCropBoxData = getCropBoxDataForScale(cropperInstance, MIN_CROP_BOX_SCALE);
+                cropperInstance.options.minCropBoxWidth = minCropBoxData.width;
+                cropperInstance.options.minCropBoxHeight = minCropBoxData.height;
+            }
+
+            function constrainCropBoxScale(cropperInstance, immediate = false) {
+                if (!cropperInstance || isLimitingCropBox) return;
+
+                const applyLimit = () => {
+                    cropBoxLimitAnimationFrame = null;
+
+                    try {
+                        const cropBoxData = cropperInstance.getCropBoxData();
+                        const minCropBoxData = getCropBoxDataForScale(cropperInstance, MIN_CROP_BOX_SCALE);
+                        const maxCropBoxData = getCropBoxDataForScale(cropperInstance, MAX_CROP_BOX_SCALE);
+
+                        if (
+                            !Number.isFinite(cropBoxData.width) ||
+                            !Number.isFinite(cropBoxData.height) ||
+                            cropBoxData.width <= 0 ||
+                            cropBoxData.height <= 0
+                        ) {
+                            return;
+                        }
+
+                        let targetCropBoxData = null;
+                        const isBelowMin =
+                            cropBoxData.width < minCropBoxData.width - 1 ||
+                            cropBoxData.height < minCropBoxData.height - 1;
+                        const exceedsMax =
+                            cropBoxData.width > maxCropBoxData.width + 1 ||
+                            cropBoxData.height > maxCropBoxData.height + 1;
+
+                        if (isBelowMin) {
+                            targetCropBoxData = minCropBoxData;
+                        } else if (exceedsMax) {
+                            targetCropBoxData = maxCropBoxData;
+                        } else {
+                            return;
+                        }
+
+                        const centerX = cropBoxData.left + cropBoxData.width / 2;
+                        const centerY = cropBoxData.top + cropBoxData.height / 2;
+                        const maxLeft = Math.max(0, targetCropBoxData.containerWidth - targetCropBoxData.width);
+                        const maxTop = Math.max(0, targetCropBoxData.containerHeight - targetCropBoxData.height);
+                        const left = Math.max(0, Math.min(centerX - targetCropBoxData.width / 2, maxLeft));
+                        const top = Math.max(0, Math.min(centerY - targetCropBoxData.height / 2, maxTop));
+
+                        isLimitingCropBox = true;
+                        cropperInstance.setCropBoxData({
+                            left,
+                            top,
+                            width: targetCropBoxData.width,
+                            height: targetCropBoxData.height
+                        });
+                    } catch (error) {
+                        // Cropper can be destroyed while a touch frame is still queued.
+                    } finally {
+                        isLimitingCropBox = false;
+                    }
+                };
+
+                if (immediate) {
+                    if (cropBoxLimitAnimationFrame) {
+                        cancelAnimationFrame(cropBoxLimitAnimationFrame);
+                    }
+                    applyLimit();
+                    return;
+                }
+
+                if (cropBoxLimitAnimationFrame) {
+                    cancelAnimationFrame(cropBoxLimitAnimationFrame);
+                }
+
+                cropBoxLimitAnimationFrame = requestAnimationFrame(applyLimit);
+            }
+
+            function updateCropperResizeHandle() {
+                const resizeHandle = document.getElementById('cropperResizeHandle');
+                const cropperContainer = document.getElementById('cropperContainer');
+                const cropperOverlay = document.getElementById('cropperOverlay');
+
+                if (
+                    !resizeHandle ||
+                    !cropperContainer ||
+                    !cropper ||
+                    !cropper.cropBoxElement ||
+                    cropperOverlay.style.display !== 'flex'
+                ) {
+                    if (resizeHandle) {
+                        resizeHandle.style.display = 'none';
+                    }
+                    return;
+                }
+
+                const cropBoxRect = cropper.cropBoxElement.getBoundingClientRect();
+                const cropperContainerRect = cropperContainer.getBoundingClientRect();
+
+                resizeHandle.style.display = 'block';
+                resizeHandle.style.left = `${cropBoxRect.right - cropperContainerRect.left}px`;
+                resizeHandle.style.top = `${cropBoxRect.top - cropperContainerRect.top}px`;
+            }
+
+            function queueCropperResizeHandleUpdate() {
+                if (cropBoxHandleAnimationFrame) {
+                    cancelAnimationFrame(cropBoxHandleAnimationFrame);
+                }
+
+                cropBoxHandleAnimationFrame = requestAnimationFrame(() => {
+                    cropBoxHandleAnimationFrame = null;
+                    updateCropperResizeHandle();
+                });
+            }
+
+            function startCropBoxResize(event) {
+                if (!cropper) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                updateCropBoxMinOptions(cropper);
+
+                const cropBoxData = cropper.getCropBoxData();
+                const cropBoxRect = cropper.cropBoxElement.getBoundingClientRect();
+
+                activeCropResize = {
+                    pointerId: event.pointerId,
+                    centerClientX: cropBoxRect.left + cropBoxRect.width / 2,
+                    centerClientY: cropBoxRect.top + cropBoxRect.height / 2,
+                    centerCropX: cropBoxData.left + cropBoxData.width / 2,
+                    centerCropY: cropBoxData.top + cropBoxData.height / 2,
+                    aspectRatio: cropper.options.aspectRatio || 1
+                };
+
+                event.currentTarget.setPointerCapture(event.pointerId);
+            }
+
+            function resizeCropBoxFromPointer(event) {
+                if (!cropper || !activeCropResize || activeCropResize.pointerId !== event.pointerId) return;
+
+                event.preventDefault();
+
+                const minCropBoxData = getCropBoxDataForScale(cropper, MIN_CROP_BOX_SCALE);
+                const maxCropBoxData = getCropBoxDataForScale(cropper, MAX_CROP_BOX_SCALE);
+                const pointerOffsetX = event.clientX - activeCropResize.centerClientX;
+                const pointerOffsetY = event.clientY - activeCropResize.centerClientY;
+                const aspectRatioFactor = 1 + (1 / (activeCropResize.aspectRatio * activeCropResize.aspectRatio));
+                const projectedWidth = 2 * (pointerOffsetX - pointerOffsetY / activeCropResize.aspectRatio) / aspectRatioFactor;
+                const unclampedWidth = Number.isFinite(projectedWidth) ? projectedWidth : maxCropBoxData.width;
+                const width = Math.max(minCropBoxData.width, Math.min(unclampedWidth, maxCropBoxData.width));
+                const height = width / activeCropResize.aspectRatio;
+                const maxLeft = Math.max(0, maxCropBoxData.containerWidth - width);
+                const maxTop = Math.max(0, maxCropBoxData.containerHeight - height);
+                const left = Math.max(0, Math.min(activeCropResize.centerCropX - width / 2, maxLeft));
+                const top = Math.max(0, Math.min(activeCropResize.centerCropY - height / 2, maxTop));
+
+                cropper.setCropBoxData({
+                    left,
+                    top,
+                    width,
+                    height
+                });
+                queueCropperResizeHandleUpdate();
+            }
+
+            function stopCropBoxResize(event) {
+                if (!activeCropResize || activeCropResize.pointerId !== event.pointerId) return;
+
+                activeCropResize = null;
+                constrainCropBoxScale(cropper, true);
+                queueCropperResizeHandleUpdate();
+            }
+
+            function destroyCropperInstance() {
+                if (cropBoxLimitAnimationFrame) {
+                    cancelAnimationFrame(cropBoxLimitAnimationFrame);
+                    cropBoxLimitAnimationFrame = null;
+                }
+
+                if (cropBoxHandleAnimationFrame) {
+                    cancelAnimationFrame(cropBoxHandleAnimationFrame);
+                    cropBoxHandleAnimationFrame = null;
+                }
+
+                activeCropResize = null;
+                document.getElementById('cropperResizeHandle')?.style.setProperty('display', 'none');
+
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+            }
+
+            function getResponsiveCropperConfig(orientation) {
+                const aspectRatio = orientation === "Landscape" ? 3 / 2 : 2 / 3;
+                
+                return {
+                    aspectRatio: aspectRatio,
+                    viewMode: 1, // Changed from 2 - allows crop box to extend beyond image
+                    autoCropArea: INITIAL_CROP_BOX_SCALE,
+                    responsive: true,
+                    dragMode: 'crop',
+                    movable: false,
+                    zoomable: false,
+                    zoomOnTouch: false,
+                    zoomOnWheel: false,
+                    scalable: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                    guides: true,
+                    background: false,
+                    highlight: true,
+                    checkCrossOrigin: false,
+                    cropmove: function() {
+                        constrainCropBoxScale(this.cropper);
+                        queueCropperResizeHandleUpdate();
+                    },
+                    cropend: function() {
+                        constrainCropBoxScale(this.cropper, true);
+                        queueCropperResizeHandleUpdate();
+                    },
+                    crop: function() {
+                        queueCropperResizeHandleUpdate();
+                    },
+                    built: function() {
+                        
+                        const cropBox = this.cropper.cropBoxElement;
+                        const lines = cropBox.querySelectorAll('.cropper-line');
+                        const points = cropBox.querySelectorAll('.cropper-point');
+                        
+                        lines.forEach(line => line.style.display = '');
+                        points.forEach(point => point.style.display = '');
+                        
+                        const face = cropBox.querySelector('.cropper-face');
+                        if (face) {
+                            face.style.cursor = 'move';
+                            face.style.pointerEvents = 'auto';
+                        }
+                        
+                        // ✅ REMOVE ALL CLOSE BUTTONS
+                        const removeCloseButtons = () => {
+                            const selectors = [
+                                '.cropper-close',
+                                '.cropper-modal button',
+                                '.cropper-container button:not(#saveCropButton)',
+                                'button[data-method="destroy"]',
+                                '*[aria-label*="close"]',
+                                '*[title*="close"]'
+                            ];
+                            
+                            selectors.forEach(selector => {
+                                (document.getElementById('cropperOverlay')?.querySelectorAll(selector) || []).forEach(btn => {
+                                    if (btn.id !== 'saveCropButton') {
+                                        btn.style.display = 'none';
+                                        btn.remove();
+                                    }
+                                });
+                            });
+                            
+                            // Remove any element containing ×
+                            document.getElementById('cropperOverlay')?.querySelectorAll('.cropper-container *').forEach(el => {
+                                if (el.textContent === '×' || el.textContent.trim() === '×') {
+                                    el.style.display = 'none';
+                                    el.remove();
+                                }
+                            });
+                        };
+                        
+                        removeCloseButtons();
+                        // Run again after a short delay to catch dynamically added elements
+                        setTimeout(removeCloseButtons, 100);
+                    },
+                    ready: function() {
+                        
+                        setTimeout(() => {
+                            if (this.cropper) {
+                                const imageData = this.cropper.getImageData();
+                                const containerData = this.cropper.getContainerData();
+                                
+                                
+                                // Ensure we have valid image dimensions
+                                if (imageData.width <= 0 || imageData.height <= 0) {
+                                    return;
+                                }
+                                
+                                updateCropBoxMinOptions(this.cropper);
+
+                                const cropBoxData = getCropBoxDataForScale(this.cropper, INITIAL_CROP_BOX_SCALE);
+                                const left = (cropBoxData.containerWidth - cropBoxData.width) / 2;
+                                const top = (cropBoxData.containerHeight - cropBoxData.height) / 2;
+                                
+                                const finalCropData = {
+                                    left: left,
+                                    top: top,
+                                    width: cropBoxData.width,
+                                    height: cropBoxData.height
+                                };
+                                
+                                
+                                this.cropper.setCropBoxData(finalCropData);
+                                constrainCropBoxScale(this.cropper, true);
+                                queueCropperResizeHandleUpdate();
+                            }
+                            
+                            // ✅ REMOVE CLOSE BUTTONS AFTER READY
+                            const removeCloseButtons = () => {
+                                const selectors = [
+                                    '.cropper-close',
+                                    '.cropper-modal button',
+                                    '.cropper-container button:not(#saveCropButton)',
+                                    'button[data-method="destroy"]',
+                                    '*[aria-label*="close"]',
+                                    '*[title*="close"]'
+                                ];
+                                
+                                selectors.forEach(selector => {
+                                    (document.getElementById('cropperOverlay')?.querySelectorAll(selector) || []).forEach(btn => {
+                                        if (btn.id !== 'saveCropButton') {
+                                            btn.style.display = 'none';
+                                            btn.remove();
+                                        }
+                                    });
+                                });
+                                
+                                // Remove any element containing ×
+                                document.getElementById('cropperOverlay')?.querySelectorAll('.cropper-container *').forEach(el => {
+                                    if (el.textContent === '×' || el.textContent.trim() === '×') {
+                                        el.style.display = 'none';
+                                        el.remove();
+                                    }
+                                });
+                            };
+                            
+                            removeCloseButtons();
+                        }, 150); // Increased timeout to ensure image is fully loaded
+                    }
+                };
+            }
+            
+            // ✅ CROP SIZE SLIDER: Reset function
+            function resetCropper() {
+                if (!cropper) return;
+                
+                cropper.reset();
+                
+                // Reset crop size slider
+                const zoomSlider = document.getElementById('zoomSlider');
+                zoomSlider.value = INITIAL_CROP_BOX_SCALE;
+                
+            }
+            
+            // ✅ CROP SIZE SLIDER: Setup crop size slider functionality
+            function setupZoomSlider() {
+                const zoomSlider = document.getElementById('zoomSlider');
+                
+                if (!zoomSlider) {
+                    console.error('🚨 SLIDER: Slider element not found!', {zoomSlider});
+                    return;
+                }
+                let lastZoomSliderUpdate = 0;
+
+                zoomSlider.addEventListener('input', function() {
+                    
+                    if (!cropper) {
+                        return;
+                    }
+
+                    const now = performance.now();
+                    if (now - lastZoomSliderUpdate < 16) {
+                        return;
+                    }
+                    lastZoomSliderUpdate = now;
+                    
+                    const requestedValue = parseFloat(this.value);
+                    const value = Number.isFinite(requestedValue)
+                        ? Math.max(MIN_CROP_BOX_SCALE, Math.min(requestedValue, MAX_CROP_BOX_SCALE))
+                        : INITIAL_CROP_BOX_SCALE;
+                    this.value = value;
+                    
+                    const containerData = cropper.getContainerData();
+                    
+                    // Ensure we have valid data
+                    if (containerData.width <= 0 || containerData.height <= 0) {
+                        return;
+                    }
+                    
+                    const targetCropBoxData = getCropBoxDataForScale(cropper, value);
+                    
+                    // Get current crop box position to maintain relative position
+                    const currentCropData = cropper.getCropBoxData();
+                    
+                    // Calculate new centered position
+                    let newLeft = (targetCropBoxData.containerWidth - targetCropBoxData.width) / 2;
+                    let newTop = (targetCropBoxData.containerHeight - targetCropBoxData.height) / 2;
+                    
+                    // If we have existing crop data, try to maintain relative position
+                    if (currentCropData.width > 0 && currentCropData.height > 0) {
+                        const centerX = currentCropData.left + currentCropData.width / 2;
+                        const centerY = currentCropData.top + currentCropData.height / 2;
+                        
+                        newLeft = centerX - targetCropBoxData.width / 2;
+                        newTop = centerY - targetCropBoxData.height / 2;
+                        
+                        // Keep within container bounds
+                        newLeft = Math.max(0, Math.min(newLeft, targetCropBoxData.containerWidth - targetCropBoxData.width));
+                        newTop = Math.max(0, Math.min(newTop, targetCropBoxData.containerHeight - targetCropBoxData.height));
+                    }
+                    
+                    const newCropData = {
+                        left: newLeft,
+                        top: newTop,
+                        width: targetCropBoxData.width,
+                        height: targetCropBoxData.height
+                    };
+                    
+                    
+                    cropper.setCropBoxData(newCropData);
+                    constrainCropBoxScale(cropper, true);
+                });
+                
+                // Reset crop size when slider is double-clicked
+                zoomSlider.addEventListener('dblclick', function() {
+                    this.value = INITIAL_CROP_BOX_SCALE;
+                    this.dispatchEvent(new Event('input'));
+                });
+            }
+            
+            // Initialize crop size slider when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupZoomSlider);
+            } else {
+                setupZoomSlider();
+            }
+            
+            const priceMapping = {
+                "300x200mm": 99,
+                "600x400mm": 235,
+                "900x600mm": 350,
+                "1200x800mm": 700
+            };
+
+            const resolutionMapping = {
+                "300x200mm": {
+                    width: 800,
+                    height: 700
+                },
+                "600x400mm": {
+                    width: 1200,
+                    height: 1100
+                },
+                "900x600mm": {
+                    width: 1700,
+                    height: 1500
+                },
+                "1200x800mm": {
+                    width: 2200,
+                    height: 2000
+                }
+            };
+
+            const frameImages = {
+                "Black": {
+                    landscape: "https://static.wixstatic.com/media/4db74a_aca803f39a194834a0f785ee0ed9829e~mv2.png",
+                    portrait: "https://static.wixstatic.com/media/4db74a_d3911e189f104d37930b16e303bd7fc8~mv2.png",
+                    landscapeAddBorder: "https://static.wixstatic.com/media/4db74a_e7e6a449359f4099b4f8ec688ccaf8c5~mv2.png",
+                    portraitAddBorder: "https://static.wixstatic.com/media/4db74a_27c8b0b646c444e9915208ebdf219b03~mv2.png"
+                },
+                "White": {
+                    landscape: "https://static.wixstatic.com/media/4db74a_ce460b15ab364b4e98f29490c882b6fd~mv2.png",
+                    portrait: "https://static.wixstatic.com/media/4db74a_695e900b36de4d62b7853d4a75999a21~mv2.png",
+                    landscapeAddBorder: "https://static.wixstatic.com/media/4db74a_f1d86c172d27450da30dcbf804385c47~mv2.png",
+                    portraitAddBorder: "https://static.wixstatic.com/media/4db74a_02584d6d018d4399a59100835bd3d806~mv2.png"
+                },
+                "Natural": {
+                    landscape: "https://static.wixstatic.com/media/4db74a_6cbf0df4c7ec418a9d4cde5ab833181d~mv2.png",
+                    portrait: "https://static.wixstatic.com/media/4db74a_b920602155eb4db6aecc02651f8f4516~mv2.png",
+                    landscapeAddBorder: "https://static.wixstatic.com/media/4db74a_060d3c24638e4e98af90abbb11963661~mv2.png",
+                    portraitAddBorder: "https://static.wixstatic.com/media/4db74a_da184c93a4a34324914d45eb147cfbc8~mv2.png"
+                }
+            };
+
+            let cropper;
+            let currentUploadObjectUrl = null;
+            let previewUpdateTimer = null;
+            let checkoutData = {
+                FrameColor: 'Black'
+            };
+            let wixCartItems = [];
+            let visualCartItems = [];
+            let currentOrientation = "Landscape";
+            let isCartUpdating = false;
+
+            // ✅ NEW: Global function to update orientation button text (now removed since we don't have text)
+            function updateOrientationButtonText() {
+                // Button now only shows icon, no text to update
+            }
+
+            function setCurrentUploadObjectUrl(file) {
+                if (currentUploadObjectUrl) {
+                    URL.revokeObjectURL(currentUploadObjectUrl);
+                }
+                currentUploadObjectUrl = URL.createObjectURL(file);
+                return currentUploadObjectUrl;
+            }
+
+            function clearCurrentUploadObjectUrl() {
+                if (currentUploadObjectUrl) {
+                    URL.revokeObjectURL(currentUploadObjectUrl);
+                    currentUploadObjectUrl = null;
+                }
+            }
+
+            const mobileFrameMedia = window.matchMedia("(max-width: 768px)");
+            let mobileFrameScaleRaf = null;
+
+            function syncMobileFrameScale() {
+                const frameContainer = document.getElementById("frameContainer");
+                if (!frameContainer) return;
+
+                // Mobile frame sizing is CSS-only; clear old runtime sizing variables.
+                frameContainer.style.removeProperty("--frame-image-mobile-width");
+                frameContainer.style.removeProperty("--frame-image-mobile-height");
+                frameContainer.style.removeProperty("--frame-image-mobile-max-width");
+                frameContainer.style.removeProperty("--frame-image-mobile-max-height");
+                frameContainer.style.removeProperty("--frame-image-mobile-left");
+                frameContainer.style.removeProperty("--frame-image-mobile-top");
+            }
+
+            function queueMobileFrameScaleSync() {
+                if (mobileFrameScaleRaf) {
+                    cancelAnimationFrame(mobileFrameScaleRaf);
+                }
+
+                mobileFrameScaleRaf = requestAnimationFrame(() => {
+                    mobileFrameScaleRaf = null;
+                    syncMobileFrameScale();
+                });
+            }
+
+            function updatePreviewVisibility(orientation) {
+                const uploadedImage = document.getElementById("uploadedImage");
+                const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
+
+                if (orientation === "Landscape") {
+                    uploadedImage.style.display = "block";
+                    uploadedImagePortrait.style.display = "none";
+                } else {
+                    uploadedImage.style.display = "none";
+                    uploadedImagePortrait.style.display = "block";
+                }
+            }
+
+            function applyFrameOrientation(orientation) {
+                currentOrientation = orientation;
+                updateFrameContainerClasses();
+
+                const frameContainer = document.getElementById("frameContainer");
+                frameContainer.style.width = "1000px";
+                frameContainer.style.height = "1000px";
+
+                const selectedColor = checkoutData.FrameColor || "Black";
+                const frameOverlay = document.getElementById("frameOverlay");
+                const borderDropdown = document.getElementById("borderDropdown");
+                const imageKey = orientation.toLowerCase() + (borderDropdown.value === "Add Border" ? "AddBorder" : "");
+
+                frameOverlay.src = frameImages[selectedColor][imageKey];
+                updatePreviewVisibility(orientation);
+                checkoutData.Orientation = orientation;
+                queueMobileFrameScaleSync();
+            }
+
+            function setPreviewSources(src) {
+                document.getElementById("uploadedImage").src = src;
+                document.getElementById("uploadedImagePortrait").src = src;
+            }
+
+            function updateFrameContainerClasses() {
+                const frameContainer = document.getElementById("frameContainer");
+                if (!frameContainer) return;
+
+                const orientation = document.getElementById("orientationDropdown").value || currentOrientation || "Landscape";
+                const border = document.getElementById("borderDropdown").value;
+                const frameColor = checkoutData.FrameColor || "Black";
+
+                frameContainer.classList.remove(
+                    "landscape-frame",
+                    "portrait-frame",
+                    "full-image-frame",
+                    "border-frame",
+                    "black-frame",
+                    "natural-frame",
+                    "raw-frame",
+                    "white-frame"
+                );
+
+                frameContainer.classList.add(
+                    orientation === "Portrait" ? "portrait-frame" : "landscape-frame",
+                    border === "Add Border" ? "border-frame" : "full-image-frame",
+                    `${frameColor.toLowerCase()}-frame`
+                );
+
+                if (frameColor === "Natural") {
+                    frameContainer.classList.add("raw-frame");
+                }
+
+                queueMobileFrameScaleSync();
+            }
+
+            // ✅ NEW: Function to update background orientation without closing cropper
+            const mobileFrameOverlay = document.getElementById("frameOverlay");
+            const mobileFrameContainer = document.getElementById("frameContainer");
+
+            if (mobileFrameOverlay) {
+                mobileFrameOverlay.addEventListener("load", queueMobileFrameScaleSync);
+            }
+
+            if (mobileFrameContainer && "ResizeObserver" in window) {
+                const mobileFrameResizeObserver = new ResizeObserver(queueMobileFrameScaleSync);
+                mobileFrameResizeObserver.observe(mobileFrameContainer);
+            }
+
+            window.addEventListener("resize", queueMobileFrameScaleSync, { passive: true });
+            window.addEventListener("orientationchange", queueMobileFrameScaleSync);
+
+            if (mobileFrameMedia.addEventListener) {
+                mobileFrameMedia.addEventListener("change", queueMobileFrameScaleSync);
+            } else if (mobileFrameMedia.addListener) {
+                mobileFrameMedia.addListener(queueMobileFrameScaleSync);
+            }
+
+            queueMobileFrameScaleSync();
+
+            function updateBackgroundOrientation(orientation) {
+                applyFrameOrientation(orientation);
+                return;
+
+                // Update current orientation variable
+                currentOrientation = orientation;
+                updateFrameContainerClasses();
+
+                // Update frame container size
+                const frameContainer = document.getElementById("frameContainer");
+                frameContainer.style.width = "1000px";
+                frameContainer.style.height = "1000px";
+
+                // Update frame overlay image
+                const selectedColor = checkoutData.FrameColor;
+                const frameOverlay = document.getElementById("frameOverlay");
+                const borderDropdown = document.getElementById("borderDropdown");
+
+                if (borderDropdown.value === "Add Border") {
+                    frameOverlay.src = frameImages[selectedColor][orientation.toLowerCase() + "AddBorder"];
+                } else {
+                    frameOverlay.src = frameImages[selectedColor][orientation.toLowerCase()];
+                }
+                queueMobileFrameScaleSync();
+
+                // Get current cropped image and apply it to the correct orientation display
+                const croppedImage = getCroppedImage();
+                if (croppedImage) {
+                    const uploadedImage = document.getElementById("uploadedImage");
+                    const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
+                    
+                    // Update both image sources with the current crop
+                    uploadedImage.src = croppedImage;
+                    uploadedImagePortrait.src = croppedImage;
+                    
+                    // Show/hide the correct image based on orientation
+                    if (orientation === "Landscape") {
+                        uploadedImage.style.display = "block";
+                        uploadedImagePortrait.style.display = "none";
+                    } else {
+                        uploadedImage.style.display = "none";
+                        uploadedImagePortrait.style.display = "block";
+                    }
+                }
+
+                // Update checkout data
+                checkoutData.Orientation = orientation;
+                
+            }
+
+            // Generate unique 6-digit code for each session/order
+            function generateUniqueCode() {
+                return Math.floor(100000 + Math.random() * 900000).toString();
+            }
+
+            function saveVisualCartToLocalStorage() {
+                localStorage.setItem('myAppVisualCart', JSON.stringify(visualCartItems));
+            }
+
+            function loadVisualCartFromLocalStorage() {
+                const storedCart = localStorage.getItem('myAppVisualCart');
+                if (storedCart) {
+                    visualCartItems = JSON.parse(storedCart);
+                }
+            }
+
+            loadVisualCartFromLocalStorage();
+            updateCartUI();
+
+            function syncWithWixCart() {
+                window.parent.postMessage({
+                    type: "getCart"
+                }, "*");
+            }
+
+            syncWithWixCart();
+
+            const blackButton = document.querySelector('[data-color="Black"]');
+            if (blackButton) blackButton.classList.add('selected');
+            updateFrameContainerClasses();
+
+            FilePond.registerPlugin(FilePondPluginImagePreview);
+            const isMobileUploader = window.matchMedia("(max-width: 768px)").matches;
+
+            const pond = FilePond.create(document.querySelector("#fileUpload"), {
+                allowMultiple: false,
+                credits: false,
+                imagePreviewHeight: isMobileUploader ? 96 : 150,
+                labelIdle: isMobileUploader
+                    ? `Tap to upload your image <span class="filepond--label-action">Browse photos</span>`
+                    : `Drag & Drop your image or <span class="filepond--label-action">Browse</span>`,
+                acceptedFileTypes: ['image/png', 'image/jpeg', 'image/gif'],
+                server: {
+                    process: (fieldName, file, metadata, load, error, progress, abort) => {
+                        const formData = new FormData();
+                        
+                        // Generate unique 6-digit code for this upload
+                        const uniqueCode = generateUniqueCode();
+                        
+                        // Create filename with unique code at the front (no timestamp since Cloudflare adds its own)
+                        const originalFileName = `${uniqueCode}_original_${file.name}`;
+                        
+                        
+                        formData.append('file', file, originalFileName);
+
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', 'https://fragrant-bird-69d3.loganwallace049.workers.dev/', true);
+                        xhr.setRequestHeader('Accept', 'application/json');
+
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                progress(true, e.loaded, e.total);
+                            }
+                        };
+
+                        xhr.onload = () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try {
+                                    const response = JSON.parse(xhr.responseText);
+                                    if (response.url) {
+                                        // Store both the URL and unique code for later use
+                                        sessionStorage.setItem('uploadedImageUrl', response.url);
+                                        sessionStorage.setItem('uniqueCode', uniqueCode);
+                                        document.getElementById('addToCartButton').disabled = false;
+                                        load(response.url);
+                                    } else {
+                                        console.error('No URL in server response:', response);
+                                        error('No URL returned from server');
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing server response:', e);
+                                    error('Invalid server response');
+                                }
+                            } else {
+                                console.error('Upload failed with status:', xhr.status);
+                                error(`Upload failed: ${xhr.statusText}`);
+                            }
+                        };
+
+                        xhr.onerror = () => {
+                            console.error('Network error during upload');
+                            error('Network error during upload');
+                        };
+
+                        xhr.onabort = () => {
+                            abort();
+                        };
+
+                        xhr.send(formData);
+
+                        return {
+                            abort: () => {
+                                xhr.abort();
+                                abort();
+                            }
+                        };
+                    }
+                },
+                onaddfile: (error, file) => {
+                    if (error) {
+                        console.error("Error adding file:", error);
+                        return;
+                    }
+
+                    document.getElementById("sizeDropdown").value = "";
+                    const borderDropdown = document.getElementById("borderDropdown");
+                    borderDropdown.value = "Full Image";
+                    borderDropdown.dispatchEvent(new Event('change'));
+
+                    const colorButtons = document.querySelectorAll(".color-button");
+                    colorButtons.forEach(btn => btn.classList.remove("selected"));
+                    const defaultColorButton = document.querySelector('[data-color="Black"]');
+                    if (defaultColorButton) defaultColorButton.classList.add('selected');
+                    checkoutData.FrameColor = 'Black';
+
+                    updateFrameOptions();
+
+                    const cropperOverlay = document.getElementById("cropperOverlay");
+                    const cropperImage = document.getElementById("cropperImage");
+                    cropperOverlay.style.display = "flex";
+
+                    const uploadedImage = document.getElementById("uploadedImage");
+                    const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
+                    const uploadObjectUrl = setCurrentUploadObjectUrl(file.file);
+                    uploadedImage.src = uploadObjectUrl;
+                    uploadedImagePortrait.src = uploadObjectUrl;
+                    cropperImage.src = uploadObjectUrl;
+
+                    document.getElementById("reopenCropperButton").style.display = 'block';
+
+                    destroyCropperInstance();
+
+                    const img = new Image();
+
+                    img.onload = function() {
+                        const orientation = this.width > this.height ? "Landscape" : "Portrait";
+                        const orientationDropdown = document.getElementById("orientationDropdown");
+                        orientationDropdown.querySelector('option[value="Portrait"]').disabled = false;
+                        orientationDropdown.value = orientation;
+
+                        applyFrameOrientation(orientation);
+
+                        // ✅ SIMPLE CROPPER: Use basic configuration
+                        const cropperConfig = getResponsiveCropperConfig(orientation);
+                        cropper = new Cropper(cropperImage, cropperConfig);
+
+                        const width = this.width;
+                        const height = this.height;
+                        const imageLongSide = Math.max(width, height);
+                        const imageShortSide = Math.min(width, height);
+                        const sizeDropdown = document.getElementById("sizeDropdown");
+                        const options = sizeDropdown.options;
+
+                        Array.from(options).forEach(option => {
+                            if (!option.value) return;
+
+                            const requiredResolution = resolutionMapping[option.value];
+                            const requiredLongSide = Math.max(requiredResolution.width, requiredResolution.height);
+                            const requiredShortSide = Math.min(requiredResolution.width, requiredResolution.height);
+                            option.disabled = imageLongSide < requiredLongSide || imageShortSide < requiredShortSide;
+                        });
+                    };
+                    img.src = uploadObjectUrl;
+                },
+                onremovefile: () => {
+                    document.getElementById("reopenCropperButton").style.display = 'none';
+                    const sizeDropdown = document.getElementById("sizeDropdown");
+                    sizeDropdown.value = "";
+
+                    const sizeOptions = sizeDropdown.querySelectorAll("option");
+                    sizeOptions.forEach(option => {
+                        if (option.value !== "") {
+                            option.disabled = true;
+                        }
+                    });
+
+                    const orientationDropdown = document.getElementById("orientationDropdown");
+                    orientationDropdown.value = "Landscape";
+                    orientationDropdown.querySelector('option[value="Portrait"]').disabled = true;
+                    applyFrameOrientation("Landscape");
+
+                    const cropperOverlay = document.getElementById("cropperOverlay");
+                    cropperOverlay.style.display = "none";
+                    destroyCropperInstance();
+                    clearCurrentUploadObjectUrl();
+                    clearTimeout(previewUpdateTimer);
+
+                    document.getElementById("uploadedImage").style.display = "none";
+                    document.getElementById("uploadedImagePortrait").style.display = "none";
+                    document.getElementById("addToCartButton").disabled = true;
+                    sessionStorage.removeItem('uploadedImageUrl');
+                }
+            });
+
+            function getCroppedImage() {
+                if (!cropper) {
+                    console.error("Cropper not initialized");
+                    return null;
+                }
+
+                try {
+                    const canvas = cropper.getCroppedCanvas({
+                        maxWidth: 1600,
+                        maxHeight: 1600,
+                        imageSmoothingEnabled: true,
+                        imageSmoothingQuality: "high"
+                    });
+                    if (!canvas) {
+                        console.error("Failed to get cropped canvas");
+                        return null;
+                    }
+                    return canvas.toDataURL("image/jpeg", 0.9);
+                } catch (error) {
+                    console.error("Error getting cropped image:", error);
+                    return null;
+                }
+            }
+
+            function closeCropperWithoutSaving() {
+                clearTimeout(previewUpdateTimer);
+                document.getElementById("cropperOverlay").style.display = "none";
+                document.getElementById("cropperResizeHandle").style.display = "none";
+                updatePreviewVisibility(document.getElementById("orientationDropdown").value);
+            }
+
+            document.getElementById("cropperCancelButton").addEventListener("click", closeCropperWithoutSaving);
+
+            const cropperResizeHandle = document.getElementById("cropperResizeHandle");
+            cropperResizeHandle.addEventListener("pointerdown", startCropBoxResize);
+            cropperResizeHandle.addEventListener("pointermove", resizeCropBoxFromPointer);
+            cropperResizeHandle.addEventListener("pointerup", stopCropBoxResize);
+            cropperResizeHandle.addEventListener("pointercancel", stopCropBoxResize);
+
+            document.getElementById("saveCropButton").addEventListener("click", () => {
+                clearTimeout(previewUpdateTimer);
+                const croppedImage = getCroppedImage();
+                if (croppedImage) {
+                    const orientation = document.getElementById("orientationDropdown").value;
+                    setPreviewSources(croppedImage);
+                    updatePreviewVisibility(orientation);
+
+                    const cropperOverlay = document.getElementById("cropperOverlay");
+                    cropperOverlay.style.display = "none";
+                    document.getElementById("cropperResizeHandle").style.display = "none";
+                } else {
+                    console.error("Failed to save crop.");
+                }
+            });
+
+            document.getElementById("reopenCropperButton").addEventListener("click", () => {
+                const cropperOverlay = document.getElementById("cropperOverlay");
+                cropperOverlay.style.display = "flex";
+                queueCropperResizeHandleUpdate();
+
+                const orientation = document.getElementById("orientationDropdown").value;
+
+                destroyCropperInstance();
+
+                // ✅ SIMPLE CROPPER: Use basic configuration
+                const cropperConfig = getResponsiveCropperConfig(orientation);
+                cropper = new Cropper(document.getElementById("cropperImage"), cropperConfig);
+            });
+
+            document.getElementById("orientationDropdown").addEventListener("change", () => {
+                const orientation = document.getElementById("orientationDropdown").value;
+
+                currentOrientation = orientation;
+
+                const frameContainer = document.getElementById("frameContainer");
+                frameContainer.style.width = "1000px";
+                frameContainer.style.height = "1000px";
+
+                if (cropper) {
+                    const aspectRatio = orientation === "Landscape" ? 3 / 2 : 2 / 3;
+                    cropper.setAspectRatio(aspectRatio);
+                    updateCropBoxMinOptions(cropper);
+                    constrainCropBoxScale(cropper, true);
+                    queueCropperResizeHandleUpdate();
+                }
+
+                const selectedColor = checkoutData.FrameColor;
+                const frameOverlay = document.getElementById("frameOverlay");
+                const borderDropdown = document.getElementById("borderDropdown");
+
+                if (borderDropdown.value === "Add Border") {
+                    frameOverlay.src = frameImages[selectedColor][orientation.toLowerCase() + "AddBorder"];
+                } else {
+                    frameOverlay.src = frameImages[selectedColor][orientation.toLowerCase()];
+                }
+
+                const uploadedImage = document.getElementById("uploadedImage");
+                const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
+                if (orientation === "Landscape") {
+                    uploadedImage.style.display = "block";
+                    uploadedImagePortrait.style.display = "none";
+                } else {
+                    uploadedImage.style.display = "none";
+                    uploadedImagePortrait.style.display = "block";
+                }
+
+                clearTimeout(previewUpdateTimer);
+                previewUpdateTimer = setTimeout(() => {
+                    const cropperOverlay = document.getElementById("cropperOverlay");
+                    if (cropper && cropperOverlay.style.display !== "flex") {
+                        const croppedImage = getCroppedImage();
+                        if (croppedImage) {
+                            setPreviewSources(croppedImage);
+                            updatePreviewVisibility(orientation);
+                        }
+                    }
+                }, 120);
+                
+                // ✅ CLEAN CROPPER: Update orientation button text when orientation changes
+                updateOrientationButtonText();
+            });
+
+            function updatePrice() {
+                const selectedSize = document.getElementById("sizeDropdown").value;
+                document.getElementById("priceDisplay").textContent = selectedSize in priceMapping ?
+                    `Price: $${priceMapping[selectedSize]}` :
+                    "Price: $0";
+            }
+
+            function updateFrameOptions() {
+                checkoutData.Size = document.getElementById("sizeDropdown").value;
+                checkoutData.Border = document.getElementById("borderDropdown").value;
+                checkoutData.Orientation = document.getElementById("orientationDropdown").value;
+                updateFrameContainerClasses();
+                updatePrice();
+                queueMobileFrameScaleSync();
+            }
+
+            const colorButtons = document.querySelectorAll(".color-button");
+            const frameOverlay = document.getElementById("frameOverlay");
+
+            colorButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    colorButtons.forEach(btn => btn.classList.remove("selected"));
+                    button.classList.add("selected");
+
+                    const selectedColor = button.getAttribute("data-color");
+                    checkoutData.FrameColor = selectedColor;
+
+                    const orientation = document.getElementById("orientationDropdown").value.toLowerCase();
+                    const borderDropdown = document.getElementById("borderDropdown");
+
+                    if (borderDropdown.value === "Add Border") {
+                        frameOverlay.src = frameImages[selectedColor][orientation + "AddBorder"];
+                    } else {
+                        frameOverlay.src = frameImages[selectedColor][orientation];
+                    }
+
+                    updateFrameOptions();
+                });
+            });
+
+            document.querySelectorAll(".dropdown").forEach(dropdown => {
+                dropdown.addEventListener("change", updateFrameOptions);
+            });
+
+            window.addEventListener("message", (event) => {
+                if (!event.data || !event.data.type) {
+                    return;
+                }
+                const {
+                    type,
+                    message,
+                    items,
+                    id
+                } = event.data;
+
+                switch (type) {
+                    case "cartData":
+                        wixCartItems = Array.isArray(items) ? items : [];
+                        break;
+                    case "cartSuccess":
+                        syncWithWixCart();
+                        break;
+                    case "removeSuccess":
+                        syncWithWixCart();
+                        break;
+                    case "cartError":
+                    case "removeError":
+                        console.error(`${type}: ${message}`);
+                        syncWithWixCart();
+                        break;
+                }
+            });
+
+            document.getElementById("addToCartButton").addEventListener("click", async () => {
+                // ✅ ADDED: Check if the cart is already full
+                if (visualCartItems.length >= 10) {
+                    alert("You can only add up to 10 items to your cart.");
+                    return; // Stop the function if the cart is full
+                }
+
+                const selectedSize = document.getElementById("sizeDropdown").value;
+                if (!selectedSize) {
+                    alert("Please select a size.");
+                    return;
+                }
+                const selectedBorder = document.getElementById("borderDropdown").value;
+                if (!selectedBorder) {
+                    alert("Please select a border option.");
+                    return;
+                }
+
+                try {
+                    const wixCartItem = {
+                        type: "addToCart",
+                        data: {
+                            Size: selectedSize,
+                            FrameColor: checkoutData.FrameColor,
+                            Border: selectedBorder,
+                            Orientation: document.getElementById("orientationDropdown").value,
+                        }
+                    };
+                    window.parent.postMessage(wixCartItem, "*");
+
+                } catch (error) {
+                    console.error("Error adding to Wix cart:", error);
+                }
+
+                const frameContainer = document.getElementById('frameContainer');
+
+                const imageElements = Array.from(frameContainer.getElementsByTagName('img'))
+                    .filter(img => img.style.display !== 'none' && img.src);
+
+                const imageLoadPromises = imageElements.map(img => new Promise(resolve => {
+                    if (img.complete) {
+                        resolve();
+                    } else {
+                        img.onload = resolve;
+                        img.onerror = () => {
+                            console.error(`Could not load image: ${img.src}`);
+                            resolve();
+                        };
+                    }
+                }));
+
+                Promise.all(imageLoadPromises).then(async () => {
+                    const clonedContainer = frameContainer.cloneNode(true);
+                    clonedContainer.style.position = 'absolute';
+                    clonedContainer.style.left = '-9999px';
+                    clonedContainer.style.top = '0px';
+                    clonedContainer.style.zIndex = '0';
+                    clonedContainer.style.pointerEvents = 'none';
+                    
+                    // ✅ FORCE MOBILE TO RENDER LIKE DESKTOP FOR THUMBNAIL
+                    clonedContainer.style.width = '1000px';
+                    clonedContainer.style.height = '1000px';
+                    clonedContainer.style.minWidth = '1000px';
+                    clonedContainer.style.minHeight = '1000px';
+                    clonedContainer.style.maxWidth = '1000px';
+                    clonedContainer.style.maxHeight = '1000px';
+                    clonedContainer.style.transform = 'none';
+                    clonedContainer.style.scale = '1';
+                    clonedContainer.style.fontSize = '16px';
+                    clonedContainer.style.zoom = '1';
+                    clonedContainer.style.webkitTextSizeAdjust = '100%';
+                    clonedContainer.style.textSizeAdjust = '100%';
+                    
+                    // ✅ OVERRIDE ALL CHILD ELEMENTS FOR DESKTOP-LIKE RENDERING
+                    const allElements = clonedContainer.querySelectorAll('*');
+                    const captureOrientation = document.getElementById("orientationDropdown").value;
+                    allElements.forEach(el => {
+                        // DON'T touch transform for images - they need their centering transform
+                        const isUploadedImage = el.id === 'uploadedImage' || el.id === 'uploadedImagePortrait';
+                        const isFrameOverlay = el.id === 'frameOverlay';
+                        const hasAddBorderClass = el.classList.contains('add-border');
+                        const isPortraitUploadedImage = captureOrientation === "Portrait" && isUploadedImage;
+                        const isWhiteFrameBorderMode = checkoutData.FrameColor === 'White' && selectedBorder === 'Add Border' && isUploadedImage && !isPortraitUploadedImage;
+                        const isWhiteFrameFullMode = checkoutData.FrameColor === 'White' && selectedBorder === 'Full Image' && isUploadedImage && !isPortraitUploadedImage;
+                        
+                        if (!isUploadedImage && !isFrameOverlay && !hasAddBorderClass && !isWhiteFrameBorderMode && !isWhiteFrameFullMode) {
+                            el.style.transform = 'none';
+                        }
+                        
+                        // Preserve the existing white-frame landscape positioning.
+                        if (isWhiteFrameBorderMode) {
+                            el.style.top = '51%';
+                            el.style.left = '52.5%';
+                            el.style.transform = 'translate(-50%, -50%)';
+                        }
+                        
+                        // For white frame in landscape full image mode, move right by 5px.
+                        if (isWhiteFrameFullMode) {
+                            el.style.left = '50.5%';
+                            el.style.transform = 'translate(-50%, -50%)';
+                        }
+
+                        if (isPortraitUploadedImage) {
+                            el.style.top = '50%';
+                            el.style.left = '50%';
+                            el.style.transform = 'translate(-50%, -50%)';
+                        }
+                        
+                        el.style.scale = '1';
+                        el.style.zoom = '1';
+                        el.style.webkitTextSizeAdjust = '100%';
+                        el.style.textSizeAdjust = '100%';
+                        
+                        // Remove viewport-dependent units
+                        const computedStyle = window.getComputedStyle(el);
+                        if (computedStyle.width && computedStyle.width.includes('vw')) {
+                            el.style.width = 'auto';
+                        }
+                        if (computedStyle.height && computedStyle.height.includes('vh')) {
+                            el.style.height = 'auto';
+                        }
+                    });
+                    
+                    document.body.appendChild(clonedContainer);
+
+                    // ✅ FORCE LAYOUT RECALCULATION
+                    clonedContainer.offsetHeight;
+                    clonedContainer.scrollTop;
+                    clonedContainer.clientHeight;
+
+                    setTimeout(() => {
+                        html2canvas(clonedContainer, {
+                            useCORS: true,
+                            allowTaint: true,
+                            backgroundColor: null,
+                            scale: 2,
+                            width: 1000,
+                            height: 1000,
+                            scrollX: 0,
+                            scrollY: 0,
+                            windowWidth: 1000,
+                            windowHeight: 1000,
+                            ignoreElements: (element) => element.id === 'cropperOverlay'
+                        }).then(canvas => {
+                            const imageDataUrl = canvas.toDataURL('image/png');
+                            const activeImageId = captureOrientation === "Portrait" ? "uploadedImagePortrait" : "uploadedImage";
+                            const activePreviewImage = document.getElementById(activeImageId);
+                            const croppedImageForCart = cropper ? getCroppedImage() : null;
+                            const cartImageSource = croppedImageForCart || activePreviewImage?.src || sessionStorage.getItem('uploadedImageUrl') || "";
+                            const frameOverlayUrl = document.getElementById("frameOverlay")?.src || "";
+                            
+                            // ✅ GENERATE NEW UNIQUE CODE FOR EACH CART ITEM
+                            const newUniqueCode = generateUniqueCode();
+                            
+                            // Create the base cart item with data URL
+                            const baseVisualItem = {
+                                lineItemId: `local_${Date.now()}`,
+                                productName: `#${newUniqueCode} - Print & Frame`, // ✅ Display name WITH hashtag and NEW unique code at front
+                                internalTitle: `#${newUniqueCode} - Print & Frame`, // ✅ Internal title WITH hashtag and NEW unique code at front
+                                uniqueCode: newUniqueCode, // Store NEW unique code separately for easy access
+                                size: selectedSize,
+                                orientation: document.getElementById("orientationDropdown").value,
+                                frameColor: checkoutData.FrameColor,
+                                border: selectedBorder,
+                                price: priceMapping[selectedSize],
+                                image: imageDataUrl, // Use data URL as fallback
+                                previewImage: cartImageSource,
+                                frameOverlayUrl: frameOverlayUrl,
+                                originalImageUrl: sessionStorage.getItem('uploadedImageUrl') || cartImageSource
+                            };
+
+                            // ✅ DUAL DESTINATION GUARANTEED: Cart gets thumbnail immediately, Cloudflare gets it too
+
+                            // STEP 1: Add to cart immediately with data URL (GUARANTEED to work)
+                            visualCartItems.push(baseVisualItem);
+                            saveVisualCartToLocalStorage();
+                            updateCartUI();
+
+                            // ✅ MOBILE: Scroll to top after adding to cart
+                            if (window.innerWidth <= 768) {
+                                window.scrollTo({
+                                    top: 0,
+                                    behavior: 'smooth'
+                                });
+                            }
+
+                            // STEP 2: ✅ IMPROVED CONSISTENT CLOUDFLARE UPLOAD - Pass the NEW unique code
+                            uploadThumbnailToCloudflareConsistently(canvas, baseVisualItem, selectedSize, selectedBorder, newUniqueCode);
+                        }).catch(err => {
+                            console.error("Cart thumbnail generation failed:", err);
+                        }).finally(() => {
+                            document.body.removeChild(clonedContainer);
+                        });
+                    }, 100);
+                });
+            });
+
+            // ✅ NEW: Consistent Cloudflare Upload Function
+            async function uploadThumbnailToCloudflareConsistently(canvas, baseVisualItem, selectedSize, selectedBorder, uniqueCode) {
+                
+                // Use the passed unique code instead of sessionStorage
+                
+                // ✅ STEP 1: Create blob with retry mechanism and quality control
+                const blob = await createBlobWithRetry(canvas, 3); // 3 retry attempts
+                if (!blob) {
+                    console.error('❌ CLOUDFLARE CONSISTENT: Failed to create blob after retries');
+                    return;
+                }
+                
+                
+                // ✅ STEP 2: Validate blob quality
+                if (blob.size < 1000) {
+                    console.error('❌ CLOUDFLARE CONSISTENT: Blob too small, likely corrupted');
+                    return;
+                }
+                
+                if (blob.size > 10 * 1024 * 1024) { // 10MB limit
+                }
+                
+                // ✅ STEP 3: Prepare upload with consistent naming
+                const thumbnailFileName = generateConsistentFileName(uniqueCode, selectedSize, selectedBorder);
+                
+                // ✅ STEP 4: Upload with retry mechanism and timeout
+                const maxRetries = 3;
+                const uploadTimeout = 30000; // 30 seconds
+                
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    
+                    try {
+                        const uploadResult = await uploadWithTimeout(blob, thumbnailFileName, uploadTimeout);
+                        
+                        if (uploadResult.success && uploadResult.url) {
+                            
+                            // ✅ STEP 5: Send to cart page with consistent data
+                            await sendToCartPageConsistently(uploadResult.url, uniqueCode, baseVisualItem);
+                            return; // Success, exit retry loop
+                        } else {
+                            throw new Error(`Upload failed: ${uploadResult.error || 'Unknown error'}`);
+                        }
+                        
+                    } catch (error) {
+                        console.error(`❌ CLOUDFLARE CONSISTENT: Attempt ${attempt} failed:`, error.message);
+                        
+                        if (attempt === maxRetries) {
+                            console.error('❌ CLOUDFLARE CONSISTENT: All upload attempts failed');
+                            return;
+                        }
+                        
+                        // Wait before retry (exponential backoff)
+                        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                }
+            }
+
+            // ✅ NEW: Create blob with retry mechanism
+            async function createBlobWithRetry(canvas, maxRetries = 3) {
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    
+                    try {
+                        const blob = await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                reject(new Error('Blob creation timeout'));
+                            }, 10000); // 10 second timeout
+                            
+                            canvas.toBlob((result) => {
+                                clearTimeout(timeout);
+                                if (result && result.size > 0) {
+                                    resolve(result);
+                                } else {
+                                    reject(new Error('Invalid blob created'));
+                                }
+                            }, 'image/png', 1.0); // Maximum quality
+                        });
+                        
+                        return blob;
+                        
+                    } catch (error) {
+                        console.error(`❌ BLOB CREATION: Attempt ${attempt} failed:`, error.message);
+                        
+                        if (attempt === maxRetries) {
+                            console.error('❌ BLOB CREATION: All attempts failed');
+                            return null;
+                        }
+                        
+                        // Wait before retry
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    }
+                }
+            }
+
+            // ✅ NEW: Generate consistent filename
+            function generateConsistentFileName(uniqueCode, selectedSize, selectedBorder) {
+                // Ensure consistent naming by cleaning inputs
+                const cleanSize = selectedSize.replace(/[^a-zA-Z0-9]/g, '');
+                const cleanFrameColor = checkoutData.FrameColor.replace(/[^a-zA-Z0-9]/g, '');
+                const cleanBorder = selectedBorder.replace(/[^a-zA-Z0-9]/g, '');
+                const timestamp = Date.now();
+                
+                const filename = `${uniqueCode}_thumbnail_${cleanSize}_${cleanFrameColor}_${cleanBorder}_${timestamp}.png`;
+                return filename;
+            }
+
+            // ✅ NEW: Upload with timeout and proper error handling
+            async function uploadWithTimeout(blob, filename, timeout = 30000) {
+                
+                return new Promise((resolve, reject) => {
+                    const timeoutId = setTimeout(() => {
+                        reject(new Error(`Upload timeout after ${timeout}ms`));
+                    }, timeout);
+                    
+                    // Create FormData with proper error handling
+                    const formData = new FormData();
+                    try {
+                        formData.append('file', blob, filename);
+                    } catch (error) {
+                        clearTimeout(timeoutId);
+                        reject(new Error(`FormData creation failed: ${error.message}`));
+                        return;
+                    }
+                    
+                    // Perform upload with comprehensive error handling
+                    fetch('https://fragrant-bird-69d3.loganwallace049.workers.dev/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': 'GoodFrame-ThumbnailUploader/1.0'
+                        }
+                    })
+                    .then(response => {
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        // Handle different content types
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            return response.json();
+                        } else {
+                            return response.text().then(text => {
+                                try {
+                                    return JSON.parse(text);
+                                } catch (e) {
+                                    return { rawResponse: text, error: 'Non-JSON response' };
+                                }
+                            });
+                        }
+                    })
+                    .then(data => {
+                        clearTimeout(timeoutId);
+                        
+                        // Extract URL from various possible response formats
+                        const possibleUrl = data?.url || 
+                                          data?.result?.url || 
+                                          data?.publicUrl || 
+                                          data?.fileUrl || 
+                                          data?.location ||
+                                          data?.downloadUrl;
+                        
+                        if (possibleUrl) {
+                            resolve({
+                                success: true,
+                                url: possibleUrl,
+                                data: data
+                            });
+                        } else {
+                            console.error('❌ UPLOAD: No valid URL found in response');
+                            console.error('📊 UPLOAD: Response data keys:', Object.keys(data || {}));
+                            resolve({
+                                success: false,
+                                error: 'No valid URL in response',
+                                data: data
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        clearTimeout(timeoutId);
+                        console.error('❌ UPLOAD: Fetch error:', error.message);
+                        reject(error);
+                    });
+                });
+            }
+
+            // ✅ NEW: Send to cart page with consistent error handling
+            async function sendToCartPageConsistently(cloudflareUrl, uniqueCode, baseVisualItem) {
+                
+                const cartUpdateData = {
+                    lineItemId: baseVisualItem.lineItemId,
+                    uniqueCode: uniqueCode,
+                    thumbnailUrl: cloudflareUrl,
+                    fallbackImage: baseVisualItem.image,
+                    productDetails: {
+                        productName: `#${uniqueCode} - Print & Frame`,
+                        internalTitle: `#${uniqueCode} - Print & Frame`,
+                        uniqueCode: uniqueCode,
+                        size: baseVisualItem.size,
+                        orientation: baseVisualItem.orientation,
+                        frameColor: baseVisualItem.frameColor,
+                        border: baseVisualItem.border,
+                        price: baseVisualItem.price,
+                        previewImage: baseVisualItem.previewImage,
+                        frameOverlayUrl: baseVisualItem.frameOverlayUrl,
+                        originalImageUrl: baseVisualItem.originalImageUrl
+                    }
+                };
+                
+                
+                try {
+                    const response = await fetch('http://localhost:3000/update-thumbnail', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'User-Agent': 'GoodFrame-CartUpdater/1.0'
+                        },
+                        body: JSON.stringify(cartUpdateData)
+                    });
+                    
+                    
+                    if (!response.ok) {
+                        throw new Error(`Cart page HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const cartResponse = await response.json();
+                    
+                } catch (error) {
+                    console.error('❌ CART PAGE FAILED:', error.message);
+                    
+                    // Fallback: Update local cart with Cloudflare URL
+                    const itemIndex = visualCartItems.findIndex(item => item.lineItemId === baseVisualItem.lineItemId);
+                    if (itemIndex > -1) {
+                        visualCartItems[itemIndex].thumbnailUrl = cloudflareUrl;
+                        visualCartItems[itemIndex].fallbackImage = baseVisualItem.image;
+                        saveVisualCartToLocalStorage();
+                        updateCartUI();
+                    }
+                }
+            }
+
+            function updateCartUI() {
+                const cartItemsContainer = document.getElementById("cartItems");
+                const cartTotalElement = document.getElementById("cartTotal");
+                const cartNav = document.getElementById("cartNav");
+                const navCartCountSpan = cartNav ? cartNav.querySelector(".cart-count") : null;
+
+                
+                if (navCartCountSpan) {
+                    navCartCountSpan.textContent = visualCartItems.length;
+                }
+
+                const total = visualCartItems.reduce((sum, item) => sum + (item.price || 0), 0);
+                cartTotalElement.textContent = `$${total.toFixed(2)}`;
+
+                if (visualCartItems.length === 0) {
+                    cartItemsContainer.innerHTML =
+                        '<div class="empty-cart-message">Your cart is empty.</div>';
+                    return;
+                }
+
+                cartItemsContainer.innerHTML = '';
+                visualCartItems.forEach((item, index) => {
+                    const cartItemElement = document.createElement("div");
+                    cartItemElement.className = "cart-item";
+                    
+                    // Create image element with fallback
+                    const imageUrl = item.image || item.fallbackImage || item.thumbnailUrl || '';
+                    const fallbackUrl = item.fallbackImage || item.thumbnailUrl || '';
+                    
+                    
+                    cartItemElement.innerHTML = `
+                                    <div class="cart-item-image" style="width: 100px !important; height: 100px !important; overflow: hidden !important; position: relative !important; display: block !important; border-radius: 12px !important; background-image: url('${imageUrl}') !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important;" 
+                                         onError="this.style.backgroundImage = 'url(${fallbackUrl.replace(/'/g, "\\'")})'">
+                                    </div>
+                                    <div class="cart-item-details">
+                                        <div class="cart-item-title">${item.productName}</div>
+                                        <div class="cart-item-meta">
+                                            ${item.size} | ${item.orientation} | ${item.frameColor} Frame | ${item.border}
+                                        </div>
+                                        <div class="cart-item-price">$${(item.price || 0).toFixed(2)}</div>
+                                        <button class="remove-item" data-item-id="${item.lineItemId}">×</button>
+                                    </div>`;
+                    cartItemsContainer.appendChild(cartItemElement);
+                });
+
+                document.querySelectorAll(".remove-item").forEach(button => {
+                    button.addEventListener("click", (e) => {
+                        if (isCartUpdating) {
+                            return;
+                        }
+                        isCartUpdating = true;
+                        document.getElementById('cartContainer').classList.add('is-updating');
+
+                        const visualItemId = e.currentTarget.getAttribute("data-item-id");
+                        const itemIndex = visualCartItems.findIndex(item => item.lineItemId === visualItemId);
+
+                        if (itemIndex > -1) {
+                            if (wixCartItems && wixCartItems.length > itemIndex && wixCartItems[itemIndex] && wixCartItems[itemIndex].lineItemId) {
+                                const wixItemToRemove = wixCartItems[itemIndex];
+                                window.parent.postMessage({
+                                    type: "removeItem",
+                                    data: {
+                                        id: wixItemToRemove.lineItemId
+                                    }
+                                }, "*");
+                            } else {
+                            }
+
+                            visualCartItems.splice(itemIndex, 1);
+                            saveVisualCartToLocalStorage();
+                            updateCartUI();
+                        }
+
+                        setTimeout(() => {
+                            isCartUpdating = false;
+                            const cartContainer = document.getElementById('cartContainer');
+                            if (cartContainer) {
+                                cartContainer.classList.remove('is-updating');
+                            }
+                            syncWithWixCart();
+                        }, 1400);
+                    });
+                });
+            }
+            document.querySelector(".close-cart").addEventListener("click", () => {
+                document.getElementById("cartLightbox").style.display = "none";
+            });
+
+            document.querySelector(".continue-shopping").addEventListener("click", () => {
+                document.getElementById("cartLightbox").style.display = "none";
+            });
+
+            document.querySelector(".checkout-button").addEventListener("click", () => {
+                window.parent.postMessage({
+                    type: "checkout"
+                }, "*");
+            });
+
+            document.getElementById("cartLightbox").addEventListener("click", (e) => {
+                if (e.target === document.getElementById("cartLightbox")) {
+                    document.getElementById("cartLightbox").style.display = "none";
+                }
+            });
+
+            const borderDropdown = document.getElementById("borderDropdown");
+            borderDropdown.addEventListener("change", () => {
+                const selectedColor = checkoutData.FrameColor;
+                const orientation = document.getElementById("orientationDropdown").value.toLowerCase();
+                const frameOverlay = document.getElementById("frameOverlay");
+
+                const uploadedImage = document.getElementById("uploadedImage");
+                const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
+
+                if (borderDropdown.value === "Add Border") {
+                    frameOverlay.src = frameImages[selectedColor][orientation + "AddBorder"];
+                    uploadedImage.classList.add("add-border");
+                    uploadedImagePortrait.classList.add("add-border");
+                } else {
+                    frameOverlay.src = frameImages[selectedColor][orientation];
+                    uploadedImage.classList.remove("add-border");
+                    uploadedImagePortrait.classList.remove("add-border");
+                }
+
+                queueMobileFrameScaleSync();
+            });
+        });
+    </script>
+    <script>
+        (() => {
+            function updateCartCount() {
+                const visualCart = JSON.parse(localStorage.getItem('myAppVisualCart') || '[]');
+                const cartCountSpan = document.querySelector('.cart-nav .cart-count');
+                if (cartCountSpan) {
+                    cartCountSpan.textContent = visualCart.length;
+                }
+            }
+
+            updateCartCount();
+
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'myAppVisualCart') {
+                    updateCartCount();
+                }
+            });
+
+            const burgerMenu = document.getElementById('burgerMenu');
+            const mobileNav = document.getElementById('mobileNav');
+            const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+            const mobileNavClose = document.getElementById('mobileNavClose');
+
+            function toggleMobileNav() {
+                burgerMenu.classList.toggle('active');
+                mobileNav.classList.toggle('active');
+                mobileNavOverlay.style.display = mobileNavOverlay.style.display === 'block' ? 'none' : 'block';
+            }
+
+            function closeMobileNav() {
+                burgerMenu.classList.remove('active');
+                mobileNav.classList.remove('active');
+                mobileNavOverlay.style.display = 'none';
+            }
+
+            if (burgerMenu) {
+                burgerMenu.addEventListener('click', toggleMobileNav);
+            }
+
+            if (mobileNavOverlay) {
+                mobileNavOverlay.addEventListener('click', closeMobileNav);
+            }
+
+            if (mobileNavClose) {
+                mobileNavClose.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeMobileNav();
+                });
+            }
+
+            document.querySelectorAll('.mobile-nav a').forEach(link => {
+                link.addEventListener('click', closeMobileNav);
+            });
+        })();
+    </script>
+
+    <script>
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'openCart') {
+                document.getElementById('cartLightbox').style.display = 'flex';
+            }
+        });
+    </script>
+</body>
+
+</html>

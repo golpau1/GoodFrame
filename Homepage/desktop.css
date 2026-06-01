@@ -1,0 +1,1948 @@
+/*
+==================================================
+  Font Imports & Root Variable Definitions
+==================================================
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap');
+
+@font-face {
+  font-family: 'Trolleybus Trial';
+  src: url('assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'NType82';
+  src: url('file:///C:/Users/logan/Desktop/Work/Good%20Frame%202/Assets/NType82-Regular.otf') format('opentype'),
+       url('../Assets/NType82-Regular.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+:root {
+  /* Color Palette */
+  --text-primary: #2D3748;
+  --text-secondary: #718096;
+  --background-primary: #ffffff;
+  --background-secondary: #ffffff;
+  --border-color: #E2E8F0;
+  --accent-color: #070707; /* Changed to #070707 for underline effect */
+
+  /* Layout & Sizing */
+  --container-gap: 50px;
+  --control-radius: 12px;
+
+  /* Typography */
+  --font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif;
+  --homepage-font-subheading-weight: 300;
+}
+
+
+/*
+==================================================
+  Global & Base Styles
+==================================================
+*/
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  background: #ffffff;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+main {
+  background: #ffffff;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* --- Buttons: NType82 + Uppercase --- */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.button,
+.btn,
+a.button,
+a.btn {
+  font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0;
+  font-variant-caps: normal;
+}
+
+
+/*
+==================================================
+  Header & Navigation
+==================================================
+*/
+
+/*
+==================================================
+  HEADER & NAVIGATION STYLES
+==================================================
+*/
+
+/* --- Top Announcement Banner --- */
+/* --- Top Banner --- */
+/*
+==================================================
+  HEADER & NAVIGATION STYLES
+==================================================
+*/
+
+/* --- Top Announcement Banner --- */
+.top-banner {
+  text-align: center;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 300;
+  font-family: 'Trolleybus Trial', 'Cutive Mono', monospace;
+  font-variant-caps: small-caps;
+  color: #f9f2e6;
+  background-color: #070707;
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+
+/* --- Main Header Container --- */
+header {
+  background: var(--background-secondary);
+  width: 100%;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.secondary-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* Left, Center, and Right columns */
+  align-items: center; /* Vertically center all items */
+  height: 72px;
+  padding: 0 40px; /* Remove top padding for proper vertical centering */
+}
+
+/* --- Logo / Header Title --- */
+.header-title {
+  justify-self: start; /* Align title to the left */
+  font-family: 'Trolleybus Trial', 'Cutive Mono', monospace;
+  font-size: 2.35rem;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  font-weight: 400;
+  font-variant-caps: normal;
+  text-transform: none;
+  color: #070707 !important;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* --- Main Navigation Links --- */
+.nav {
+  display: flex;
+  gap: 40px;
+  justify-self: center; /* Keep navigation in the center */
+}
+
+.nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1.08rem;
+  font-weight: 400;
+  font-family: 'NType82', 'Cutive Mono', monospace;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  position: relative;
+  padding: 8px 4px;
+  transition: color 0.3s ease;
+}
+
+.mobile-nav a {
+  font-family: 'NType82', 'Cutive Mono', monospace;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.nav a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent-color);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.nav a:hover {
+  color: var(--text-primary);
+}
+
+.nav a:hover::after {
+  transform: scaleX(1);
+}
+
+/* --- Cart Icon & Counter --- */
+.cart-nav {
+  justify-self: end; /* Align cart to the right */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cart-nav:hover svg {
+  stroke: var(--accent-color);
+}
+
+.cart-nav:hover .cart-count {
+  color: var(--accent-color);
+}
+
+.cart-nav svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--text-primary);
+  stroke-width: 2;
+  transition: stroke 0.2s ease;
+}
+
+/* Cart count font styling to match FAQ page */
+.cart-nav .cart-count {
+  font-family: 'Cutive Mono', monospace !important;
+  font-size: 0.9rem !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+  font-variant-caps: normal;
+}
+
+.cart-nav .cart-count {
+  color: var(--text-primary);
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+/* --- Cart Icon & Counter --- */
+
+.cart-nav {
+  justify-self: end; /* Align cart to the right */
+
+display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cart-nav:hover svg {
+  stroke: var(--accent-color);
+}
+
+.cart-nav:hover .cart-count {
+  color: var(--accent-color);
+}
+
+.cart-nav svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--text-primary);
+  stroke-width: 2;
+  transition: stroke 0.2s ease;
+}
+
+/* Cart count font styling to match FAQ page */
+
+.cart-nav .cart-count {
+  font-family: 'Cutive Mono', monospace !important;
+  font-size: 0.9rem !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+  font-variant-caps: normal;
+}
+
+.cart-nav .cart-count {
+  color: var(--text-primary);
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+/*
+==================================================
+  Page Sections & Content Blocks
+==================================================
+*/
+
+.hero-section {
+  display: flex;
+  width: 100%;
+  height: 60vh;
+  background: #ffffff;
+}
+
+.hero-section.reverse {
+  flex-direction: row; /* Changed from row-reverse to row */
+}
+
+.hero-left,
+.hero-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-left {
+  background: #ffffff;
+}
+
+.hero-right {
+  background: url('assets/diogo-lemos-c8r5SVWKaGk-unsplash.jpg') center center/cover no-repeat;
+  border-top-left-radius: 3px;
+}
+
+.hero-left.hero-image-alt {
+  background: url('assets/another+week+another+frame+(Blog+Banner)+(1).jpg') center center/cover no-repeat;
+  border-bottom-right-radius: 3px;
+}
+
+.hero-right.blue-bg {
+  background: #ffffff !important;
+}
+
+.info-bar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: #070707;
+  color: #f9f2e6;
+  font-size: 18px;
+  padding: 48px 0 40px 0;
+  font-family: 'Cutive Mono', monospace;
+  font-variant-caps: small-caps;
+  letter-spacing: -0.025em;
+}
+
+.info-bar > div {
+  text-align: center;
+  flex: 1;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100px 0 60px 0;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  background: #ffffff; /* Changed background color to pure white */
+}
+
+.quad-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 100%;
+  height: 60vw;
+  min-height: 600px;
+  max-height: 90vh;
+}
+
+.quad {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  min-width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px; /* Added padding for content */
+}
+
+.quad-left-top {
+  background: #181818;
+  color: #f9f2e6;
+}
+
+.quad-right-top {
+  background: url('assets/quad-top-right.jpg') center center/cover no-repeat;
+}
+
+.quad-left-bottom {
+  background: url('assets/quad-bottom-left.jpg') center center/cover no-repeat;
+}
+
+.quad-right-bottom {
+  background: #ffffff;
+  color: #181818;
+}
+
+.quad-content {
+  text-align: center;
+  margin: 0 auto;
+  max-width: 420px;
+}
+
+.quad-content h2 {
+  font-family: 'Trolleybus Trial', serif;
+  font-size: 2.2rem;
+  margin-bottom: 18px;
+  letter-spacing: 0.05em;
+  font-weight: 400;
+}
+
+.quad-content p {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  margin: 0;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+/*
+==================================================
+  Component-Specific Styles
+==================================================
+*/
+
+/* --- Frame Options (in .container) --- */
+
+.frame-options-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 60px;
+  width: 100%;
+  margin-bottom: 60px;
+}
+
+.frame-option {
+  text-align: center;
+  width: 250px;
+  font-family: 'Cutive Mono', monospace;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.frame-image {
+  width: 250px;
+  aspect-ratio: 1 / 1;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.frame-image:hover {
+  box-shadow: none;
+}
+
+.frame-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+  display: block;
+  border-radius: 3px;
+}
+
+.frame-option p {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1rem;
+  font-family: 'Trolleybus Trial', serif;
+  letter-spacing: 0.05em;
+}
+
+.frame-option p:last-child {
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+  font-family: 'Cutive Mono', monospace;
+  letter-spacing: -0.025em;
+}
+
+/* --- General Button Style --- */
+
+button {
+  background-color: #070707;
+  color: #f9f2e6;
+  padding: 14px 32px;
+  border: 1px solid #070707;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-size: 16px;
+  font-family: var(--homepage-font-body) !important;
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+background-color: transparent;
+color: #070707 !important;
+border-color: #070707;
+}
+
+/* --- Gallery Row --- */
+
+.gallery-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 40px;
+  background: #222;
+  padding: 32px 0;
+  margin: 0;
+  overflow-x: auto; /* Allow horizontal scroll on smaller screens */
+}
+
+.gallery-image {
+  width: 300px;
+  height: 340px;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0; /* Prevent images from shrinking */
+}
+
+.gallery-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* --- Frame Guide Section --- */
+
+.frame-guide-section {
+  width: 100%;
+  text-align: center;
+  margin: 60px 0;
+  font-family: 'Cutive Mono', monospace;
+  padding: 48px 56px 40px;
+  background: #ffffff;
+  position: relative;
+}
+
+.frame-guide-title {
+  font-size: 2.8rem;
+  margin-bottom: 16px;
+  font-family: 'Trolleybus Trial', serif;
+  font-weight: 400;
+  color: #070707;
+  letter-spacing: 0.05em;
+}
+
+.frame-guide-subtitle {
+  font-size: 1.1rem;
+  color: #070707;
+  margin-bottom: 64px;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 400;
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+}
+
+.frame-guide-steps {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 56px;
+  margin-bottom: 64px;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.frame-guide-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 300px;
+}
+
+.frame-guide-step-number {
+  width: 60px;
+  height: 60px;
+  background: var(--text-primary);
+  color: #f9f2e6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  font-family: 'Cutive Mono', monospace;
+}
+
+.frame-guide-step-icon {
+  width: 60px;
+  height: 60px;
+  background: #070707;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+  padding: 0;
+}
+
+.frame-guide-step-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.frame-guide-icon {
+  display: none;
+}
+
+.frame-guide-box {
+  background: transparent;
+  border: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0;
+}
+
+.frame-guide-box h3 {
+  font-size: 1.3rem;
+  font-weight: 400;
+  margin-bottom: 16px;
+  color: #070707;
+  font-family: 'Trolleybus Trial', serif;
+  letter-spacing: 0.05em;
+}
+
+.frame-guide-box p {
+  font-size: 1rem;
+  color: #070707;
+  line-height: 1.7;
+  margin: 0;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+}
+
+.frame-guide-arrow {
+  display: none;
+}
+
+/* Responsive adjustments for frame guide */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+==================================================
+  Footer
+==================================================
+*/
+
+.footer {
+background: #070707;
+  color: #f9f2e6;
+  padding: 40px 28px;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 16px;
+  margin-top: 0;
+  width: 100%;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  align-items: flex-start;
+  gap: 32px 72px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.footer-col {
+  min-width: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-col h3 {
+  font-size: 18px;
+  font-weight: 300;
+  margin-bottom: 0;
+  font-family: 'Trolleybus Trial', 'Cutive Mono', monospace;
+  letter-spacing: 0.05em;
+  color: #f9f2e6;
+  text-decoration: none;
+}
+
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-col ul li {
+  margin-bottom: 0;
+}
+
+.footer-col a {
+  color: #f9f2e6;
+  text-decoration: none;
+  transition: color 0.3s ease;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1.35;
+}
+
+.footer-col p {
+  margin: 0;
+  color: #f9f2e6;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.35;
+}
+
+.footer-title {
+  font-family: 'Trolleybus Trial', serif;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+}
+
+/*
+==================================================
+  Hero Section Specific Styles
+==================================================
+*/
+
+/* --- Hero Section Content --- */
+
+.hero-left h1 {
+  font-family: 'NType82', 'Cutive Mono', monospace !important;
+  font-size: 3.4rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  text-align: center;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.hero-left p {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 1.4rem;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  text-align: center;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.hero-left h2 {
+  font-family: 'NType82', 'Cutive Mono', monospace !important;
+  font-size: 1.6rem;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  text-align: center;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.hero-button {
+  background-color: #070707;
+  color: #f9f2e6;
+  padding: 14px 32px;
+  border: 1px solid #070707;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-size: 16px;
+  font-family: var(--homepage-font-body) !important;
+  font-weight: 400;
+  letter-spacing: 0;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.hero-left .hero-button,
+.hero-section.reverse .hero-right .hero-button {
+  font-variant-caps: normal;
+}
+
+.hero-button:hover {
+background-color: transparent;
+color: #070707 !important;
+border-color: #070707;
+}
+
+.hero-section.reverse .hero-right h1 {
+  font-family: 'NType82', 'Cutive Mono', monospace !important;
+  font-size: 3.4rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  text-align: center;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.hero-section.reverse .hero-right p {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 1.4rem;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  text-align: center;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.hero-section.reverse .hero-right h2 {
+  font-family: 'NType82', 'Cutive Mono', monospace !important;
+  font-size: 1.6rem;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  text-align: center;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.hero-section.reverse .hero-right .hero-button {
+  background-color: #070707;
+  color: #f9f2e6;
+  padding: 14px 32px;
+  border: 1px solid #070707;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-size: 16px;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 400;
+  letter-spacing: 0;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+/* Homepage typography overrides. */
+
+.top-banner,
+.nav a,
+.cart-nav .cart-count,
+.quad-content p,
+.frame-option,
+.frame-option p:last-child,
+button,
+.frame-guide-section,
+.frame-guide-subtitle,
+.frame-guide-step-number,
+.frame-guide-box p,
+.footer,
+.footer-col a,
+.footer-col p,
+.hero-left p,
+.hero-button,
+.hero-section.reverse .hero-right p,
+.hero-section.reverse .hero-right .hero-button {
+  font-family: 'Cutive Mono', monospace !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1.1 !important;
+  font-variant-caps: normal !important;
+}
+
+.hero-left p,
+.hero-section.reverse .hero-right p {
+  word-spacing: -0.18em !important;
+}
+
+.info-bar,
+.info-bar div {
+  font-family: var(--homepage-font-subheading) !important;
+  font-weight: var(--homepage-font-subheading-weight) !important;
+  letter-spacing: var(--homepage-font-subheading-spacing) !important;
+  line-height: 1.1 !important;
+  font-variant-caps: normal !important;
+}
+
+.top-banner {
+  font-family: var(--homepage-font-subheading) !important;
+  font-weight: var(--homepage-font-subheading-weight) !important;
+  letter-spacing: var(--homepage-font-subheading-spacing) !important;
+  line-height: 1.1 !important;
+  font-variant-caps: normal !important;
+}
+
+.frame-option-text p:first-child {
+  font-family: var(--homepage-font-subheading) !important;
+  font-weight: var(--homepage-font-subheading-weight) !important;
+  letter-spacing: var(--homepage-font-subheading-spacing) !important;
+  line-height: 1.1 !important;
+}
+
+body {
+  font-family: 'Cutive Mono', monospace !important;
+}
+
+body *,
+body *::before,
+body *::after {
+  font-weight: 400 !important;
+  letter-spacing: -0.05em !important;
+}
+
+.hero-left h1,
+.hero-section.reverse .hero-right h1,
+.mobile-section-content h2 {
+  font-family: 'NType82', 'Cutive Mono', monospace !important;
+  font-weight: var(--homepage-font-subheading-weight) !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.1 !important;
+}
+
+.frame-guide-title {
+  font-family: 'Trolleybus Trial', 'Cutive Mono', monospace !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1.1 !important;
+}
+
+.frame-guide-box h3 {
+  font-family: var(--homepage-font-title) !important;
+  font-weight: 400 !important;
+  letter-spacing: var(--homepage-font-title-spacing) !important;
+  line-height: 1.1 !important;
+}
+
+.hero-section.reverse .hero-right .hero-button:hover {
+background-color: transparent;
+color: #070707 !important;
+border-color: #070707;
+}
+
+/* Migrated from page head styles */
+
+
+
+/* Mobile Optimization Styles */
+
+    /* Smaller mobile screens */
+
+    /* Desktop styles - Hide video and carousel in hero section */
+
+@media (min-width: 769px) {
+      .hero-section:not(.hero-section-duplicate) .hero-video {
+        display: none !important;
+      }
+
+.hero-section:not(.hero-section-duplicate) .carousel {
+        display: none !important;
+      }
+
+.hero-section .pinterest-video {
+        display: none !important;
+      }
+
+.mobile-only-section {
+        display: none !important;
+      }
+
+/* Desktop info bar - override mobile carousel styles */
+
+.info-bar {
+        display: flex !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        background: #070707 !important;
+        color: #f9f2e6 !important;
+        font-size: 18px !important;
+        padding: 48px 0 40px 0 !important;
+  font-family: var(--homepage-font-subheading) !important;
+  font-variant-caps: normal !important;
+  letter-spacing: var(--homepage-font-subheading-spacing) !important;
+        height: auto !important;
+        overflow: visible !important;
+        position: static !important;
+      }
+
+.info-bar-carousel {
+        display: flex !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        width: 100% !important;
+        animation: none !important;
+        white-space: normal !important;
+      }
+
+.info-bar div {
+        text-align: center !important;
+        flex: 1 !important;
+  font-size: 19px !important;
+        line-height: 1.25 !important;
+        color: #f9f2e6 !important;
+        margin-right: 0 !important;
+        padding: 0 12px !important;
+        flex-shrink: 1 !important;
+        white-space: normal !important;
+  font-family: var(--homepage-font-subheading) !important;
+  font-variant-caps: normal !important;
+  letter-spacing: var(--homepage-font-subheading-spacing) !important;
+      }
+
+/* Hide duplicate content - only show first 3 items */
+
+.info-bar div:nth-child(n + 4) {
+        display: none !important;
+      }
+
+/* Desktop gallery - restore original layout */
+
+.gallery-row {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        gap: 40px !important;
+        background: #000000 !important;
+        padding: 32px 0 !important;
+        margin: 0 !important;
+        overflow-x: auto !important;
+        animation: none !important;
+        position: static !important;
+      }
+
+.gallery-carousel {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        background: #000000 !important;
+        gap: 40px !important;
+        animation: none !important;
+        width: auto !important;
+      }
+
+.gallery-image {
+        width: 300px !important;
+        height: 340px !important;
+        background: #000000 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        flex-shrink: 0 !important;
+      }
+
+.gallery-image img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        display: block !important;
+        border-radius: 8px !important;
+      }
+
+/* Hide duplicate images in desktop view */
+
+.gallery-image:nth-child(n + 6) {
+        display: none !important;
+      }
+
+/* Hide price and start framing button in frame options for desktop */
+
+.frame-option-button {
+        display: none !important;
+      }
+
+.frame-option-price {
+        display: none !important;
+      }
+    }
+
+.header-title {
+          font-family: "Trolleybus Trial", 'Cutive Mono', monospace !important;
+          letter-spacing: 0.05em !important;
+        }
+
+.hero-left::before,
+.hero-left::after,
+.hero-left .carousel-text,
+.hero-left p,
+.mobile-section-content > p,
+.mobile-section-item p,
+.frame-option-text p,
+.frame-option-price,
+.frame-guide-step {
+          font-family: var(--homepage-font-subheading) !important;
+          font-weight: 400 !important;
+          letter-spacing: var(--homepage-font-subheading-spacing) !important;
+          line-height: 1.1 !important;
+          font-variant-caps: normal !important;
+        }
+
+.hero-left p {
+          word-spacing: -0.18em !important;
+        }
+
+.info-bar,
+.info-bar div {
+          font-family: var(--homepage-font-subheading) !important;
+          font-weight: 400 !important;
+          letter-spacing: var(--homepage-font-subheading-spacing) !important;
+          line-height: 1.1 !important;
+          font-variant-caps: normal !important;
+        }
+
+.top-banner {
+          font-family: var(--homepage-font-subheading) !important;
+          font-weight: 400 !important;
+          letter-spacing: var(--homepage-font-subheading-spacing) !important;
+          line-height: 1.1 !important;
+          font-variant-caps: normal !important;
+        }
+
+.frame-option-text p:first-child {
+          font-family: var(--homepage-font-subheading) !important;
+          letter-spacing: var(--homepage-font-subheading-spacing) !important;
+          line-height: 1.1 !important;
+        }
+
+body {
+          font-family: 'Cutive Mono', monospace !important;
+        }
+
+body *,
+body *::before,
+body *::after {
+          font-weight: 400 !important;
+          letter-spacing: -0.05em !important;
+        }
+
+.footer {
+        background: #070707 !important;
+        color: #f9f2e6 !important;
+  padding: 40px 28px !important;
+        font-family: 'Cutive Mono', monospace !important;
+        font-size: 16px !important;
+        margin-top: 0 !important;
+        width: 100% !important;
+      }
+
+.footer,
+.footer * {
+        color: #f9f2e6 !important;
+      }
+
+.footer-content {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(180px, 1fr)) !important;
+        align-items: flex-start !important;
+        gap: 32px 72px !important;
+        max-width: 980px !important;
+        margin: 0 auto !important;
+      }
+
+.footer-col {
+        min-width: 0 !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 14px !important;
+      }
+
+.footer-col h3,
+.footer-title {
+        font-size: 18px !important;
+        font-weight: 400 !important;
+  margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        font-family: 'Trolleybus Trial', 'Cutive Mono', monospace !important;
+        letter-spacing: 0.05em !important;
+        line-height: 1.1 !important;
+        color: #f9f2e6 !important;
+        text-decoration: none !important;
+      }
+
+.footer-col ul {
+        list-style: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+      }
+
+.footer-col ul li {
+        margin-bottom: 0 !important;
+      }
+
+.footer a,
+.footer p,
+.footer li,
+.footer-col a,
+.footer-col p {
+        font-family: 'Cutive Mono', monospace !important;
+        font-weight: 400 !important;
+  margin-top: 0 !important;
+        letter-spacing: -0.05em !important;
+        line-height: 1.1 !important;
+        text-decoration: none !important;
+        color: #f9f2e6 !important;
+      }
+
+.footer-col p {
+        margin: 0 !important;
+      }
+
+.footer-dropdown-header,
+.footer-dropdown-content,
+.footer-dropdown-arrow {
+        display: none !important;
+      }
+
+/* Final homepage desktop header override */
+@media (min-width: 769px) {
+  .top-banner {
+    text-align: center !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1rem !important;
+    font-weight: 200 !important;
+    font-family: var(--homepage-font-subheading) !important;
+    font-variant-caps: normal !important;
+    color: #f9f2e6 !important;
+    background-color: #070707 !important;
+    border-bottom: none !important;
+    letter-spacing: var(--homepage-font-subheading-spacing) !important;
+    line-height: 1.1 !important;
+  }
+
+  header {
+    background: #ffffff !important;
+    width: 100% !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+  }
+
+  .secondary-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    height: auto !important;
+    padding: 10px 40px !important;
+  }
+
+  .header-title {
+    justify-self: start !important;
+    font-family: 'Trolleybus Trial', 'Cutive Mono', monospace !important;
+    font-size: 2.35rem !important;
+    letter-spacing: 0.05em !important;
+    line-height: 1 !important;
+    font-weight: 400 !important;
+    font-variant-caps: normal !important;
+    text-transform: none !important;
+    color: #070707 !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+  }
+
+  .nav {
+    display: flex !important;
+    gap: 40px !important;
+    justify-self: center !important;
+  }
+
+  .nav a {
+    color: #070707 !important;
+    text-decoration: none !important;
+    font-size: 1.08rem !important;
+    font-weight: 200 !important;
+    font-family: var(--homepage-font-subheading) !important;
+    font-variant-caps: normal !important;
+    text-transform: none !important;
+    letter-spacing: var(--homepage-font-subheading-spacing) !important;
+    line-height: 1 !important;
+    position: relative !important;
+    padding: 8px 4px !important;
+    transition: color 0.3s ease !important;
+  }
+
+  .nav a::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 2px !important;
+    background: #070707 !important;
+    transform: scaleX(0) !important;
+    transform-origin: center !important;
+    transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1) !important;
+  }
+
+  .nav a:hover {
+    color: #2D3748 !important;
+  }
+
+  .nav a:hover::after {
+    transform: scaleX(1) !important;
+  }
+
+  .cart-nav {
+    justify-self: end !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+  }
+
+  .cart-nav:hover svg {
+    stroke: #070707 !important;
+  }
+
+  .cart-nav:hover .cart-count {
+    color: #070707 !important;
+  }
+
+  .cart-nav svg {
+    width: 22px !important;
+    height: 22px !important;
+    stroke: #2D3748 !important;
+    stroke-width: 2 !important;
+    transition: stroke 0.2s ease !important;
+  }
+
+  .cart-nav .cart-count {
+    font-family: 'Cutive Mono', monospace !important;
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+    letter-spacing: -0.05em !important;
+    line-height: 1.1 !important;
+    font-variant-caps: normal !important;
+  }
+
+  .cart-nav .cart-count {
+    color: #2D3748 !important;
+    background: transparent !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    min-width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    transition: color 0.2s ease !important;
+  }
+}
+
+/* Desktop-only: keep mobile navigation UI hidden here. */
+
+.burger-menu,
+.legacy-burger-menu,
+.mobile-nav,
+.legacy-mobile-nav,
+.mobile-nav-overlay,
+.legacy-mobile-nav-overlay,
+.mobile-nav-close,
+.legacy-mobile-nav-close,
+.legacy-mobile-nav-toggle {
+  display: none !important;
+}
+
+button,
+.hero-button,
+.mobile-section-button,
+.frame-option-button,
+.frame-guide-section .hero-button {
+  font-family: var(--homepage-font-body) !important;
+  letter-spacing: -0.05em !important;
+}
+
+html,
+body,
+main {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+body {
+  background: #ffffff !important;
+  overflow-x: hidden !important;
+}
+
+:root {
+  --homepage-font-title: 'Trolleybus Trial', serif;
+  --homepage-font-subheading: 'NType82', sans-serif;
+  --homepage-font-body: 'Cutive Mono', monospace;
+  --homepage-font-title-spacing: 0.05em;
+  --homepage-font-subheading-spacing: 0;
+}
+
+.font-category-title {
+  font-family: var(--homepage-font-title) !important;
+  letter-spacing: var(--homepage-font-title-spacing) !important;
+}
+
+.font-category-subheading {
+  font-family: var(--homepage-font-subheading) !important;
+  letter-spacing: var(--homepage-font-subheading-spacing) !important;
+}
+
+.font-category-body {
+  font-family: var(--homepage-font-body) !important;
+}
+
+body,
+p,
+li,
+.frame-guide-section,
+.mobile-section-content,
+.frame-option,
+.frame-guide-box,
+.footer,
+.footer p,
+.footer a,
+.footer li,
+.footer-col p,
+.footer-col a,
+.footer-col li,
+.mobile-nav-close,
+.frame-option-text p:last-child,
+.quad-content p,
+.frame-guide-box p,
+.frame-guide-box li,
+.hero-section p,
+.hero-left p,
+.hero-right p {
+  font-family: var(--homepage-font-body) !important;
+}
+
+.header-title,
+h1,
+h2,
+h3,
+.frame-guide-title,
+.footer h3,
+.quad-content h2 {
+  font-family: var(--homepage-font-title) !important;
+  letter-spacing: var(--homepage-font-title-spacing) !important;
+}
+
+.top-banner,
+.cart-nav .cart-count,
+.carousel-text,
+.info-bar .info-bar-item,
+.mobile-section-content p,
+.frame-option-text p:first-child,
+.frame-option-price,
+.frame-guide-subtitle,
+.frame-guide-label,
+.frame-guide-step,
+.info-bar,
+.footer-dropdown-header {
+  font-family: var(--homepage-font-subheading) !important;
+  font-weight: 200 !important;
+  letter-spacing: var(--homepage-font-subheading-spacing) !important;
+}
+
+.frame-guide-subtitle {
+  letter-spacing: -0.01em !important;
+}
+
+.frame-guide-box h3 {
+  font-family: var(--homepage-font-title) !important;
+  font-weight: 400 !important;
+  letter-spacing: var(--homepage-font-title-spacing) !important;
+}
+
+.secondary-header .nav a,
+.nav a,
+.mobile-nav a {
+  font-family: var(--homepage-font-body) !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.05em !important;
+}
+
+.info-bar .info-bar-item {
+  font-variant-caps: normal !important;
+}
+
+button,
+.hero-button,
+.mobile-section-button,
+.frame-option-button,
+.frame-guide-section .hero-button {
+  font-family: var(--homepage-font-body) !important;
+  letter-spacing: -0.05em !important;
+}
+
+.hero-section p,
+.hero-left p,
+.hero-right p {
+  font-family: var(--homepage-font-body) !important;
+  letter-spacing: 0 !important;
+  word-spacing: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* Shared desktop header */
+header,
+.legacy-page-header {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  margin: 0 !important;
+  background: #ffffff !important;
+  color: #070707 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+}
+
+.top-banner,
+.legacy-top-banner {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-height: 40px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 8px 20px !important;
+  background: #070707 !important;
+  background-color: #070707 !important;
+  color: #f9f2e6 !important;
+  border: 0 !important;
+  text-align: center !important;
+  font-family: 'NType82', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 1rem !important;
+  font-weight: 300 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+}
+
+.secondary-header,
+.legacy-secondary-header {
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: 1fr auto 1fr !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 10px 40px !important;
+  background: #ffffff !important;
+  color: #070707 !important;
+  border: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  position: relative !important;
+  z-index: 999 !important;
+}
+
+.header-title,
+.legacy-header-title {
+  justify-self: start !important;
+  margin: 0 !important;
+  color: #070707 !important;
+  text-decoration: none !important;
+  font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 2.35rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1 !important;
+}
+
+.header-title:hover,
+.legacy-header-title:hover {
+  color: #070707 !important;
+  text-decoration: none !important;
+}
+
+.nav,
+.legacy-nav {
+  display: flex !important;
+  align-items: center !important;
+  justify-self: center !important;
+  gap: 40px !important;
+  margin: 0 !important;
+}
+
+.nav a,
+.legacy-nav a {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 8px 4px !important;
+  color: #070707 !important;
+  text-decoration: none !important;
+  font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 1.08rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1 !important;
+  transition: color 0.3s ease !important;
+}
+
+.nav a::after,
+.legacy-nav a::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 2px !important;
+  background: #070707 !important;
+  transform: scaleX(0) !important;
+  transform-origin: center !important;
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1) !important;
+}
+
+.nav a:hover,
+.legacy-nav a:hover {
+  color: #2D3748 !important;
+}
+
+.nav a:hover::after,
+.legacy-nav a:hover::after {
+  transform: scaleX(1) !important;
+}
+
+.cart-nav,
+.legacy-cart-nav {
+  justify-self: end !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  color: #2D3748 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.cart-nav svg,
+.legacy-cart-nav svg {
+  width: 22px !important;
+  height: 22px !important;
+  stroke: #2D3748 !important;
+  stroke-width: 2 !important;
+  transition: stroke 0.2s ease !important;
+}
+
+.cart-count,
+.cart-nav .cart-count,
+.legacy-cart-nav .cart-count {
+  min-width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  color: #2D3748 !important;
+  background: transparent !important;
+  font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-size: 0.9rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1.1 !important;
+  transition: color 0.2s ease !important;
+}
+
+.cart-nav:hover,
+.legacy-cart-nav:hover,
+.cart-nav:hover .cart-count,
+.legacy-cart-nav:hover .cart-count {
+  color: #070707 !important;
+}
+
+.cart-nav:hover svg,
+.legacy-cart-nav:hover svg {
+  stroke: #070707 !important;
+}
+
+.burger-menu,
+.legacy-burger-menu,
+.mobile-nav,
+.legacy-mobile-nav,
+.mobile-nav-overlay,
+.legacy-mobile-nav-overlay,
+.mobile-nav-close,
+.legacy-mobile-nav-close,
+.legacy-mobile-nav-toggle {
+  display: none !important;
+}
+
+/* Shared desktop footer */
+.footer {
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  margin-top: auto !important;
+  padding: 40px 28px !important;
+  background: #070707 !important;
+  color: #f9f2e6 !important;
+  border: 0 !important;
+  font-size: 16px !important;
+}
+
+.footer,
+.footer * {
+  color: #f9f2e6 !important;
+}
+
+.footer-content {
+  box-sizing: border-box !important;
+  width: min(980px, 100%) !important;
+  max-width: 980px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(180px, 1fr)) !important;
+  align-items: flex-start !important;
+  gap: 32px 72px !important;
+}
+
+.footer-col {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  text-align: center !important;
+}
+
+.footer-col h3,
+.footer h3,
+.footer-title {
+  margin: 0 !important;
+  color: #f9f2e6 !important;
+  font-family: 'Trolleybus Trial' !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1.1 !important;
+  text-decoration: none !important;
+}
+
+.footer-col ul {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.footer-col li {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.footer a,
+.footer p,
+.footer li,
+.footer-col a,
+.footer-col p {
+  margin: 0 !important;
+  color: #f9f2e6 !important;
+  font-family: 'Cutive Mono' !important;
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1.35 !important;
+  text-decoration: none !important;
+}
+
+.footer-col a:hover {
+  color: #f9f2e6 !important;
+  font-weight: 400 !important;
+  text-decoration: none !important;
+}
+
+.footer-dropdown-header,
+.footer-dropdown-content,
+.footer-dropdown-arrow {
+  display: none !important;
+}
+
+/* Shared desktop body font spacing */
+:root {
+  --body-font-spacing: -0.05em;
+}
+
+body,
+p,
+li,
+label,
+input,
+select,
+textarea,
+.nav a,
+.legacy-nav a,
+.cart-count,
+.cart-nav .cart-count,
+.legacy-cart-nav .cart-count,
+.footer a,
+.footer p,
+.footer li,
+.footer-col a,
+.footer-col p {
+  letter-spacing: var(--body-font-spacing) !important;
+}
+
+/* Shared desktop title and subheading spacing */
+:root {
+  --title-font-spacing: 0.05em;
+  --subheading-font-spacing: 0;
+  --homepage-font-title-spacing: var(--title-font-spacing);
+  --homepage-font-subheading-spacing: var(--subheading-font-spacing);
+}
+
+h1,
+h2,
+h3,
+.header-title,
+.legacy-header-title,
+.footer-col h3,
+.footer h3,
+.footer-title,
+.intro h2,
+.price-item h3,
+.about-intro h1,
+.about-panel-copy h2,
+.editorial-index,
+.editorial-heading h1,
+.editorial-card h2,
+.section-header h2,
+.card-body h3,
+.stat-number,
+.frame-guide-title,
+.frame-guide-box h3,
+.text-content h2,
+.upload-container h2,
+.cart-header h2,
+.cart-item-title {
+  letter-spacing: var(--title-font-spacing) !important;
+}
+
+.top-banner,
+.legacy-top-banner,
+.info-bar,
+.info-bar div,
+.hero-left h1,
+.hero-section.reverse .hero-right h1,
+.mobile-section-content h2,
+[class*="kicker"],
+[class*="label"],
+[class*="badge"],
+[class*="tag"],
+[class*="eyebrow"],
+[class*="subheading"],
+[class*="subtitle"] {
+  letter-spacing: var(--subheading-font-spacing) !important;
+}

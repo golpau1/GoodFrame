@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Management - Good Frame Admin</title>
+    <link rel="stylesheet" href="../Stripe_Checkout/Views/admin-desktop.css?v=20260525-typography" media="screen and (min-width: 769px)">
+    <link rel="stylesheet" href="../Stripe_Checkout/Views/admin-mobile.css?v=20260525-typography" media="screen and (max-width: 768px)">
+</head>
+<body>
+    <div class="admin-header">
+        <h1>🖼️ Good Frame - Order Management</h1>
+        <p>View completed orders with unique codes for fulfillment</p>
+    </div>
+    
+    <button class="refresh-btn" onclick="window.location.reload()">🔄 Refresh Orders</button>
+    
+    <div class="orders-container">
+        <div id="ordersContent">
+            <!-- Orders will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        async function loadOrders() {
+            try {
+                const response = await fetch('/admin/orders');
+                const orders = await response.json();
+                
+                const ordersContent = document.getElementById('ordersContent');
+                
+                if (!orders || orders.length === 0) {
+                    ordersContent.innerHTML = '<div class="no-orders">No completed orders found. Orders will appear here after payment completion.</div>';
+                    return;
+                }
+                
+                ordersContent.innerHTML = orders.map(order => `
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div class="order-id">Order #${order.stripeSessionId.slice(-8)}</div>
+                            <div class="order-status">${order.paymentStatus.toUpperCase()}</div>
+                        </div>
+                        
+                        <div class="order-details">
+                            <div class="detail-group">
+                                <div class="detail-label">Customer Info</div>
+                                <div class="detail-value">
+                                    ${order.customerName || 'N/A'}<br>
+                                    ${order.customerEmail || 'N/A'}
+                                </div>
+                            </div>
+                            
+                            <div class="detail-group">
+                                <div class="detail-label">Order Total</div>
+                                <div class="detail-value">
+                                    $${order.totalAmount.toFixed(2)} ${order.currency.toUpperCase()}<br>
+                                    <small>Placed: ${new Date(order.createdAt).toLocaleString()}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="order-items">
+                            <div class="items-header">📦 Items & Unique Codes:</div>
+                            ${order.items.map(item => `
+                                <div class="item">
+                                    <div class="item-name">${item.finalProductName}</div>
+                                    <div class="unique-code">🆔 CODE: #${item.uniqueCode}</div>
+                                    <div class="file-info">
+                                        📁 Find files: <strong>${item.uniqueCode}_original_*</strong> and <strong>${item.uniqueCode}_thumbnail_*</strong>
+                                    </div>
+                                    <div class="item-details">
+                                        ${item.size} | ${item.orientation} | ${item.frameColor} Frame | ${item.border} | Qty: ${item.quantity} | $${item.amount.toFixed(2)}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                document.getElementById('ordersContent').innerHTML = '<div class="no-orders">Error loading orders. Please check the console.</div>';
+            }
+        }
+        
+        // Load orders when page loads
+        document.addEventListener('DOMContentLoaded', loadOrders);
+    </script>
+</body>
+</html>
