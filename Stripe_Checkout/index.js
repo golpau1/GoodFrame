@@ -6,16 +6,27 @@ const fs = require('fs')
 
 const app = express()
 const baseUrl = (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
+const siteRoot = path.join(__dirname, '..')
+const homepagePath = path.join(siteRoot, 'index.html')
+
+app.get(['/', '/index.html', '/home'], (req, res) => {
+    res.sendFile(homepagePath)
+})
+
+app.get('/Homepage/Homepage.html', (req, res) => {
+    res.redirect('/index.html')
+})
 
 // Serve static files from the parent directory (Good Frame 2)
-app.use(express.static(path.join(__dirname, '..')))
+app.use(express.static(siteRoot))
 
 // FIX: Increase the JSON body limit to accept larger payloads (e.g., with image data)
 app.use(express.json({ limit: '100mb' }))
 
+app.set('views', path.join(__dirname, 'Views'))
 app.set('view engine', 'ejs')
 
-app.get('/', (req, res) => {
+app.get(['/cart', '/cart.html'], (req, res) => {
     res.render('index.ejs')
 })
 
@@ -56,7 +67,7 @@ app.post('/create-checkout-session', async (req, res) => {
                 allowed_countries: ['US', 'BR', 'AU']
             },
             success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/cancel`,
+            cancel_url: `${baseUrl}/cart`,
             // Add additional configuration to ensure URLs are used
             payment_method_types: ['card'],
             billing_address_collection: 'required'
@@ -79,8 +90,8 @@ app.get('/complete', (req, res) => {
 })
 
 app.get('/cancel', (req, res) => {
-    // Redirects to the root page if the user cancels
-    res.redirect('/')
+    // Redirects back to the cart if the user cancels
+    res.redirect('/cart')
 })
 
 app.listen(3000)
