@@ -5,10 +5,19 @@ const path = require('path')
 const fs = require('fs')
 
 const app = express()
-const baseUrl = (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
+const defaultBaseUrl = process.env.NODE_ENV === 'production'
+    ? 'https://golpau1.github.io/GoodFrame'
+    : 'http://localhost:3000'
+const baseUrl = (process.env.BASE_URL || defaultBaseUrl).replace(/\/$/, '')
 const siteRoot = path.join(__dirname, '..')
 const homepagePath = path.join(siteRoot, 'index.html')
 const cartPath = path.join(siteRoot, 'cart.html')
+const priceBySize = Object.freeze({
+    '300x200mm': 9900,
+    '600x400mm': 23500,
+    '900x600mm': 35000,
+    '1200x800mm': 70000
+})
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || [
     'http://localhost:3000',
     'http://localhost:5500',
@@ -83,32 +92,107 @@ app.get('/Views/success.html', (req, res) => {
     res.redirect('/success.html' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''));
 })
 
-// The route is updated to match the front-end fetch request
+function getRequestedSize(item) {
+    if (typeof item?.size === 'string' && priceBySize[item.size]) {
+        return item.size
+    }
+
+    const productName = item?.price_data?.product_data?.name
+    if (typeof productName !== 'string') {
+        return null
+    }
+
+    return Object.keys(priceBySize).find(size => productName.includes(size)) || null
+}
+
+function getItemDescription(item) {
+    const directDescription = [
+        item?.orientation,
+        item?.frameColor ? `${item.frameColor} Frame` : '',
+        item?.border
+    ].filter(Boolean).join(' | ')
+    const legacyDescription = item?.price_data?.product_data?.description
+    const description = directDescription || legacyDescription || 'Custom framed print'
+
+    return String(description).replace(/[\r\n]+/g, ' ').slice(0, 200)
+}
+
+function buildStripeLineItems(items) {
+    if (!Array.isArray(items) || items.length === 0 || items.length > 20) {
+        throw new Error('Cart must contain between 1 and 20 items')
+    }
+
+    const lineItems = []
+    let subtotal = 0
+
+    items.forEach(item => {
+        const productName = item?.price_data?.product_data?.name
+        if (productName === 'Shipping') {
+            return
+        }
+
+        const size = getRequestedSize(item)
+        if (!size) {
+            throw new Error('One or more cart items has an invalid frame size')
+        }
+
+        const requestedQuantity = Number(item?.quantity)
+        const quantity = Number.isInteger(requestedQuantity)
+            ? Math.min(Math.max(requestedQuantity, 1), 10)
+            : 1
+        const unitAmount = priceBySize[size]
+        subtotal += unitAmount * quantity
+
+        lineItems.push({
+            price_data: {
+                currency: 'aud',
+                product_data: {
+                    name: `Print & Frame - ${size}`,
+                    description: getItemDescription(item)
+                },
+                unit_amount: unitAmount
+            },
+            quantity
+        })
+    })
+
+    if (lineItems.length === 0) {
+        throw new Error('Cart does not contain any purchasable items')
+    }
+
+    if (subtotal <= 10000) {
+        lineItems.push({
+            price_data: {
+                currency: 'aud',
+                product_data: {
+                    name: 'Shipping'
+                },
+                unit_amount: 1500
+            },
+            quantity: 1
+        })
+    }
+
+    return lineItems
+}
+
 app.post('/create-checkout-session', async (req, res) => {
     try {
-
+        const lineItems = buildStripeLineItems(req.body.items)
         const session = await stripe.checkout.sessions.create({
-            // The line items are now taken from the request body
-            line_items: req.body.items,
+            line_items: lineItems,
             mode: 'payment',
             shipping_address_collection: {
-                // You can customize the allowed countries as needed
                 allowed_countries: ['US', 'BR', 'AU']
             },
-            success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/cart`,
-            // Add additional configuration to ensure URLs are used
-            payment_method_types: ['card'],
+            success_url: `${baseUrl}/Checkout/success.html?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${baseUrl}/cart.html`,
             billing_address_collection: 'required'
         })
 
-
-        // Respond with the session ID in JSON format
-        res.json({ id: session.id })
-
+        res.json({ id: session.id, url: session.url })
     } catch (error) {
         console.error('Stripe Error:', error);
-        // Send the actual error message for easier debugging
         res.status(500).json({ error: error.message || 'Failed to create session' });
     }
 })

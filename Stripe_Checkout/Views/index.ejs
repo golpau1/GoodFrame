@@ -17,11 +17,6 @@
     <link rel="stylesheet" href="../Stripe_Checkout/mobile.css?v=20260427-pricing-footer-layout" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260608-mobile-footer">
     
-    <script src="https://js.stripe.com/v3/"></script>
-
-
-
-
 </head>
 
 <body>
@@ -109,7 +104,6 @@
         </div>
     </footer>
     
-    <script src="https://js.stripe.com/v3/"></script>
     <script>
         (() => {
             function updateCartCount() {
@@ -170,9 +164,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             // ❗️ IMPORTANT: Replace with your actual Stripe publishable key
-            const stripe = Stripe('pk_test_51PNafYBqoMGy9EwI789lDswZqJc9Mkiylirtf3DPedVFhG0ak67hnE30Eud7z6kN1Z69ZCZQ0t8iSD76ZfwPOJxO00qTMWp1Ga');
             const checkoutApiBaseUrl = (window.GOOD_FRAME_CHECKOUT_API_BASE_URL || '').trim().replace(/\/$/, '');
-            const stripePaymentLink = 'https://buy.stripe.com/8x29AScrx3OWcYq3Zi2oE04';
 
             let visualCartItems = [];
 
@@ -388,20 +380,8 @@
 
                 const checkoutButton = document.querySelector(".checkout-button");
                 if (checkoutButton) {
-                    checkoutButton.addEventListener("click", handlePaymentLinkCheckout);
+                    checkoutButton.addEventListener("click", handleCheckout);
                 }
-            }
-
-            function handlePaymentLinkCheckout() {
-                const storedCart = localStorage.getItem('myAppVisualCart');
-                const cart = storedCart ? JSON.parse(storedCart) : [];
-
-                if (cart.length === 0) {
-                    alert("Your cart is empty. Please add items before checking out.");
-                    return;
-                }
-
-                window.location.assign(stripePaymentLink);
             }
 
             async function handleCheckout() {
@@ -478,18 +458,12 @@
 
                     const session = await response.json();
 
-                    if (!session.id) {
+                    if (!session.url) {
                         alert("Could not create checkout session.");
                         return;
                     }
 
-                    const result = await stripe.redirectToCheckout({
-                        sessionId: session.id,
-                    });
-
-                    if (result.error) {
-                        alert(result.error.message);
-                    }
+                    window.location.assign(session.url);
                 } catch (error) {
                     console.error('Error:', error);
                     alert('An error occurred during checkout. Please try again.');
