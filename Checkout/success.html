@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Checkout/desktop.css?v=20260601-success-titlecase" media="screen and (min-width: 901px)">
     <link rel="stylesheet" href="../Checkout/mobile.css?v=20260601-success-titlecase" media="screen and (max-width: 900px)">
-    <link rel="stylesheet" href="../Shared/logo.css?v=20260608-mobile-header">
+    <link rel="stylesheet" href="../Shared/logo.css?v=20260608-mobile-footer">
     <style>
         @font-face {
             font-family: 'Girthquake';
@@ -160,20 +160,40 @@
             display: inline !important;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
             .footer {
                 padding: 32px 20px 36px !important;
+                text-align: center !important;
             }
 
             .footer .footer-content {
                 width: min(100%, 560px) !important;
                 grid-template-columns: 1fr !important;
                 gap: 24px !important;
+                justify-items: center !important;
+                text-align: center !important;
             }
 
             .footer .footer-col {
-                align-items: flex-start !important;
-                text-align: left !important;
+                width: 100% !important;
+                max-width: 340px !important;
+                margin: 0 auto !important;
+                align-items: center !important;
+                text-align: center !important;
+            }
+
+            .footer .footer-col h3,
+            .footer .footer-title,
+            .footer .footer-col ul,
+            .footer .footer-col li,
+            .footer .footer-col p,
+            .footer .footer-col a {
+                text-align: center !important;
+            }
+
+            .footer .footer-col ul {
+                width: 100% !important;
+                align-items: center !important;
             }
 
             .success-container {
