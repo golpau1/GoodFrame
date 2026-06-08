@@ -8,6 +8,7 @@ const app = express()
 const baseUrl = (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
 const siteRoot = path.join(__dirname, '..')
 const homepagePath = path.join(siteRoot, 'index.html')
+const cartPath = path.join(siteRoot, 'cart.html')
 
 app.get(['/', '/index.html', '/home'], (req, res) => {
     res.sendFile(homepagePath)
@@ -27,7 +28,7 @@ app.set('views', path.join(__dirname, 'Views'))
 app.set('view engine', 'ejs')
 
 app.get(['/cart', '/cart.html'], (req, res) => {
-    res.render('index.ejs')
+    res.sendFile(cartPath)
 })
 
 // Serve the success page
