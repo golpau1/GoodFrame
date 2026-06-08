@@ -172,6 +172,7 @@
             // ❗️ IMPORTANT: Replace with your actual Stripe publishable key
             const stripe = Stripe('pk_test_51PNafYBqoMGy9EwI789lDswZqJc9Mkiylirtf3DPedVFhG0ak67hnE30Eud7z6kN1Z69ZCZQ0t8iSD76ZfwPOJxO00qTMWp1Ga');
             const checkoutApiBaseUrl = (window.GOOD_FRAME_CHECKOUT_API_BASE_URL || '').trim().replace(/\/$/, '');
+            const stripePaymentLink = 'https://buy.stripe.com/8x29AScrx3OWcYq3Zi2oE04';
 
             let visualCartItems = [];
 
@@ -387,8 +388,20 @@
 
                 const checkoutButton = document.querySelector(".checkout-button");
                 if (checkoutButton) {
-                    checkoutButton.addEventListener("click", handleCheckout);
+                    checkoutButton.addEventListener("click", handlePaymentLinkCheckout);
                 }
+            }
+
+            function handlePaymentLinkCheckout() {
+                const storedCart = localStorage.getItem('myAppVisualCart');
+                const cart = storedCart ? JSON.parse(storedCart) : [];
+
+                if (cart.length === 0) {
+                    alert("Your cart is empty. Please add items before checking out.");
+                    return;
+                }
+
+                window.location.assign(stripePaymentLink);
             }
 
             async function handleCheckout() {
