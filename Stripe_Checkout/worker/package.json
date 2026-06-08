@@ -1,0 +1,11 @@
+{
+  "name": "good-frame-checkout-worker",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.98.0"
+  }
+}

@@ -163,8 +163,11 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // ❗️ IMPORTANT: Replace with your actual Stripe publishable key
-            const checkoutApiBaseUrl = (window.GOOD_FRAME_CHECKOUT_API_BASE_URL || '').trim().replace(/\/$/, '');
+            // A runtime override can point checkout at a different deployed API.
+            const checkoutApiBaseUrl = (
+                window.GOOD_FRAME_CHECKOUT_API_BASE_URL ||
+                'https://good-frame-checkout.loganwallace049.workers.dev'
+            ).trim().replace(/\/$/, '');
 
             let visualCartItems = [];
 
