@@ -171,8 +171,43 @@
         document.addEventListener("DOMContentLoaded", () => {
             // ❗️ IMPORTANT: Replace with your actual Stripe publishable key
             const stripe = Stripe('pk_test_51PNafYBqoMGy9EwI789lDswZqJc9Mkiylirtf3DPedVFhG0ak67hnE30Eud7z6kN1Z69ZCZQ0t8iSD76ZfwPOJxO00qTMWp1Ga');
+            const checkoutApiBaseUrl = (window.GOOD_FRAME_CHECKOUT_API_BASE_URL || '').trim().replace(/\/$/, '');
 
             let visualCartItems = [];
+
+            function getCheckoutSessionEndpoint() {
+                if (checkoutApiBaseUrl) {
+                    return `${checkoutApiBaseUrl}/create-checkout-session`;
+                }
+
+                const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+                if (window.location.protocol === 'file:' || (isLocalHost && window.location.port !== '3000')) {
+                    return 'http://localhost:3000/create-checkout-session';
+                }
+
+                if (isLocalHost || window.location.port === '3000') {
+                    return '/create-checkout-session';
+                }
+
+                return '';
+            }
+
+            async function readCheckoutError(response) {
+                const fallback = response.statusText || 'Unable to create checkout session';
+                const text = await response.text();
+
+                if (!text) {
+                    return fallback;
+                }
+
+                try {
+                    const errorData = JSON.parse(text);
+                    return errorData.error || fallback;
+                } catch {
+                    return fallback;
+                }
+            }
 
             function saveVisualCartToLocalStorage() {
                 localStorage.setItem('myAppVisualCart', JSON.stringify(visualCartItems));
@@ -406,7 +441,14 @@
                 }
 
                 try {
-                    const response = await fetch('/create-checkout-session', {
+                    const checkoutEndpoint = getCheckoutSessionEndpoint();
+
+                    if (!checkoutEndpoint) {
+                        alert('Checkout is not connected on the live site yet. Please deploy the Stripe checkout server and set GOOD_FRAME_CHECKOUT_API_BASE_URL to its URL.');
+                        return;
+                    }
+
+                    const response = await fetch(checkoutEndpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -416,8 +458,8 @@
 
                     // Check if the server responded with an error before parsing JSON
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        alert(`Server error: ${errorData.error || response.statusText}`);
+                        const errorMessage = await readCheckoutError(response);
+                        alert(`Server error: ${errorMessage}`);
                         return;
                     }
 

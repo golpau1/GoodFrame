@@ -9,6 +9,34 @@ const baseUrl = (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/,
 const siteRoot = path.join(__dirname, '..')
 const homepagePath = path.join(siteRoot, 'index.html')
 const cartPath = path.join(siteRoot, 'cart.html')
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || [
+    'http://localhost:3000',
+    'http://localhost:5500',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5500',
+    'https://golpau1.github.io'
+].join(','))
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean)
+
+app.use((req, res, next) => {
+    const origin = req.headers.origin
+
+    if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+        res.setHeader('Access-Control-Allow-Origin', origin)
+        res.setHeader('Vary', 'Origin')
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204)
+    }
+
+    next()
+})
 
 app.get(['/', '/index.html', '/home'], (req, res) => {
     res.sendFile(homepagePath)
@@ -95,4 +123,7 @@ app.get('/cancel', (req, res) => {
     res.redirect('/cart')
 })
 
-app.listen(3000)
+const port = process.env.PORT || 3000
+app.listen(port, () => {
+    console.log(`Stripe checkout server listening on port ${port}`)
+})
