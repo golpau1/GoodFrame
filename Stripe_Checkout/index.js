@@ -93,16 +93,45 @@ app.get('/Views/success.html', (req, res) => {
 })
 
 function getRequestedSize(item) {
-    if (typeof item?.size === 'string' && priceBySize[item.size]) {
-        return item.size
+    const values = [
+        item?.size,
+        item?.price_data?.product_data?.name
+    ]
+
+    for (const value of values) {
+        if (typeof value !== 'string') {
+            continue
+        }
+
+        const dimensions = value
+            .toLowerCase()
+            .replace(/[×*]/g, 'x')
+            .match(/(\d+)\s*x\s*(\d+)\s*mm/)
+
+        if (!dimensions) {
+            continue
+        }
+
+        const width = Number(dimensions[1])
+        const height = Number(dimensions[2])
+        const size = Object.keys(priceBySize).find(candidate => {
+            const [canonicalWidth, canonicalHeight] = candidate
+                .replace('mm', '')
+                .split('x')
+                .map(Number)
+
+            return (
+                (width === canonicalWidth && height === canonicalHeight) ||
+                (width === canonicalHeight && height === canonicalWidth)
+            )
+        })
+
+        if (size) {
+            return size
+        }
     }
 
-    const productName = item?.price_data?.product_data?.name
-    if (typeof productName !== 'string') {
-        return null
-    }
-
-    return Object.keys(priceBySize).find(size => productName.includes(size)) || null
+    return null
 }
 
 function getItemDescription(item) {

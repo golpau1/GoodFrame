@@ -43,6 +43,46 @@ function cleanText(value, fallback) {
   return text.replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
 }
 
+function getLegacyProductName(item) {
+  const productName = item?.price_data?.product_data?.name;
+  return typeof productName === 'string' ? productName : '';
+}
+
+function normalizeRequestedSize(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const dimensions = value
+    .toLowerCase()
+    .replace(/[×*]/g, 'x')
+    .match(/(\d+)\s*x\s*(\d+)\s*mm/);
+
+  if (!dimensions) {
+    return null;
+  }
+
+  const width = Number(dimensions[1]);
+  const height = Number(dimensions[2]);
+
+  return Object.keys(PRICE_BY_SIZE).find(size => {
+    const [canonicalWidth, canonicalHeight] = size
+      .replace('mm', '')
+      .split('x')
+      .map(Number);
+
+    return (
+      (width === canonicalWidth && height === canonicalHeight) ||
+      (width === canonicalHeight && height === canonicalWidth)
+    );
+  }) || null;
+}
+
+function getRequestedSize(item) {
+  return normalizeRequestedSize(item?.size) ||
+    normalizeRequestedSize(getLegacyProductName(item));
+}
+
 function buildLineItems(items) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 20) {
     throw new Error('Cart must contain between 1 and 20 items');
@@ -52,7 +92,11 @@ function buildLineItems(items) {
   let subtotal = 0;
 
   items.forEach(item => {
-    const size = typeof item?.size === 'string' ? item.size : '';
+    if (getLegacyProductName(item).trim().toLowerCase() === 'shipping') {
+      return;
+    }
+
+    const size = getRequestedSize(item);
     const unitAmount = PRICE_BY_SIZE[size];
 
     if (!unitAmount) {
@@ -77,6 +121,10 @@ function buildLineItems(items) {
       quantity
     });
   });
+
+  if (lineItems.length === 0) {
+    throw new Error('Cart does not contain any purchasable items');
+  }
 
   if (subtotal <= 10000) {
     lineItems.push({

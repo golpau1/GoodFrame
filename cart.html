@@ -399,42 +399,13 @@
                     return;
                 }
 
-                const line_items = cart.map(item => {
-                    // Update product name for Stripe checkout and handle various formats
-                    let displayName = item.productName;
-                    if (displayName && displayName.includes("Print with Frame")) {
-                        displayName = displayName.replace("Print with Frame", "Print & Frame");
-                    } else if (displayName === "Print With Frame") {
-                        displayName = "Print & Frame";
-                    }
-                    return {
-                        price_data: {
-                            currency: 'aud',
-                            product_data: {
-                                name: `${displayName} - ${item.size}`,
-                                description: `${item.orientation} | ${item.frameColor} Frame | ${item.border}`,
-                                // ✅ FIX: This line is removed to prevent the 500 server error
-                                // images: [item.image], 
-                            },
-                            unit_amount: (item.price || 0) * 100,
-                        },
-                        quantity: 1,
-                    };
-                });
-                
-                const subtotal = cart.reduce((sum, item) => sum + (item.price || 0), 0);
-                if (subtotal <= 100) {
-                    line_items.push({
-                        price_data: {
-                            currency: 'aud',
-                            product_data: {
-                                name: 'Shipping',
-                            },
-                            unit_amount: 15 * 100,
-                        },
-                        quantity: 1,
-                    });
-                }
+                const checkoutItems = cart.map(item => ({
+                    size: item.size,
+                    orientation: item.orientation,
+                    frameColor: item.frameColor,
+                    border: item.border,
+                    quantity: 1,
+                }));
 
                 try {
                     const checkoutEndpoint = getCheckoutSessionEndpoint();
@@ -449,7 +420,7 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ items: line_items }),
+                        body: JSON.stringify({ items: checkoutItems }),
                     });
 
                     // Check if the server responded with an error before parsing JSON
