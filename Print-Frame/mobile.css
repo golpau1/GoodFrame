@@ -5568,24 +5568,17 @@ footer.footer .footer-content,
   }
 
   #cropperOverlay .cropper-top-controls {
-    display: flex !important;
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: 48px !important;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
     margin: 0 !important;
-    padding: 0 34px !important;
-    gap: 10px !important;
-    justify-content: center !important;
-    align-items: center !important;
+    padding: 0 !important;
+    gap: 0 !important;
   }
 
   #cropperOverlay .zoom-control {
-    width: 100% !important;
-    min-width: 0 !important;
-    padding: 10px 14px !important;
-    border-radius: 8px !important;
-    gap: 12px !important;
+    display: none !important;
   }
 
   #cropperOverlay .zoom-control label {
@@ -5593,10 +5586,11 @@ footer.footer .footer-content,
   }
 
   #cropperOverlay .cropper-image-container {
-    flex: 1 1 auto !important;
+    flex: 1 1 0 !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
+    max-height: none !important;
     margin: 0 !important;
     border-radius: 8px !important;
   }

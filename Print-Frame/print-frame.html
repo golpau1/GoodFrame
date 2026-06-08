@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260608-no-crop-slider" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260608-no-crop-slider" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260608-cropper-layout">
 
 
@@ -115,14 +115,6 @@
         <div id="cropperContainer">
             <button id="cropperCancelButton" type="button" aria-label="Cancel crop" title="Cancel crop">x</button>
             <div id="cropperResizeHandle" aria-hidden="true"></div>
-            <!-- Top Button Row -->
-            <div class="cropper-top-controls">
-                <div class="zoom-control">
-                    <label for="zoomSlider">Crop Size</label>
-                    <input type="range" id="zoomSlider" min="0.8" max="1.0" step="0.0025" value="1.0" />
-                </div>
-            </div>
-            
             <!-- Image Container -->
             <div class="cropper-image-container">
                 <div class="cropper-image-wrapper">
@@ -754,50 +746,14 @@
                 };
             }
             
-            // ✅ CROP SIZE SLIDER: Reset function
+            // Reset cropper to the default crop area
             function resetCropper() {
                 if (!cropper) return;
                 
                 cropper.reset();
                 
-                // Reset crop size slider
-                const zoomSlider = document.getElementById('zoomSlider');
-                zoomSlider.value = INITIAL_CROP_BOX_SCALE;
                 scheduleCropBoxScale(INITIAL_CROP_BOX_SCALE);
                 
-            }
-            
-            // ✅ CROP SIZE SLIDER: Setup crop size slider functionality
-            function setupZoomSlider() {
-                const zoomSlider = document.getElementById('zoomSlider');
-                
-                if (!zoomSlider) {
-                    console.error('🚨 SLIDER: Slider element not found!', {zoomSlider});
-                    return;
-                }
-                zoomSlider.addEventListener('input', function() {
-                    
-                    if (!cropper) {
-                        return;
-                    }
-                    
-                    const value = clampCropBoxScale(parseFloat(this.value));
-                    this.value = value;
-                    scheduleCropBoxScale(value);
-                });
-                
-                // Reset crop size when slider is double-clicked
-                zoomSlider.addEventListener('dblclick', function() {
-                    this.value = INITIAL_CROP_BOX_SCALE;
-                    this.dispatchEvent(new Event('input'));
-                });
-            }
-            
-            // Initialize crop size slider when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', setupZoomSlider);
-            } else {
-                setupZoomSlider();
             }
             
             const priceMapping = {

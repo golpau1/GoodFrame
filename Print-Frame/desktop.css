@@ -3217,29 +3217,24 @@ h3,
 }
 
 #cropperOverlay .cropper-top-controls {
-  display: flex !important;
-  flex: 0 0 auto !important;
-  width: 100% !important;
-  height: auto !important;
-  min-height: 46px !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
   margin: 0 !important;
-  padding: 0 38px !important;
-  gap: 12px !important;
-  justify-content: center !important;
-  align-items: center !important;
+  padding: 0 !important;
+  gap: 0 !important;
 }
 
 #cropperOverlay .zoom-control {
-  width: min(100%, 360px) !important;
-  min-width: 0 !important;
-  padding: 10px 16px !important;
-  border-radius: 8px !important;
+  display: none !important;
 }
 
 #cropperOverlay .cropper-image-container {
-  flex: 1 1 auto !important;
+  flex: 1 1 0 !important;
   width: 100% !important;
   min-height: 0 !important;
+  max-height: none !important;
   margin: 0 !important;
   border-radius: 10px !important;
 }
