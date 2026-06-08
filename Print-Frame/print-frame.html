@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css?v=20260608-no-crop-slider" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css?v=20260608-no-crop-slider" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260608-cart-toast" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260608-cart-toast" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260608-cropper-layout">
 
 
@@ -149,6 +149,11 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div id="addToCartToast" class="add-cart-toast" role="status" aria-live="polite" aria-atomic="true">
+        <span>Added to cart</span>
+        <a href="../cart.html">View cart</a>
     </div>
 
     <section class="product-info-section">
@@ -1079,6 +1084,18 @@
                 }
             }
 
+            let addToCartToastTimer;
+            function showAddToCartToast() {
+                const toast = document.getElementById("addToCartToast");
+                if (!toast) return;
+
+                window.clearTimeout(addToCartToastTimer);
+                toast.classList.add("is-visible");
+                addToCartToastTimer = window.setTimeout(() => {
+                    toast.classList.remove("is-visible");
+                }, 2800);
+            }
+
             loadVisualCartFromLocalStorage();
             updateCartUI();
 
@@ -1641,6 +1658,7 @@
                             visualCartItems.push(baseVisualItem);
                             saveVisualCartToLocalStorage();
                             updateCartUI();
+                            showAddToCartToast();
 
                             // ✅ MOBILE: Scroll to top after adding to cart
                             if (window.innerWidth <= 768) {
