@@ -317,16 +317,81 @@
                     : INITIAL_CROP_BOX_SCALE;
             }
 
-            function getCropBoxDataForScale(cropperInstance, scale) {
+            function fitCropperCanvasToContainer(cropperInstance) {
+                if (!cropperInstance) return null;
+
                 const containerData = cropperInstance.getContainerData();
+                const imageData = cropperInstance.getImageData();
                 const containerWidth = containerData.width || window.innerWidth;
                 const containerHeight = containerData.height || window.innerHeight;
+                const naturalWidth = imageData.naturalWidth || imageData.width;
+                const naturalHeight = imageData.naturalHeight || imageData.height;
+
+                if (
+                    containerWidth <= 0 ||
+                    containerHeight <= 0 ||
+                    naturalWidth <= 0 ||
+                    naturalHeight <= 0
+                ) {
+                    return null;
+                }
+
+                const imageAspectRatio = naturalWidth / naturalHeight;
+                const containerAspectRatio = containerWidth / containerHeight;
+                let width;
+                let height;
+
+                if (containerAspectRatio > imageAspectRatio) {
+                    height = containerHeight;
+                    width = height * imageAspectRatio;
+                } else {
+                    width = containerWidth;
+                    height = width / imageAspectRatio;
+                }
+
+                const canvasData = {
+                    left: (containerWidth - width) / 2,
+                    top: (containerHeight - height) / 2,
+                    width,
+                    height
+                };
+
+                cropperInstance.setCanvasData(canvasData);
+                return canvasData;
+            }
+
+            function getAvailableCropAreaData(cropperInstance) {
+                const containerData = cropperInstance.getContainerData();
+                const canvasData = cropperInstance.getCanvasData ? cropperInstance.getCanvasData() : {};
+                const fallbackWidth = containerData.width || window.innerWidth;
+                const fallbackHeight = containerData.height || window.innerHeight;
+                const width = Number.isFinite(canvasData.width) && canvasData.width > 0
+                    ? canvasData.width
+                    : fallbackWidth;
+                const height = Number.isFinite(canvasData.height) && canvasData.height > 0
+                    ? canvasData.height
+                    : fallbackHeight;
+
+                return {
+                    left: Number.isFinite(canvasData.left) ? canvasData.left : 0,
+                    top: Number.isFinite(canvasData.top) ? canvasData.top : 0,
+                    width,
+                    height
+                };
+            }
+
+            function getCropBoxDataForScale(cropperInstance, scale) {
+                const cropAreaData = getAvailableCropAreaData(cropperInstance);
+                const containerWidth = cropAreaData.width;
+                const containerHeight = cropAreaData.height;
                 const aspectRatio = cropperInstance.options.aspectRatio || 1;
                 const maxWidth = containerWidth * scale;
                 const maxHeight = containerHeight * scale;
 
                 if (maxWidth / aspectRatio <= maxHeight) {
                     return {
+                        areaLeft: cropAreaData.left,
+                        areaTop: cropAreaData.top,
                         width: maxWidth,
                         height: maxWidth / aspectRatio,
                         containerWidth,
@@ -335,6 +400,8 @@
                 }
 
                 return {
+                    areaLeft: cropAreaData.left,
+                    areaTop: cropAreaData.top,
                     width: maxHeight * aspectRatio,
                     height: maxHeight,
                     containerWidth,
@@ -353,17 +420,19 @@
 
                 const centerX = hasCurrentCropBox
                     ? currentCropData.left + currentCropData.width / 2
-                    : targetCropBoxData.containerWidth / 2;
+                    : targetCropBoxData.areaLeft + targetCropBoxData.containerWidth / 2;
                 const centerY = hasCurrentCropBox
                     ? currentCropData.top + currentCropData.height / 2
-                    : targetCropBoxData.containerHeight / 2;
+                    : targetCropBoxData.areaTop + targetCropBoxData.containerHeight / 2;
 
-                const maxLeft = Math.max(0, targetCropBoxData.containerWidth - targetCropBoxData.width);
-                const maxTop = Math.max(0, targetCropBoxData.containerHeight - targetCropBoxData.height);
+                const minLeft = targetCropBoxData.areaLeft;
+                const minTop = targetCropBoxData.areaTop;
+                const maxLeft = minLeft + Math.max(0, targetCropBoxData.containerWidth - targetCropBoxData.width);
+                const maxTop = minTop + Math.max(0, targetCropBoxData.containerHeight - targetCropBoxData.height);
 
                 return {
-                    left: Math.max(0, Math.min(centerX - targetCropBoxData.width / 2, maxLeft)),
-                    top: Math.max(0, Math.min(centerY - targetCropBoxData.height / 2, maxTop)),
+                    left: Math.max(minLeft, Math.min(centerX - targetCropBoxData.width / 2, maxLeft)),
+                    top: Math.max(minTop, Math.min(centerY - targetCropBoxData.height / 2, maxTop)),
                     width: targetCropBoxData.width,
                     height: targetCropBoxData.height
                 };
@@ -604,7 +673,7 @@
                 
                 return {
                     aspectRatio: aspectRatio,
-                    viewMode: 1, // Changed from 2 - allows crop box to extend beyond image
+                    viewMode: 1, // Keep the crop box constrained to the visible image canvas
                     autoCropArea: INITIAL_CROP_BOX_SCALE,
                     responsive: true,
                     dragMode: 'crop',
@@ -684,29 +753,19 @@
                         setTimeout(() => {
                             if (this.cropper) {
                                 const imageData = this.cropper.getImageData();
-                                const containerData = this.cropper.getContainerData();
                                 
                                 
                                 // Ensure we have valid image dimensions
                                 if (imageData.width <= 0 || imageData.height <= 0) {
                                     return;
                                 }
+
+                                fitCropperCanvasToContainer(this.cropper);
                                 
                                 updateCropBoxMinOptions(this.cropper);
-
-                                const cropBoxData = getCropBoxDataForScale(this.cropper, INITIAL_CROP_BOX_SCALE);
-                                const left = (cropBoxData.containerWidth - cropBoxData.width) / 2;
-                                const top = (cropBoxData.containerHeight - cropBoxData.height) / 2;
-                                
-                                const finalCropData = {
-                                    left: left,
-                                    top: top,
-                                    width: cropBoxData.width,
-                                    height: cropBoxData.height
-                                };
-                                
-                                
-                                this.cropper.setCropBoxData(finalCropData);
+                                this.cropper.setCropBoxData(
+                                    getCenteredCropBoxDataForScale(this.cropper, INITIAL_CROP_BOX_SCALE)
+                                );
                                 constrainCropBoxScale(this.cropper, true);
                                 queueCropperResizeHandleUpdate();
                             }
@@ -751,7 +810,7 @@
                 if (!cropper) return;
                 
                 cropper.reset();
-                
+                fitCropperCanvasToContainer(cropper);
                 scheduleCropBoxScale(INITIAL_CROP_BOX_SCALE);
                 
             }
@@ -1289,7 +1348,9 @@
                 if (cropper) {
                     const aspectRatio = orientation === "Landscape" ? 3 / 2 : 2 / 3;
                     cropper.setAspectRatio(aspectRatio);
+                    fitCropperCanvasToContainer(cropper);
                     updateCropBoxMinOptions(cropper);
+                    cropper.setCropBoxData(getCenteredCropBoxDataForScale(cropper, INITIAL_CROP_BOX_SCALE));
                     constrainCropBoxScale(cropper, true);
                     queueCropperResizeHandleUpdate();
                 }
