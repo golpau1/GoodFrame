@@ -314,8 +314,16 @@
             const INITIAL_CROP_BOX_SCALE = 1;
             let cropBoxLimitAnimationFrame = null;
             let cropBoxHandleAnimationFrame = null;
+            let cropSliderAnimationFrame = null;
+            let pendingCropSliderScale = null;
             let isLimitingCropBox = false;
             let activeCropResize = null;
+
+            function clampCropBoxScale(scale) {
+                return Number.isFinite(scale)
+                    ? Math.max(MIN_CROP_BOX_SCALE, Math.min(scale, MAX_CROP_BOX_SCALE))
+                    : INITIAL_CROP_BOX_SCALE;
+            }
 
             function getCropBoxDataForScale(cropperInstance, scale) {
                 const containerData = cropperInstance.getContainerData();
@@ -340,6 +348,61 @@
                     containerWidth,
                     containerHeight
                 };
+            }
+
+            function getCenteredCropBoxDataForScale(cropperInstance, scale) {
+                const targetCropBoxData = getCropBoxDataForScale(cropperInstance, clampCropBoxScale(scale));
+                const currentCropData = cropperInstance.getCropBoxData();
+                const hasCurrentCropBox =
+                    Number.isFinite(currentCropData.width) &&
+                    Number.isFinite(currentCropData.height) &&
+                    currentCropData.width > 0 &&
+                    currentCropData.height > 0;
+
+                const centerX = hasCurrentCropBox
+                    ? currentCropData.left + currentCropData.width / 2
+                    : targetCropBoxData.containerWidth / 2;
+                const centerY = hasCurrentCropBox
+                    ? currentCropData.top + currentCropData.height / 2
+                    : targetCropBoxData.containerHeight / 2;
+
+                const maxLeft = Math.max(0, targetCropBoxData.containerWidth - targetCropBoxData.width);
+                const maxTop = Math.max(0, targetCropBoxData.containerHeight - targetCropBoxData.height);
+
+                return {
+                    left: Math.max(0, Math.min(centerX - targetCropBoxData.width / 2, maxLeft)),
+                    top: Math.max(0, Math.min(centerY - targetCropBoxData.height / 2, maxTop)),
+                    width: targetCropBoxData.width,
+                    height: targetCropBoxData.height
+                };
+            }
+
+            function applyCropBoxScale(scale) {
+                if (!cropper) return;
+
+                const containerData = cropper.getContainerData();
+                if (containerData.width <= 0 || containerData.height <= 0) {
+                    return;
+                }
+
+                updateCropBoxMinOptions(cropper);
+                cropper.setCropBoxData(getCenteredCropBoxDataForScale(cropper, scale));
+                queueCropperResizeHandleUpdate();
+            }
+
+            function scheduleCropBoxScale(scale) {
+                pendingCropSliderScale = clampCropBoxScale(scale);
+
+                if (cropSliderAnimationFrame) {
+                    return;
+                }
+
+                cropSliderAnimationFrame = requestAnimationFrame(() => {
+                    cropSliderAnimationFrame = null;
+                    const scaleToApply = pendingCropSliderScale;
+                    pendingCropSliderScale = null;
+                    applyCropBoxScale(scaleToApply);
+                });
             }
 
             function updateCropBoxMinOptions(cropperInstance) {
@@ -529,6 +592,12 @@
                     cropBoxHandleAnimationFrame = null;
                 }
 
+                if (cropSliderAnimationFrame) {
+                    cancelAnimationFrame(cropSliderAnimationFrame);
+                    cropSliderAnimationFrame = null;
+                    pendingCropSliderScale = null;
+                }
+
                 activeCropResize = null;
                 document.getElementById('cropperResizeHandle')?.style.setProperty('display', 'none');
 
@@ -694,6 +763,7 @@
                 // Reset crop size slider
                 const zoomSlider = document.getElementById('zoomSlider');
                 zoomSlider.value = INITIAL_CROP_BOX_SCALE;
+                scheduleCropBoxScale(INITIAL_CROP_BOX_SCALE);
                 
             }
             
@@ -705,65 +775,15 @@
                     console.error('🚨 SLIDER: Slider element not found!', {zoomSlider});
                     return;
                 }
-                let lastZoomSliderUpdate = 0;
-
                 zoomSlider.addEventListener('input', function() {
                     
                     if (!cropper) {
                         return;
                     }
-
-                    const now = performance.now();
-                    if (now - lastZoomSliderUpdate < 16) {
-                        return;
-                    }
-                    lastZoomSliderUpdate = now;
                     
-                    const requestedValue = parseFloat(this.value);
-                    const value = Number.isFinite(requestedValue)
-                        ? Math.max(MIN_CROP_BOX_SCALE, Math.min(requestedValue, MAX_CROP_BOX_SCALE))
-                        : INITIAL_CROP_BOX_SCALE;
+                    const value = clampCropBoxScale(parseFloat(this.value));
                     this.value = value;
-                    
-                    const containerData = cropper.getContainerData();
-                    
-                    // Ensure we have valid data
-                    if (containerData.width <= 0 || containerData.height <= 0) {
-                        return;
-                    }
-                    
-                    const targetCropBoxData = getCropBoxDataForScale(cropper, value);
-                    
-                    // Get current crop box position to maintain relative position
-                    const currentCropData = cropper.getCropBoxData();
-                    
-                    // Calculate new centered position
-                    let newLeft = (targetCropBoxData.containerWidth - targetCropBoxData.width) / 2;
-                    let newTop = (targetCropBoxData.containerHeight - targetCropBoxData.height) / 2;
-                    
-                    // If we have existing crop data, try to maintain relative position
-                    if (currentCropData.width > 0 && currentCropData.height > 0) {
-                        const centerX = currentCropData.left + currentCropData.width / 2;
-                        const centerY = currentCropData.top + currentCropData.height / 2;
-                        
-                        newLeft = centerX - targetCropBoxData.width / 2;
-                        newTop = centerY - targetCropBoxData.height / 2;
-                        
-                        // Keep within container bounds
-                        newLeft = Math.max(0, Math.min(newLeft, targetCropBoxData.containerWidth - targetCropBoxData.width));
-                        newTop = Math.max(0, Math.min(newTop, targetCropBoxData.containerHeight - targetCropBoxData.height));
-                    }
-                    
-                    const newCropData = {
-                        left: newLeft,
-                        top: newTop,
-                        width: targetCropBoxData.width,
-                        height: targetCropBoxData.height
-                    };
-                    
-                    
-                    cropper.setCropBoxData(newCropData);
-                    constrainCropBoxScale(cropper, true);
+                    scheduleCropBoxScale(value);
                 });
                 
                 // Reset crop size when slider is double-clicked
