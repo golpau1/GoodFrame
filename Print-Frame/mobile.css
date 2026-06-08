@@ -5551,3 +5551,80 @@ footer.footer .footer-content,
   font-variant-caps: normal !important;
   letter-spacing: 0 !important;
 }
+
+/* Cropper final layout pass */
+@media (max-width: 900px) {
+  #cropperOverlay {
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+    align-items: center !important;
+  }
+
+  #cropperOverlay #cropperContainer {
+    width: min(430px, calc(100vw - 20px)) !important;
+    height: min(720px, calc(100dvh - 20px)) !important;
+    padding: 12px !important;
+    gap: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  #cropperOverlay .cropper-top-controls {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 0 34px !important;
+    gap: 10px !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  #cropperOverlay .zoom-control {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    gap: 12px !important;
+  }
+
+  #cropperOverlay .zoom-control label {
+    font-size: 12px !important;
+  }
+
+  #cropperOverlay .cropper-image-container {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+  }
+
+  #cropperOverlay .cropper-bottom-controls {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #reopenCropperButton,
+  #cropperOverlay #saveCropButton {
+    text-transform: none !important;
+    font-variant-caps: normal !important;
+    letter-spacing: 0 !important;
+  }
+
+  #cropperOverlay #saveCropButton {
+    width: 100% !important;
+    max-width: none !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 10px 18px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+  }
+}

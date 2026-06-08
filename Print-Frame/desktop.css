@@ -3202,3 +3202,67 @@ h3,
   font-variant-caps: normal !important;
   letter-spacing: 0 !important;
 }
+
+/* Cropper final layout pass */
+#cropperOverlay {
+  padding: 24px !important;
+  align-items: center !important;
+}
+
+#cropperOverlay #cropperContainer {
+  width: min(720px, calc(100vw - 48px)) !important;
+  height: min(760px, calc(100vh - 48px)) !important;
+  padding: 18px !important;
+  gap: 14px !important;
+}
+
+#cropperOverlay .cropper-top-controls {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 46px !important;
+  margin: 0 !important;
+  padding: 0 38px !important;
+  gap: 12px !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+#cropperOverlay .zoom-control {
+  width: min(100%, 360px) !important;
+  min-width: 0 !important;
+  padding: 10px 16px !important;
+  border-radius: 8px !important;
+}
+
+#cropperOverlay .cropper-image-container {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border-radius: 10px !important;
+}
+
+#cropperOverlay .cropper-bottom-controls {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  min-height: 46px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#reopenCropperButton,
+#cropperOverlay #saveCropButton {
+  text-transform: none !important;
+  font-variant-caps: normal !important;
+  letter-spacing: 0 !important;
+}
+
+#cropperOverlay #saveCropButton {
+  min-width: 150px !important;
+  height: 46px !important;
+  padding: 10px 24px !important;
+  border-radius: 8px !important;
+  line-height: 1 !important;
+}

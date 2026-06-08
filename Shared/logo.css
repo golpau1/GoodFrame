@@ -146,7 +146,7 @@ body .girthquake-heading {
   display: inline-block;
 }
 
-button:not(.remove-item):not(.close-cart):not(#cropperCancelButton):not(.cart-button):not(.checkout-button):not(.continue-shopping):not(.success-button):not(.primary-button):not(.secondary-button):not(#addToCartButton),
+button:not(.remove-item):not(.close-cart):not(#cropperCancelButton):not(.cart-button):not(.checkout-button):not(.continue-shopping):not(.success-button):not(.primary-button):not(.secondary-button):not(#addToCartButton):not(#saveCropButton):not(#reopenCropperButton),
 input[type="button"],
 input[type="submit"],
 input[type="reset"],
@@ -159,9 +159,7 @@ a.btn,
 .frame-option-button,
 .frame-guide-btn,
 .frame-guide-section .hero-button,
-.nav-btn,
-#saveCropButton,
-#reopenCropperButton {
+.nav-btn {
   font-family: var(--gf-font-body) !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
@@ -174,7 +172,9 @@ a.btn,
 .success-button,
 .primary-button,
 .secondary-button,
-#addToCartButton {
+#addToCartButton,
+#saveCropButton,
+#reopenCropperButton {
   font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
