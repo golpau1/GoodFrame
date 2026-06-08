@@ -783,7 +783,8 @@ box-sizing: border-box;
   background: linear-gradient(to right, #e9ecef 0%, #e9ecef 100%);
   outline: none;
   appearance: none;
-  transition: all 0.25s ease;
+  touch-action: pan-x;
+  transition: none;
   cursor: pointer;
 }
 
@@ -800,7 +801,7 @@ box-sizing: border-box;
   cursor: pointer;
   border: 3px solid #ffffff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-  transition: all 0.25s ease;
+  transition: none;
 }
 
 .zoom-control input[type="range"]::-webkit-slider-thumb:hover {
@@ -816,7 +817,7 @@ box-sizing: border-box;
   cursor: pointer;
   border: 3px solid #ffffff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-  transition: all 0.25s ease;
+  transition: none;
 }
 
 .zoom-control span {
