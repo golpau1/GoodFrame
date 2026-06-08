@@ -36,7 +36,7 @@
       <div class="burger-line"></div>
     </div>
 
-    <a href="cart.html" class="cart-nav" id="cartNav">
+    <a href="./cart.html" class="cart-nav" id="cartNav">
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -367,6 +367,19 @@
     </footer>
 
   <script>
+    const cartPageUrl = new URL("cart.html", window.location.href);
+    const headerCartLink = document.getElementById("cartNav");
+
+    if (headerCartLink) {
+      headerCartLink.href = cartPageUrl.href;
+      headerCartLink.addEventListener("click", function (event) {
+        if (this.href.includes("localhost:3000")) {
+          event.preventDefault();
+          window.location.href = cartPageUrl.href;
+        }
+      });
+    }
+
     // Update cart count in header from localStorage (used by print-frame.html)
     function updateCartCount() {
       const visualCart = JSON.parse(localStorage.getItem("myAppVisualCart") || "[]");
