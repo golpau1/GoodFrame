@@ -55,7 +55,7 @@ function normalizeRequestedSize(value) {
 
   const dimensions = value
     .toLowerCase()
-    .replace(/[×*]/g, 'x')
+    .replace(/[\u00d7*]/g, 'x')
     .match(/(\d+)\s*x\s*(\d+)\s*mm/);
 
   if (!dimensions) {
@@ -83,6 +83,40 @@ function getRequestedSize(item) {
     normalizeRequestedSize(getLegacyProductName(item));
 }
 
+function getOrderCode(item) {
+  const values = [
+    item?.uniqueCode,
+    item?.orderCode,
+    item?.code,
+    item?.productName,
+    item?.internalTitle,
+    getLegacyProductName(item)
+  ];
+
+  for (const value of values) {
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      continue;
+    }
+
+    const match = String(value).match(/\b(\d{6})\b/);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return '';
+}
+
+function getOrderCodes(lineItems) {
+  return [...new Set(lineItems
+    .map(item => item.orderCode)
+    .filter(Boolean))];
+}
+
+function getOrderCodeMetadataValue(orderCodes) {
+  return orderCodes.map(code => `#${code}`).join(', ').slice(0, 500);
+}
+
 function buildLineItems(items) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 20) {
     throw new Error('Cart must contain between 1 and 20 items');
@@ -107,7 +141,9 @@ function buildLineItems(items) {
     const quantity = Number.isInteger(requestedQuantity)
       ? Math.min(Math.max(requestedQuantity, 1), 10)
       : 1;
+    const orderCode = getOrderCode(item);
     const description = [
+      orderCode ? `Code #${orderCode}` : '',
       cleanText(item.orientation, ''),
       item.frameColor ? `${cleanText(item.frameColor, '')} Frame` : '',
       cleanText(item.border, '')
@@ -115,10 +151,12 @@ function buildLineItems(items) {
 
     subtotal += unitAmount * quantity;
     lineItems.push({
-      name: `Print & Frame - ${size}`,
+      name: orderCode ? `#${orderCode} - Print & Frame - ${size}` : `Print & Frame - ${size}`,
       description,
       unitAmount,
-      quantity
+      quantity,
+      orderCode,
+      size
     });
   });
 
@@ -139,6 +177,8 @@ function buildLineItems(items) {
 }
 
 function createStripePayload(lineItems, siteBaseUrl) {
+  const orderCodes = getOrderCodes(lineItems);
+  const orderCodeMetadataValue = getOrderCodeMetadataValue(orderCodes);
   const payload = new URLSearchParams({
     mode: 'payment',
     success_url: `${siteBaseUrl}/Checkout/success.html?session_id={CHECKOUT_SESSION_ID}`,
@@ -149,11 +189,22 @@ function createStripePayload(lineItems, siteBaseUrl) {
     'shipping_address_collection[allowed_countries][2]': 'BR'
   });
 
+  if (orderCodes.length > 0) {
+    payload.set('client_reference_id', orderCodes[0]);
+    payload.set('metadata[order_codes]', orderCodeMetadataValue);
+    payload.set('payment_intent_data[description]', `Good Frame ${orderCodeMetadataValue}`);
+    payload.set('payment_intent_data[metadata][order_codes]', orderCodeMetadataValue);
+  }
+
   lineItems.forEach((item, index) => {
     const prefix = `line_items[${index}]`;
     payload.set(`${prefix}[price_data][currency]`, 'aud');
     payload.set(`${prefix}[price_data][product_data][name]`, item.name);
     payload.set(`${prefix}[price_data][product_data][description]`, item.description);
+    if (item.orderCode) {
+      payload.set(`${prefix}[price_data][product_data][metadata][order_code]`, item.orderCode);
+      payload.set(`${prefix}[price_data][product_data][metadata][frame_size]`, item.size);
+    }
     payload.set(`${prefix}[price_data][unit_amount]`, String(item.unitAmount));
     payload.set(`${prefix}[quantity]`, String(item.quantity));
   });

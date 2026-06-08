@@ -400,6 +400,7 @@
                 }
 
                 const checkoutItems = cart.map(item => ({
+                    uniqueCode: item.uniqueCode,
                     size: item.size,
                     orientation: item.orientation,
                     frameColor: item.frameColor,

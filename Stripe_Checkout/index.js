@@ -105,7 +105,7 @@ function getRequestedSize(item) {
 
         const dimensions = value
             .toLowerCase()
-            .replace(/[×*]/g, 'x')
+            .replace(/[\u00d7*]/g, 'x')
             .match(/(\d+)\s*x\s*(\d+)\s*mm/)
 
         if (!dimensions) {
@@ -134,8 +134,35 @@ function getRequestedSize(item) {
     return null
 }
 
+function getOrderCode(item) {
+    const productName = item?.price_data?.product_data?.name
+    const values = [
+        item?.uniqueCode,
+        item?.orderCode,
+        item?.code,
+        item?.productName,
+        item?.internalTitle,
+        productName
+    ]
+
+    for (const value of values) {
+        if (typeof value !== 'string' && typeof value !== 'number') {
+            continue
+        }
+
+        const match = String(value).match(/\b(\d{6})\b/)
+        if (match) {
+            return match[1]
+        }
+    }
+
+    return ''
+}
+
 function getItemDescription(item) {
+    const orderCode = getOrderCode(item)
     const directDescription = [
+        orderCode ? `Code #${orderCode}` : '',
         item?.orientation,
         item?.frameColor ? `${item.frameColor} Frame` : '',
         item?.border
@@ -169,20 +196,32 @@ function buildStripeLineItems(items) {
         const quantity = Number.isInteger(requestedQuantity)
             ? Math.min(Math.max(requestedQuantity, 1), 10)
             : 1
+        const orderCode = getOrderCode(item)
         const unitAmount = priceBySize[size]
         subtotal += unitAmount * quantity
 
-        lineItems.push({
+        const productData = {
+            name: orderCode ? `#${orderCode} - Print & Frame - ${size}` : `Print & Frame - ${size}`,
+            description: getItemDescription(item)
+        }
+
+        if (orderCode) {
+            productData.metadata = {
+                order_code: orderCode,
+                frame_size: size
+            }
+        }
+
+        const lineItem = {
             price_data: {
                 currency: 'aud',
-                product_data: {
-                    name: `Print & Frame - ${size}`,
-                    description: getItemDescription(item)
-                },
+                product_data: productData,
                 unit_amount: unitAmount
             },
             quantity
-        })
+        }
+
+        lineItems.push(lineItem)
     })
 
     if (lineItems.length === 0) {
@@ -208,7 +247,11 @@ function buildStripeLineItems(items) {
 app.post('/create-checkout-session', async (req, res) => {
     try {
         const lineItems = buildStripeLineItems(req.body.items)
-        const session = await stripe.checkout.sessions.create({
+        const orderCodes = [...new Set(lineItems
+            .map(item => item.price_data?.product_data?.metadata?.order_code)
+            .filter(Boolean))]
+        const orderCodeMetadataValue = orderCodes.map(code => `#${code}`).join(', ').slice(0, 500)
+        const sessionOptions = {
             line_items: lineItems,
             mode: 'payment',
             shipping_address_collection: {
@@ -217,7 +260,22 @@ app.post('/create-checkout-session', async (req, res) => {
             success_url: `${baseUrl}/Checkout/success.html?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${baseUrl}/cart.html`,
             billing_address_collection: 'required'
-        })
+        }
+
+        if (orderCodes.length > 0) {
+            sessionOptions.client_reference_id = orderCodes[0]
+            sessionOptions.metadata = {
+                order_codes: orderCodeMetadataValue
+            }
+            sessionOptions.payment_intent_data = {
+                description: `Good Frame ${orderCodeMetadataValue}`,
+                metadata: {
+                    order_codes: orderCodeMetadataValue
+                }
+            }
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionOptions)
 
         res.json({ id: session.id, url: session.url })
     } catch (error) {
