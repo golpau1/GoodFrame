@@ -170,6 +170,7 @@
             ).trim().replace(/\/$/, '');
 
             let visualCartItems = [];
+            let checkoutInProgress = false;
 
             function getCheckoutSessionEndpoint() {
                 if (checkoutApiBaseUrl) {
@@ -203,6 +204,17 @@
                 } catch {
                     return fallback;
                 }
+            }
+
+            function setCheckoutLoading(isLoading) {
+                document.querySelectorAll(".checkout-button").forEach(button => {
+                    if (!button.dataset.defaultText) {
+                        button.dataset.defaultText = button.textContent.trim();
+                    }
+
+                    button.disabled = isLoading;
+                    button.textContent = isLoading ? "Opening checkout..." : button.dataset.defaultText;
+                });
             }
 
             function saveVisualCartToLocalStorage() {
@@ -388,6 +400,10 @@
             }
 
             async function handleCheckout() {
+                if (checkoutInProgress) {
+                    return;
+                }
+
                 let cart = [];
                 const storedCart = localStorage.getItem('myAppVisualCart');
                 if (storedCart) {
@@ -408,12 +424,15 @@
                     quantity: 1,
                 }));
 
+                let redirectingToStripe = false;
+                checkoutInProgress = true;
+                setCheckoutLoading(true);
+
                 try {
                     const checkoutEndpoint = getCheckoutSessionEndpoint();
 
                     if (!checkoutEndpoint) {
-                        alert('Checkout is not connected on the live site yet. Please deploy the Stripe checkout server and set GOOD_FRAME_CHECKOUT_API_BASE_URL to its URL.');
-                        return;
+                        throw new Error('Checkout is not connected on the live site yet.');
                     }
 
                     const response = await fetch(checkoutEndpoint, {
@@ -427,21 +446,28 @@
                     // Check if the server responded with an error before parsing JSON
                     if (!response.ok) {
                         const errorMessage = await readCheckoutError(response);
-                        alert(`Server error: ${errorMessage}`);
-                        return;
+                        throw new Error(`Server error: ${errorMessage}`);
                     }
 
                     const session = await response.json();
 
                     if (!session.url) {
-                        alert("Could not create checkout session.");
-                        return;
+                        throw new Error("Could not create checkout session.");
                     }
 
                     window.location.assign(session.url);
+                    redirectingToStripe = true;
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred during checkout. Please try again.');
+                    const message = error instanceof Error && error.message
+                        ? error.message
+                        : 'An error occurred during checkout.';
+                    alert(`${message} Please refresh and try again.`);
+                } finally {
+                    if (!redirectingToStripe) {
+                        checkoutInProgress = false;
+                        setCheckoutLoading(false);
+                    }
                 }
             }
             
