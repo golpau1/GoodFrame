@@ -284,6 +284,12 @@
             }
 
             function renderCartThumbnail(item, itemImageSrc) {
+                const composedThumbnailSrc = item.thumbnailUrl || item.image || item.fallbackImage;
+
+                if (composedThumbnailSrc) {
+                    return `<img src="${escapeCartAttribute(composedThumbnailSrc)}" alt="Picture Frame" class="cart-item-image">`;
+                }
+
                 const photoSrc = item.previewImage || item.originalImageUrl;
                 const frameOverlayUrl = getCartFrameOverlayUrl(item);
 
@@ -333,7 +339,7 @@
                         displayName = "Print & Frame";
                     }
                     const placeholderImage = 'https://via.placeholder.com/100/1E1E1E/EAEAEA?text=No+Img';
-                    const itemImageSrc = item.image || item.thumbnailUrl || item.fallbackImage || item.originalImageUrl || placeholderImage;
+                    const itemImageSrc = item.thumbnailUrl || item.image || item.fallbackImage || item.originalImageUrl || placeholderImage;
                     cartItemElement.innerHTML = `
                         ${renderCartThumbnail(item, itemImageSrc)}
                         <div class="cart-item-details">

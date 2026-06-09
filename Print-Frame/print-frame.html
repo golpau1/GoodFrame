@@ -1073,8 +1073,39 @@
                 return Math.floor(100000 + Math.random() * 900000).toString();
             }
 
+            function generateCartLineItemId() {
+                const randomPart = Math.random().toString(36).slice(2, 10);
+                return `local_${Date.now()}_${randomPart}`;
+            }
+
+            function getPersistableCartItems() {
+                return visualCartItems.map(item => {
+                    const persistableItem = { ...item };
+
+                    if (persistableItem.thumbnailUrl) {
+                        delete persistableItem.image;
+                        delete persistableItem.fallbackImage;
+                    }
+
+                    if (
+                        typeof persistableItem.previewImage === 'string' &&
+                        persistableItem.previewImage.startsWith('data:')
+                    ) {
+                        delete persistableItem.previewImage;
+                    }
+
+                    return persistableItem;
+                });
+            }
+
             function saveVisualCartToLocalStorage() {
-                localStorage.setItem('myAppVisualCart', JSON.stringify(visualCartItems));
+                try {
+                    localStorage.setItem('myAppVisualCart', JSON.stringify(getPersistableCartItems()));
+                    return true;
+                } catch (error) {
+                    console.error("Could not save the cart locally:", error);
+                    return false;
+                }
             }
 
             function loadVisualCartFromLocalStorage() {
@@ -1128,6 +1159,7 @@
                         
                         // Generate unique 6-digit code for this upload
                         const uniqueCode = generateUniqueCode();
+                        sessionStorage.setItem('uniqueCode', uniqueCode);
                         
                         // Create filename with unique code at the front (no timestamp since Cloudflare adds its own)
                         const originalFileName = `${uniqueCode}_original_${file.name}`;
@@ -1194,6 +1226,7 @@
                         return;
                     }
 
+                    document.getElementById('addToCartButton').disabled = true;
                     document.getElementById("sizeDropdown").value = "";
                     const borderDropdown = document.getElementById("borderDropdown");
                     borderDropdown.value = "Full Image";
@@ -1281,6 +1314,7 @@
                     document.getElementById("uploadedImagePortrait").style.display = "none";
                     document.getElementById("addToCartButton").disabled = true;
                     sessionStorage.removeItem('uploadedImageUrl');
+                    sessionStorage.removeItem('uniqueCode');
                 }
             });
 
@@ -1306,6 +1340,87 @@
                     console.error("Error getting cropped image:", error);
                     return null;
                 }
+            }
+
+            function loadImageForThumbnail(src) {
+                return new Promise((resolve, reject) => {
+                    const image = new Image();
+
+                    image.onload = () => resolve(image);
+                    image.onerror = () => reject(new Error("Could not load the cropped image for the thumbnail."));
+                    image.src = src;
+                });
+            }
+
+            function getThumbnailImagePlacement(orientation, border) {
+                const isPortrait = orientation === "Portrait";
+                const hasBorder = border === "Add Border";
+                const landscapeWidth = hasBorder ? 0.74 : 0.83;
+                const landscapeHeight = hasBorder ? 0.49333 : 0.55333;
+                const width = isPortrait ? landscapeHeight : landscapeWidth;
+                const height = isPortrait ? landscapeWidth : landscapeHeight;
+
+                return {
+                    left: (1 - width) / 2,
+                    top: (1 - height) / 2,
+                    width,
+                    height,
+                    objectFit: "cover"
+                };
+            }
+
+            function drawImageWithObjectFit(context, image, placement, canvasWidth, canvasHeight) {
+                const targetLeft = placement.left * canvasWidth;
+                const targetTop = placement.top * canvasHeight;
+                const targetWidth = placement.width * canvasWidth;
+                const targetHeight = placement.height * canvasHeight;
+                const containScale = Math.min(
+                    targetWidth / image.naturalWidth,
+                    targetHeight / image.naturalHeight
+                );
+                const coverScale = Math.max(
+                    targetWidth / image.naturalWidth,
+                    targetHeight / image.naturalHeight
+                );
+                const imageScale = placement.objectFit === "cover" ? coverScale : containScale;
+                const width = image.naturalWidth * imageScale;
+                const height = image.naturalHeight * imageScale;
+                const left = targetLeft + (targetWidth - width) / 2;
+                const top = targetTop + (targetHeight - height) / 2;
+
+                context.save();
+                context.beginPath();
+                context.rect(targetLeft, targetTop, targetWidth, targetHeight);
+                context.clip();
+                context.drawImage(image, left, top, width, height);
+                context.restore();
+            }
+
+            async function composeCroppedImageThumbnail(canvas, imageSource, placement) {
+                const image = await loadImageForThumbnail(imageSource);
+                const outputCanvas = document.createElement('canvas');
+                outputCanvas.width = canvas.width;
+                outputCanvas.height = canvas.height;
+                const context = outputCanvas.getContext('2d');
+
+                context.fillStyle = "#ffffff";
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(canvas, 0, 0);
+                drawImageWithObjectFit(context, image, placement, canvas.width, canvas.height);
+                return outputCanvas;
+            }
+
+            function createCompactCartPreview(canvas) {
+                const previewSize = 360;
+                const previewCanvas = document.createElement('canvas');
+                previewCanvas.width = previewSize;
+                previewCanvas.height = previewSize;
+                const context = previewCanvas.getContext('2d');
+
+                context.fillStyle = "#ffffff";
+                context.fillRect(0, 0, previewSize, previewSize);
+                context.drawImage(canvas, 0, 0, previewSize, previewSize);
+                return previewCanvas.toDataURL('image/jpeg', 0.78);
             }
 
             function closeCropperWithoutSaving() {
@@ -1498,6 +1613,11 @@
                     alert("Please select a border option.");
                     return;
                 }
+                const uploadUniqueCode = sessionStorage.getItem('uniqueCode');
+                if (!/^\d{6}$/.test(uploadUniqueCode || "")) {
+                    alert("Please wait for the original image upload to finish.");
+                    return;
+                }
 
                 try {
                     const wixCartItem = {
@@ -1516,6 +1636,20 @@
                 }
 
                 const frameContainer = document.getElementById('frameContainer');
+                const captureOrientation = document.getElementById("orientationDropdown").value;
+                const activeImageId = captureOrientation === "Portrait" ? "uploadedImagePortrait" : "uploadedImage";
+                const activePreviewImage = document.getElementById(activeImageId);
+                const croppedImageForCapture = cropper ? getCroppedImage() : null;
+                const thumbnailImagePlacement = getThumbnailImagePlacement(captureOrientation, selectedBorder);
+                const captureImageSource = croppedImageForCapture ||
+                    activePreviewImage?.src ||
+                    sessionStorage.getItem('uploadedImageUrl') ||
+                    "";
+
+                if (!captureImageSource) {
+                    console.error("Cart thumbnail generation failed: the cropped image placement is unavailable.");
+                    return;
+                }
 
                 const imageElements = Array.from(frameContainer.getElementsByTagName('img'))
                     .filter(img => img.style.display !== 'none' && img.src);
@@ -1556,7 +1690,6 @@
                     
                     // ✅ OVERRIDE ALL CHILD ELEMENTS FOR DESKTOP-LIKE RENDERING
                     const allElements = clonedContainer.querySelectorAll('*');
-                    const captureOrientation = document.getElementById("orientationDropdown").value;
                     allElements.forEach(el => {
                         // DON'T touch transform for images - they need their centering transform
                         const isUploadedImage = el.id === 'uploadedImage' || el.id === 'uploadedImagePortrait';
@@ -1624,32 +1757,29 @@
                             windowWidth: 1000,
                             windowHeight: 1000,
                             ignoreElements: (element) => element.id === 'cropperOverlay'
-                        }).then(canvas => {
-                            const imageDataUrl = canvas.toDataURL('image/png');
-                            const activeImageId = captureOrientation === "Portrait" ? "uploadedImagePortrait" : "uploadedImage";
-                            const activePreviewImage = document.getElementById(activeImageId);
-                            const croppedImageForCart = cropper ? getCroppedImage() : null;
-                            const cartImageSource = croppedImageForCart || activePreviewImage?.src || sessionStorage.getItem('uploadedImageUrl') || "";
+                        }).then(async canvas => {
+                            canvas = await composeCroppedImageThumbnail(
+                                canvas,
+                                captureImageSource,
+                                thumbnailImagePlacement
+                            );
+                            const compactCartPreview = createCompactCartPreview(canvas);
                             const frameOverlayUrl = document.getElementById("frameOverlay")?.src || "";
-                            
-                            // ✅ GENERATE NEW UNIQUE CODE FOR EACH CART ITEM
-                            const newUniqueCode = generateUniqueCode();
                             
                             // Create the base cart item with data URL
                             const baseVisualItem = {
-                                lineItemId: `local_${Date.now()}`,
-                                productName: `#${newUniqueCode} - Print & Frame`, // ✅ Display name WITH hashtag and NEW unique code at front
-                                internalTitle: `#${newUniqueCode} - Print & Frame`, // ✅ Internal title WITH hashtag and NEW unique code at front
-                                uniqueCode: newUniqueCode, // Store NEW unique code separately for easy access
+                                lineItemId: generateCartLineItemId(),
+                                productName: `#${uploadUniqueCode} - Print & Frame`,
+                                internalTitle: `#${uploadUniqueCode} - Print & Frame`,
+                                uniqueCode: uploadUniqueCode,
                                 size: selectedSize,
                                 orientation: document.getElementById("orientationDropdown").value,
                                 frameColor: checkoutData.FrameColor,
                                 border: selectedBorder,
                                 price: priceMapping[selectedSize],
-                                image: imageDataUrl, // Use data URL as fallback
-                                previewImage: cartImageSource,
+                                image: compactCartPreview,
                                 frameOverlayUrl: frameOverlayUrl,
-                                originalImageUrl: sessionStorage.getItem('uploadedImageUrl') || cartImageSource
+                                originalImageUrl: sessionStorage.getItem('uploadedImageUrl') || ""
                             };
 
                             // ✅ DUAL DESTINATION GUARANTEED: Cart gets thumbnail immediately, Cloudflare gets it too
@@ -1668,8 +1798,13 @@
                                 });
                             }
 
-                            // STEP 2: ✅ IMPROVED CONSISTENT CLOUDFLARE UPLOAD - Pass the NEW unique code
-                            uploadThumbnailToCloudflareConsistently(canvas, baseVisualItem, selectedSize, selectedBorder, newUniqueCode);
+                            uploadThumbnailToCloudflareConsistently(
+                                canvas,
+                                baseVisualItem,
+                                selectedSize,
+                                selectedBorder,
+                                uploadUniqueCode
+                            );
                         }).catch(err => {
                             console.error("Cart thumbnail generation failed:", err);
                         }).finally(() => {
@@ -1869,6 +2004,16 @@
 
             // ✅ NEW: Send to cart page with consistent error handling
             async function sendToCartPageConsistently(cloudflareUrl, uniqueCode, baseVisualItem) {
+                const itemIndex = visualCartItems.findIndex(item => item.lineItemId === baseVisualItem.lineItemId);
+
+                if (itemIndex > -1) {
+                    visualCartItems[itemIndex].thumbnailUrl = cloudflareUrl;
+                    delete visualCartItems[itemIndex].image;
+                    delete visualCartItems[itemIndex].fallbackImage;
+                    delete visualCartItems[itemIndex].previewImage;
+                    saveVisualCartToLocalStorage();
+                    updateCartUI();
+                }
                 
                 const cartUpdateData = {
                     lineItemId: baseVisualItem.lineItemId,
@@ -1912,14 +2057,6 @@
                 } catch (error) {
                     console.error('❌ CART PAGE FAILED:', error.message);
                     
-                    // Fallback: Update local cart with Cloudflare URL
-                    const itemIndex = visualCartItems.findIndex(item => item.lineItemId === baseVisualItem.lineItemId);
-                    if (itemIndex > -1) {
-                        visualCartItems[itemIndex].thumbnailUrl = cloudflareUrl;
-                        visualCartItems[itemIndex].fallbackImage = baseVisualItem.image;
-                        saveVisualCartToLocalStorage();
-                        updateCartUI();
-                    }
                 }
             }
 
@@ -1949,8 +2086,8 @@
                     cartItemElement.className = "cart-item";
                     
                     // Create image element with fallback
-                    const imageUrl = item.image || item.fallbackImage || item.thumbnailUrl || '';
-                    const fallbackUrl = item.fallbackImage || item.thumbnailUrl || '';
+                    const imageUrl = item.thumbnailUrl || item.image || item.fallbackImage || '';
+                    const fallbackUrl = item.thumbnailUrl || item.fallbackImage || item.image || '';
                     
                     
                     cartItemElement.innerHTML = `
