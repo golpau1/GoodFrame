@@ -2973,3 +2973,12 @@ footer.footer .footer-content,
 .footer-dropdown-arrow {
   display: none !important;
 }
+
+.hero-section.reverse .hero-right .hero-subheading,
+.mobile-section-content .hero-subheading {
+  font-family: var(--homepage-font-subheading) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.05em !important;
+  word-spacing: 0.12em !important;
+  line-height: 1.3 !important;
+}
