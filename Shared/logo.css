@@ -112,6 +112,15 @@ body .girthquake-heading {
   content: none !important;
 }
 
+@media (min-width: 901px) {
+  .header-title,
+  .legacy-header-title,
+  .secondary-header .header-title,
+  .legacy-secondary-header .legacy-header-title {
+    font-size: 32px !important;
+  }
+}
+
 .top-banner,
 .legacy-top-banner {
   box-sizing: border-box !important;
