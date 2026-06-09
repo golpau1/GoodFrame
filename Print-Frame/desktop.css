@@ -3247,8 +3247,12 @@ h3,
 }
 
 #cropperOverlay #cropperContainer {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
   width: min(720px, calc(100vw - 48px)) !important;
   height: min(760px, calc(100vh - 48px)) !important;
+  max-height: calc(100vh - 48px) !important;
   padding: 18px !important;
   gap: 14px !important;
 }
@@ -3273,7 +3277,26 @@ h3,
   min-height: 0 !important;
   max-height: none !important;
   margin: 0 !important;
+  padding: 8px 8px 12px !important;
+  box-sizing: border-box !important;
   border-radius: 10px !important;
+}
+
+#cropperOverlay .cropper-image-wrapper,
+#cropperOverlay .cropper-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+#cropperOverlay #cropperImage {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
 }
 
 #cropperOverlay .cropper-bottom-controls {
