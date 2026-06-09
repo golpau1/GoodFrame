@@ -2478,3 +2478,10 @@ footer.footer .footer-content,
 .footer-dropdown-arrow {
   display: none !important;
 }
+
+@media (max-width: 900px) {
+  .about-panel {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
