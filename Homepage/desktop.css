@@ -1575,6 +1575,14 @@ button,
   line-height: 1.2 !important;
 }
 
+.hero-section.reverse .hero-right p,
+.hero-section.reverse .hero-right .hero-button,
+.mobile-section-content p,
+.mobile-section-content .mobile-section-button {
+  font-family: var(--homepage-font-subheading) !important;
+  letter-spacing: 0 !important;
+}
+
 /* Shared desktop header */
 header,
 .legacy-page-header {
