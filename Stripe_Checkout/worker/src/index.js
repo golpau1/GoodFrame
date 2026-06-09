@@ -118,8 +118,8 @@ function getOrderCodeMetadataValue(orderCodes) {
 }
 
 function buildLineItems(items) {
-  if (!Array.isArray(items) || items.length === 0 || items.length > 20) {
-    throw new Error('Cart must contain between 1 and 20 items');
+  if (!Array.isArray(items) || items.length === 0 || items.length > 10) {
+    throw new Error('Cart must contain between 1 and 10 items');
   }
 
   const lineItems = [];

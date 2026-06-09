@@ -174,8 +174,8 @@ function getItemDescription(item) {
 }
 
 function buildStripeLineItems(items) {
-    if (!Array.isArray(items) || items.length === 0 || items.length > 20) {
-        throw new Error('Cart must contain between 1 and 20 items')
+    if (!Array.isArray(items) || items.length === 0 || items.length > 10) {
+        throw new Error('Cart must contain between 1 and 10 items')
     }
 
     const lineItems = []
@@ -245,8 +245,15 @@ function buildStripeLineItems(items) {
 }
 
 app.post('/create-checkout-session', async (req, res) => {
+    let lineItems
+
     try {
-        const lineItems = buildStripeLineItems(req.body.items)
+        lineItems = buildStripeLineItems(req.body.items)
+    } catch (error) {
+        return res.status(400).json({ error: error.message })
+    }
+
+    try {
         const orderCodes = [...new Set(lineItems
             .map(item => item.price_data?.product_data?.metadata?.order_code)
             .filter(Boolean))]

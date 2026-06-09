@@ -877,6 +877,8 @@
             let visualCartItems = [];
             let currentOrientation = "Landscape";
             let isCartUpdating = false;
+            let isAddingToCart = false;
+            const MAX_CART_ITEMS = 10;
 
             // ✅ NEW: Global function to update orientation button text (now removed since we don't have text)
             function updateOrientationButtonText() {
@@ -1079,13 +1081,8 @@
             }
 
             function getPersistableCartItems() {
-                return visualCartItems.map(item => {
+                return visualCartItems.slice(0, MAX_CART_ITEMS).map(item => {
                     const persistableItem = { ...item };
-
-                    if (persistableItem.thumbnailUrl) {
-                        delete persistableItem.image;
-                        delete persistableItem.fallbackImage;
-                    }
 
                     if (
                         typeof persistableItem.previewImage === 'string' &&
@@ -1111,8 +1108,19 @@
             function loadVisualCartFromLocalStorage() {
                 const storedCart = localStorage.getItem('myAppVisualCart');
                 if (storedCart) {
-                    visualCartItems = JSON.parse(storedCart);
+                    const storedItems = JSON.parse(storedCart);
+                    visualCartItems = Array.isArray(storedItems)
+                        ? storedItems.slice(0, MAX_CART_ITEMS)
+                        : [];
                 }
+            }
+
+            function setAddToCartBusy(isBusy) {
+                isAddingToCart = isBusy;
+                const hasUploadedImage =
+                    Boolean(sessionStorage.getItem('uploadedImageUrl')) &&
+                    /^\d{6}$/.test(sessionStorage.getItem('uniqueCode') || "");
+                document.getElementById("addToCartButton").disabled = isBusy || !hasUploadedImage;
             }
 
             let addToCartToastTimer;
@@ -1597,10 +1605,13 @@
             });
 
             document.getElementById("addToCartButton").addEventListener("click", async () => {
-                // ✅ ADDED: Check if the cart is already full
-                if (visualCartItems.length >= 10) {
+                if (isAddingToCart) {
+                    return;
+                }
+
+                if (visualCartItems.length >= MAX_CART_ITEMS) {
                     alert("You can only add up to 10 items to your cart.");
-                    return; // Stop the function if the cart is full
+                    return;
                 }
 
                 const selectedSize = document.getElementById("sizeDropdown").value;
@@ -1618,6 +1629,7 @@
                     alert("Please wait for the original image upload to finish.");
                     return;
                 }
+                setAddToCartBusy(true);
 
                 try {
                     const wixCartItem = {
@@ -1648,6 +1660,7 @@
 
                 if (!captureImageSource) {
                     console.error("Cart thumbnail generation failed: the cropped image placement is unavailable.");
+                    setAddToCartBusy(false);
                     return;
                 }
 
@@ -1809,8 +1822,12 @@
                             console.error("Cart thumbnail generation failed:", err);
                         }).finally(() => {
                             document.body.removeChild(clonedContainer);
+                            setAddToCartBusy(false);
                         });
                     }, 100);
+                }).catch(error => {
+                    console.error("Cart image preparation failed:", error);
+                    setAddToCartBusy(false);
                 });
             });
 
@@ -2008,8 +2025,6 @@
 
                 if (itemIndex > -1) {
                     visualCartItems[itemIndex].thumbnailUrl = cloudflareUrl;
-                    delete visualCartItems[itemIndex].image;
-                    delete visualCartItems[itemIndex].fallbackImage;
                     delete visualCartItems[itemIndex].previewImage;
                     saveVisualCartToLocalStorage();
                     updateCartUI();
@@ -2086,7 +2101,7 @@
                     cartItemElement.className = "cart-item";
                     
                     // Create image element with fallback
-                    const imageUrl = item.thumbnailUrl || item.image || item.fallbackImage || '';
+                    const imageUrl = item.image || item.thumbnailUrl || item.fallbackImage || '';
                     const fallbackUrl = item.thumbnailUrl || item.fallbackImage || item.image || '';
                     
                     
