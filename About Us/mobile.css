@@ -2484,4 +2484,20 @@ footer.footer .footer-content,
     border: 0 !important;
     box-shadow: none !important;
   }
+
+  .about-panel:nth-child(1) {
+    order: 3;
+  }
+
+  .about-panel:nth-child(2) {
+    order: 1;
+  }
+
+  .about-panel:nth-child(3) {
+    order: 2;
+  }
+
+  .about-panel img {
+    border-radius: 6px !important;
+  }
 }
