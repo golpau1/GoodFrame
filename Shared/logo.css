@@ -302,11 +302,11 @@ body .pricing-container h3.pricing-girthquake:not(.header-title):not(.legacy-hea
 
 body .pricing-container .bold-dollar {
   display: inline-block;
-  margin-right: 0.02em;
-  font-family: 'Arial Black', Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif !important;
-  font-weight: 900 !important;
+  margin-right: 0;
+  font-family: var(--gf-font-heading) !important;
+  font-weight: 400 !important;
   letter-spacing: 0 !important;
-  line-height: 0.9;
+  line-height: inherit;
 }
 
 body .about-desktop-editorial .about-girthquake:not(.header-title):not(.legacy-header-title):not(#cropperCancelButton),
