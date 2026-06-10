@@ -13,10 +13,21 @@ const siteRoot = path.join(__dirname, '..')
 const homepagePath = path.join(siteRoot, 'index.html')
 const cartPath = path.join(siteRoot, 'cart.html')
 const priceBySize = Object.freeze({
-    '300x200mm': 9900,
-    '600x400mm': 23500,
-    '900x600mm': 35000,
-    '1200x800mm': 70000
+    '210x297mm': 9900,
+    '420x594mm': 23500,
+    '594x841mm': 35000,
+    '841x1189mm': 70000
+})
+const canonicalSizeByDimensions = Object.freeze({
+    '210x297': '210x297mm',
+    '200x300': '210x297mm',
+    '420x594': '420x594mm',
+    '400x600': '420x594mm',
+    '594x841': '594x841mm',
+    '600x900': '594x841mm',
+    '841x1189': '841x1189mm',
+    '800x1200': '841x1189mm',
+    '900x1200': '841x1189mm'
 })
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || [
     'http://localhost:3000',
@@ -114,17 +125,10 @@ function getRequestedSize(item) {
 
         const width = Number(dimensions[1])
         const height = Number(dimensions[2])
-        const size = Object.keys(priceBySize).find(candidate => {
-            const [canonicalWidth, canonicalHeight] = candidate
-                .replace('mm', '')
-                .split('x')
-                .map(Number)
-
-            return (
-                (width === canonicalWidth && height === canonicalHeight) ||
-                (width === canonicalHeight && height === canonicalWidth)
-            )
-        })
+        const dimensionKey = [width, height]
+            .sort((a, b) => a - b)
+            .join('x')
+        const size = canonicalSizeByDimensions[dimensionKey]
 
         if (size) {
             return size
