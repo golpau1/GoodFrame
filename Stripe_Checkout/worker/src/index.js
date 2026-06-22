@@ -147,7 +147,6 @@ function buildLineItems(items) {
       : 1;
     const orderCode = getOrderCode(item);
     const description = [
-      orderCode ? `Code #${orderCode}` : '',
       cleanText(item.orientation, ''),
       item.frameColor ? `${cleanText(item.frameColor, '')} Frame` : '',
       cleanText(item.border, '')
@@ -155,7 +154,7 @@ function buildLineItems(items) {
 
     subtotal += unitAmount * quantity;
     lineItems.push({
-      name: orderCode ? `#${orderCode} - Print & Frame - ${size}` : `Print & Frame - ${size}`,
+      name: `Print & Frame - ${size}`,
       description,
       unitAmount,
       quantity,
@@ -196,7 +195,7 @@ function createStripePayload(lineItems, siteBaseUrl) {
   if (orderCodes.length > 0) {
     payload.set('client_reference_id', orderCodes[0]);
     payload.set('metadata[order_codes]', orderCodeMetadataValue);
-    payload.set('payment_intent_data[description]', `Good Frame ${orderCodeMetadataValue}`);
+    payload.set('payment_intent_data[description]', 'Good Frame custom frame order');
     payload.set('payment_intent_data[metadata][order_codes]', orderCodeMetadataValue);
   }
 

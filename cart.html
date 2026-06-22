@@ -262,6 +262,22 @@
                     .replace(/>/g, "&gt;");
             }
 
+            function getCustomerFacingProductName(productName) {
+                let displayName = typeof productName === "string" && productName.trim()
+                    ? productName.trim()
+                    : "Print & Frame";
+
+                displayName = displayName.replace(/^#?\d{6}\s*-\s*/, "");
+
+                if (displayName.includes("Print with Frame")) {
+                    displayName = displayName.replace("Print with Frame", "Print & Frame");
+                } else if (displayName === "Print With Frame") {
+                    displayName = "Print & Frame";
+                }
+
+                return displayName || "Print & Frame";
+            }
+
             function getCartFrameOverlayUrl(item) {
                 if (item.frameOverlayUrl) {
                     return item.frameOverlayUrl;
@@ -336,13 +352,7 @@
                 visualCartItems.forEach((item, index) => {
                     const cartItemElement = document.createElement("div");
                     cartItemElement.className = "cart-item";
-                    // Update product name display to "Print & Frame" and handle various formats
-                    let displayName = item.productName;
-                    if (displayName && displayName.includes("Print with Frame")) {
-                        displayName = displayName.replace("Print with Frame", "Print & Frame");
-                    } else if (displayName === "Print With Frame") {
-                        displayName = "Print & Frame";
-                    }
+                    const displayName = getCustomerFacingProductName(item.productName);
                     const placeholderImage = 'https://via.placeholder.com/100/1E1E1E/EAEAEA?text=No+Img';
                     const itemImageSrc = item.image || item.thumbnailUrl || item.fallbackImage || item.originalImageUrl || placeholderImage;
                     cartItemElement.innerHTML = `

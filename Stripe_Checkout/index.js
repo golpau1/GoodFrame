@@ -164,9 +164,7 @@ function getOrderCode(item) {
 }
 
 function getItemDescription(item) {
-    const orderCode = getOrderCode(item)
     const directDescription = [
-        orderCode ? `Code #${orderCode}` : '',
         item?.orientation,
         item?.frameColor ? `${item.frameColor} Frame` : '',
         item?.border
@@ -205,7 +203,7 @@ function buildStripeLineItems(items) {
         subtotal += unitAmount * quantity
 
         const productData = {
-            name: orderCode ? `#${orderCode} - Print & Frame - ${size}` : `Print & Frame - ${size}`,
+            name: `Print & Frame - ${size}`,
             description: getItemDescription(item)
         }
 
@@ -279,7 +277,7 @@ app.post('/create-checkout-session', async (req, res) => {
                 order_codes: orderCodeMetadataValue
             }
             sessionOptions.payment_intent_data = {
-                description: `Good Frame ${orderCodeMetadataValue}`,
+                description: 'Good Frame custom frame order',
                 metadata: {
                     order_codes: orderCodeMetadataValue
                 }

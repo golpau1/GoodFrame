@@ -1078,6 +1078,22 @@
                 return `local_${Date.now()}_${randomPart}`;
             }
 
+            function getCustomerFacingProductName(productName) {
+                let displayName = typeof productName === "string" && productName.trim()
+                    ? productName.trim()
+                    : "Print & Frame";
+
+                displayName = displayName.replace(/^#?\d{6}\s*-\s*/, "");
+
+                if (displayName.includes("Print with Frame")) {
+                    displayName = displayName.replace("Print with Frame", "Print & Frame");
+                } else if (displayName === "Print With Frame") {
+                    displayName = "Print & Frame";
+                }
+
+                return displayName || "Print & Frame";
+            }
+
             function getPersistableCartItems() {
                 return visualCartItems.slice(0, MAX_CART_ITEMS).map(item => {
                     const persistableItem = { ...item };
@@ -1808,7 +1824,7 @@
                             // Create the base cart item with data URL
                             const baseVisualItem = {
                                 lineItemId: generateCartLineItemId(),
-                                productName: `#${uploadUniqueCode} - Print & Frame`,
+                                productName: "Print & Frame",
                                 internalTitle: `#${uploadUniqueCode} - Print & Frame`,
                                 uniqueCode: uploadUniqueCode,
                                 size: selectedSize,
@@ -2095,6 +2111,7 @@
                     // Create image element with fallback
                     const imageUrl = item.image || item.thumbnailUrl || item.fallbackImage || '';
                     const fallbackUrl = item.thumbnailUrl || item.fallbackImage || item.image || '';
+                    const displayName = getCustomerFacingProductName(item.productName);
                     
                     
                     cartItemElement.innerHTML = `
@@ -2102,7 +2119,7 @@
                                          onError="this.style.backgroundImage = 'url(${fallbackUrl.replace(/'/g, "\\'")})'">
                                     </div>
                                     <div class="cart-item-details">
-                                        <div class="cart-item-title">${item.productName}</div>
+                                        <div class="cart-item-title">${displayName}</div>
                                         <div class="cart-item-meta">
                                             ${item.size} | ${item.orientation} | ${item.frameColor} Frame | ${item.border}
                                         </div>
