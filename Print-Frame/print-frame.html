@@ -325,10 +325,11 @@
 
                 const containerData = cropperInstance.getContainerData();
                 const imageData = cropperInstance.getImageData();
+                const imageElement = cropperInstance.element || document.getElementById('cropperImage');
                 const containerWidth = containerData.width || window.innerWidth;
                 const containerHeight = containerData.height || window.innerHeight;
-                const naturalWidth = imageData.naturalWidth || imageData.width;
-                const naturalHeight = imageData.naturalHeight || imageData.height;
+                const naturalWidth = imageElement?.naturalWidth || imageData.naturalWidth || imageData.width;
+                const naturalHeight = imageElement?.naturalHeight || imageData.naturalHeight || imageData.height;
 
                 if (
                     containerWidth <= 0 ||
