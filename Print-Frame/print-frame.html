@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css?v=20260713-frame-opening" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css?v=20260713-frame-opening" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260713-frame-image-area-fix" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260713-frame-image-area-fix" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260610-gloock-dollar">
 
 
@@ -68,10 +68,10 @@
     </div>
 
     <div class="container">
-        <div class="frame-container" id="frameContainer">
-            <div class="frame-image-window" id="frameImageWindow">
-                <img alt="" id="uploadedImage">
-                <img alt="" id="uploadedImagePortrait">
+        <div class="frame-container frame-preview" id="frameContainer">
+            <div class="frame-image-window frame-image-area" id="frameImageWindow">
+                <img alt="" id="uploadedImage" class="customer-image">
+                <img alt="" id="uploadedImagePortrait" class="customer-image">
             </div>
             <img src="https://static.wixstatic.com/media/4db74a_aca803f39a194834a0f785ee0ed9829e~mv2.png" alt="Frame"
                 class="frame-overlay" id="frameOverlay" crossorigin="anonymous">
@@ -1114,8 +1114,15 @@
             }
 
             function setPreviewSources(src) {
-                document.getElementById("uploadedImage").src = src;
-                document.getElementById("uploadedImagePortrait").src = src;
+                ["uploadedImage", "uploadedImagePortrait"].forEach(id => {
+                    const previewImage = document.getElementById(id);
+                    [
+                        "inset", "top", "right", "bottom", "left", "width", "height",
+                        "min-width", "min-height", "max-width", "max-height", "margin",
+                        "transform", "transform-origin"
+                    ].forEach(property => previewImage.style.removeProperty(property));
+                    previewImage.src = src;
+                });
             }
 
             function updateFrameContainerClasses() {
