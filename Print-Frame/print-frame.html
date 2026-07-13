@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css?v=20260713-ppi-checker" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css?v=20260713-ppi-checker" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260713-frame-opening" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260713-frame-opening" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260610-gloock-dollar">
 
 
@@ -878,9 +878,70 @@
             let isCartUpdating = false;
             let isAddingToCart = false;
             let uploadedImageDimensions = null;
+            let frameOpeningAnimationFrame = null;
             const MAX_CART_ITEMS = 10;
             const MINIMUM_PRINT_PPI = 180;
             const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Please select a smaller print or upload a higher-resolution photo.";
+            const FRAME_ASSET_SIZE = 870;
+            const frameOpeningBounds = {
+                Black: {
+                    landscape: { left: 79, top: 197, right: 794, bottom: 672 },
+                    landscapeAddBorder: { left: 114, top: 220, right: 756, bottom: 649 },
+                    portrait: { left: 197, top: 75, right: 672, bottom: 790 },
+                    portraitAddBorder: { left: 220, top: 114, right: 649, bottom: 756 }
+                },
+                White: {
+                    landscape: { left: 79, top: 198, right: 793, bottom: 672 },
+                    landscapeAddBorder: { left: 115, top: 221, right: 754, bottom: 648 },
+                    portrait: { left: 198, top: 76, right: 672, bottom: 790 },
+                    portraitAddBorder: { left: 221, top: 115, right: 648, bottom: 754 }
+                },
+                Natural: {
+                    landscape: { left: 77, top: 198, right: 791, bottom: 672 },
+                    landscapeAddBorder: { left: 114, top: 220, right: 756, bottom: 649 },
+                    portrait: { left: 198, top: 78, right: 672, bottom: 792 },
+                    portraitAddBorder: { left: 220, top: 114, right: 649, bottom: 756 }
+                }
+            };
+
+            function syncFrameOpening() {
+                const frameContainer = document.getElementById("frameContainer");
+                if (!frameContainer) return;
+
+                const orientation = document.getElementById("orientationDropdown").value.toLowerCase();
+                const hasBorder = document.getElementById("borderDropdown").value === "Add Border";
+                const imageKey = orientation + (hasBorder ? "AddBorder" : "");
+                const frameColor = checkoutData.FrameColor || "Black";
+                const bounds = frameOpeningBounds[frameColor]?.[imageKey];
+                if (!bounds) return;
+
+                const stageWidth = frameContainer.clientWidth;
+                const stageHeight = frameContainer.clientHeight;
+                if (!stageWidth || !stageHeight) return;
+
+                const renderedAssetSize = Math.min(stageWidth, stageHeight);
+                const assetScale = renderedAssetSize / FRAME_ASSET_SIZE;
+                const assetOffsetX = (stageWidth - renderedAssetSize) / 2;
+                const assetOffsetY = (stageHeight - renderedAssetSize) / 2;
+                const seamUnderlap = 1;
+                const left = Math.max(0, Math.floor(assetOffsetX + bounds.left * assetScale) - seamUnderlap);
+                const top = Math.max(0, Math.floor(assetOffsetY + bounds.top * assetScale) - seamUnderlap);
+                const right = Math.min(stageWidth, Math.ceil(assetOffsetX + (bounds.right + 1) * assetScale) + seamUnderlap);
+                const bottom = Math.min(stageHeight, Math.ceil(assetOffsetY + (bounds.bottom + 1) * assetScale) + seamUnderlap);
+
+                frameContainer.style.setProperty("--frame-opening-left", `${left}px`);
+                frameContainer.style.setProperty("--frame-opening-top", `${top}px`);
+                frameContainer.style.setProperty("--frame-opening-width", `${right - left}px`);
+                frameContainer.style.setProperty("--frame-opening-height", `${bottom - top}px`);
+            }
+
+            function queueFrameOpeningSync() {
+                if (frameOpeningAnimationFrame) cancelAnimationFrame(frameOpeningAnimationFrame);
+                frameOpeningAnimationFrame = requestAnimationFrame(() => {
+                    frameOpeningAnimationFrame = null;
+                    syncFrameOpening();
+                });
+            }
 
             function getCroppedPixelDimensions() {
                 if (cropper) {
@@ -1049,6 +1110,7 @@
                 updatePreviewVisibility(orientation);
                 checkoutData.Orientation = orientation;
                 queueMobileFrameScaleSync();
+                queueFrameOpeningSync();
             }
 
             function setPreviewSources(src) {
@@ -1086,6 +1148,7 @@
                 }
 
                 queueMobileFrameScaleSync();
+                queueFrameOpeningSync();
             }
 
             // ✅ NEW: Function to update background orientation without closing cropper
@@ -1093,16 +1156,28 @@
             const mobileFrameContainer = document.getElementById("frameContainer");
 
             if (mobileFrameOverlay) {
-                mobileFrameOverlay.addEventListener("load", queueMobileFrameScaleSync);
+                mobileFrameOverlay.addEventListener("load", () => {
+                    queueMobileFrameScaleSync();
+                    queueFrameOpeningSync();
+                });
             }
 
             if (mobileFrameContainer && "ResizeObserver" in window) {
-                const mobileFrameResizeObserver = new ResizeObserver(queueMobileFrameScaleSync);
+                const mobileFrameResizeObserver = new ResizeObserver(() => {
+                    queueMobileFrameScaleSync();
+                    queueFrameOpeningSync();
+                });
                 mobileFrameResizeObserver.observe(mobileFrameContainer);
             }
 
-            window.addEventListener("resize", queueMobileFrameScaleSync, { passive: true });
-            window.addEventListener("orientationchange", queueMobileFrameScaleSync);
+            window.addEventListener("resize", () => {
+                queueMobileFrameScaleSync();
+                queueFrameOpeningSync();
+            }, { passive: true });
+            window.addEventListener("orientationchange", () => {
+                queueMobileFrameScaleSync();
+                queueFrameOpeningSync();
+            });
 
             if (mobileFrameMedia.addEventListener) {
                 mobileFrameMedia.addEventListener("change", queueMobileFrameScaleSync);
@@ -1111,6 +1186,7 @@
             }
 
             queueMobileFrameScaleSync();
+            queueFrameOpeningSync();
 
             function updateBackgroundOrientation(orientation) {
                 applyFrameOrientation(orientation);
