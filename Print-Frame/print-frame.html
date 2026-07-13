@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css?v=20260713-portrait-preview-fix" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css?v=20260713-portrait-preview-fix" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260713-160ppi-info" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260713-160ppi-info" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260610-gloock-dollar">
 
 
@@ -87,6 +87,13 @@
                 <option value="Portrait" disabled>Portrait</option>
             </select>
 
+            <div class="print-size-heading">
+                <span>Print size</span>
+                <button class="quality-info-button" id="qualityInfoButton" type="button"
+                    aria-label="View photo quality requirements" aria-expanded="false"
+                    aria-controls="quality-info-panel">i</button>
+            </div>
+
             <select id="sizeDropdown" class="dropdown">
                 <option value="">Select Size</option>
                 <option value="210x297mm" disabled>210×297mm</option>
@@ -94,7 +101,7 @@
                 <option value="594x841mm" disabled>594×841mm</option>
                 <option value="841x1189mm" disabled>841×1189mm</option>
             </select>
-            <p id="sizeQualityMessage" class="size-quality-message" role="status" aria-live="polite" hidden>Image quality too low for this size. Please select a smaller print or upload a higher-resolution photo.</p>
+            <p id="sizeQualityMessage" class="size-quality-message" role="status" aria-live="polite" hidden></p>
 
             <select id="borderDropdown" class="dropdown">
                 <option value="Full Image" selected>Full Image</option>
@@ -109,6 +116,26 @@
 
             <p id="priceDisplay">Price: $0</p>
             <button id="addToCartButton" disabled>Add to cart</button>
+        </div>
+    </div>
+
+    <div class="quality-info-overlay" id="qualityInfoOverlay" hidden>
+        <div id="quality-info-panel" class="quality-info-panel" role="dialog" aria-modal="true"
+            aria-labelledby="quality-info-title">
+            <button class="quality-info-close" id="qualityInfoClose" type="button"
+                aria-label="Close photo quality information">×</button>
+            <h3 id="quality-info-title">Photo quality requirements</h3>
+            <p>Our quality checker reviews the resolution of your uploaded photo and shows which print sizes will produce a clear result.</p>
+            <p>Larger prints need more image detail. Cropping or zooming into your photo reduces the available resolution, so some larger sizes may become unavailable.</p>
+            <h4>Minimum resolution at 160 PPI</h4>
+            <ul>
+                <li>Small — 210 × 297 mm: 1323 × 1871 px</li>
+                <li>Medium — 420 × 594 mm: 2646 × 3742 px</li>
+                <li>Large — 594 × 841 mm: 3742 × 5298 px</li>
+                <li>Extra-large — 841 × 1189 mm: 5298 × 7490 px</li>
+            </ul>
+            <p>For landscape photos, the pixel dimensions are reversed.</p>
+            <p>For the best results, upload the original full-resolution photo rather than a screenshot or an image downloaded from social media.</p>
         </div>
     </div>
 
@@ -832,10 +859,10 @@
             };
 
             const resolutionMapping = {
-                "210x297mm": { width: 1488, height: 2105 },
-                "420x594mm": { width: 2976, height: 4209 },
-                "594x841mm": { width: 4209, height: 5960 },
-                "841x1189mm": { width: 5960, height: 8426 }
+                "210x297mm": { width: 1323, height: 1871 },
+                "420x594mm": { width: 2646, height: 3742 },
+                "594x841mm": { width: 3742, height: 5298 },
+                "841x1189mm": { width: 5298, height: 7490 }
             };
 
             const printSizeMillimetres = {
@@ -881,8 +908,9 @@
             let frameOpeningAnimationFrame = null;
             let autoSelectLargestSizePending = false;
             const MAX_CART_ITEMS = 10;
-            const MINIMUM_PRINT_PPI = 180;
-            const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Please select a smaller print or upload a higher-resolution photo.";
+            const MINIMUM_PRINT_PPI = 160;
+            const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Choose a smaller print size or upload a higher-resolution photo.";
+            const ACCEPTABLE_QUALITY_MESSAGE = "Your photo meets our recommended print quality for this size.";
             const FRAME_ASSET_SIZE = 870;
             const frameOpeningBounds = {
                 Black: {
@@ -989,10 +1017,9 @@
                     ? { width: portraitPrintSize.height, height: portraitPrintSize.width }
                     : portraitPrintSize;
 
-                return {
-                    width: croppedDimensions.width / (printSize.width / 25.4),
-                    height: croppedDimensions.height / (printSize.height / 25.4)
-                };
+                const widthPpi = croppedDimensions.width / (printSize.width / 25.4);
+                const heightPpi = croppedDimensions.height / (printSize.height / 25.4);
+                return Math.min(widthPpi, heightPpi);
             }
 
             function isSizeQualityValid(size) {
@@ -1000,14 +1027,12 @@
                 const orientation = document.getElementById("orientationDropdown").value;
                 const requiredDimensions = getRequiredPixelDimensions(size, orientation);
                 const effectivePpi = getEffectivePpi(size);
-                const roundingTolerance = 0.05;
 
                 return Boolean(
                     croppedDimensions &&
                     requiredDimensions &&
-                    effectivePpi &&
-                    effectivePpi.width >= MINIMUM_PRINT_PPI - roundingTolerance &&
-                    effectivePpi.height >= MINIMUM_PRINT_PPI - roundingTolerance &&
+                    Number.isFinite(effectivePpi) &&
+                    effectivePpi >= MINIMUM_PRINT_PPI &&
                     croppedDimensions.width >= requiredDimensions.width &&
                     croppedDimensions.height >= requiredDimensions.height
                 );
@@ -1055,8 +1080,17 @@
                 }
 
                 const qualityMessage = document.getElementById("sizeQualityMessage");
-                qualityMessage.textContent = LOW_QUALITY_MESSAGE;
-                qualityMessage.hidden = !croppedDimensions || !hasDisabledSize || Boolean(sizeDropdown.value);
+                const selectedSize = sizeDropdown.value;
+                if (selectedSize && isSizeQualityValid(selectedSize)) {
+                    const effectivePpi = getEffectivePpi(selectedSize);
+                    qualityMessage.textContent = `${ACCEPTABLE_QUALITY_MESSAGE} (${Math.round(effectivePpi)} PPI)`;
+                    qualityMessage.classList.add("is-success");
+                    qualityMessage.hidden = false;
+                } else {
+                    qualityMessage.textContent = LOW_QUALITY_MESSAGE;
+                    qualityMessage.classList.remove("is-success");
+                    qualityMessage.hidden = !croppedDimensions || !hasDisabledSize;
+                }
                 updateAddToCartState();
             }
 
@@ -1222,6 +1256,7 @@
                 document.getElementById("frameOverlay").src = frameImages.Black.landscape;
 
                 document.getElementById("sizeQualityMessage").hidden = true;
+                document.getElementById("sizeQualityMessage").classList.remove("is-success");
                 document.getElementById("priceDisplay").textContent = "Price: $0";
                 setAddToCartBusy(false);
                 queueMobileFrameScaleSync();
@@ -2425,6 +2460,32 @@
                 }
 
                 queueMobileFrameScaleSync();
+            });
+
+            const qualityInfoButton = document.getElementById("qualityInfoButton");
+            const qualityInfoOverlay = document.getElementById("qualityInfoOverlay");
+            const qualityInfoClose = document.getElementById("qualityInfoClose");
+
+            function openQualityInfo() {
+                qualityInfoOverlay.hidden = false;
+                qualityInfoButton.setAttribute("aria-expanded", "true");
+                qualityInfoClose.focus();
+            }
+
+            function closeQualityInfo() {
+                if (qualityInfoOverlay.hidden) return;
+                qualityInfoOverlay.hidden = true;
+                qualityInfoButton.setAttribute("aria-expanded", "false");
+                qualityInfoButton.focus();
+            }
+
+            qualityInfoButton.addEventListener("click", openQualityInfo);
+            qualityInfoClose.addEventListener("click", closeQualityInfo);
+            qualityInfoOverlay.addEventListener("click", event => {
+                if (event.target === qualityInfoOverlay) closeQualityInfo();
+            });
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape" && !qualityInfoOverlay.hidden) closeQualityInfo();
             });
         });
     </script>
