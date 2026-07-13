@@ -323,7 +323,7 @@ body {
 /* Main Container */
 
 .about-desktop-editorial[hidden] {
-    display: block !important;
+    display: flex !important;
 }
 
 .about-page {
@@ -331,16 +331,20 @@ body {
 }
 
 .about-desktop-editorial {
-    width: calc(100% - 48px);
-    max-width: 1180px;
+    flex: 1 0 auto;
+    width: calc(100% - 80px);
+    max-width: 1040px;
     margin: 0 auto;
-    padding: 56px 38px 72px;
+    padding: 48px 0 64px;
+    align-items: center;
+    justify-content: center;
     background: #ffffff;
 }
 
 .editorial-shell {
     display: flex;
     flex-direction: column;
+    width: 100%;
     gap: 0;
 }
 
