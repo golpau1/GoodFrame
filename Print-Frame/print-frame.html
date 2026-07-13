@@ -879,6 +879,7 @@
             let isAddingToCart = false;
             let uploadedImageDimensions = null;
             let frameOpeningAnimationFrame = null;
+            let autoSelectLargestSizePending = false;
             const MAX_CART_ITEMS = 10;
             const MINIMUM_PRINT_PPI = 180;
             const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Please select a smaller print or upload a higher-resolution photo.";
@@ -1036,7 +1037,21 @@
 
                 if (sizeDropdown.value && !isSizeQualityValid(sizeDropdown.value)) {
                     sizeDropdown.value = "";
+                    checkoutData.Size = "";
                     updatePrice();
+                }
+
+                if (autoSelectLargestSizePending && croppedDimensions) {
+                    const largestAvailableOption = Array.from(sizeDropdown.options)
+                        .filter(option => option.value && !option.disabled)
+                        .pop();
+
+                    if (largestAvailableOption) {
+                        sizeDropdown.value = largestAvailableOption.value;
+                        checkoutData.Size = largestAvailableOption.value;
+                        autoSelectLargestSizePending = false;
+                        updatePrice();
+                    }
                 }
 
                 const qualityMessage = document.getElementById("sizeQualityMessage");
@@ -1473,7 +1488,9 @@
                     }
 
                     document.getElementById('addToCartButton').disabled = true;
+                    destroyCropperInstance();
                     uploadedImageDimensions = null;
+                    autoSelectLargestSizePending = true;
                     document.getElementById("sizeDropdown").value = "";
                     const borderDropdown = document.getElementById("borderDropdown");
                     borderDropdown.value = "Full Image";
@@ -1498,8 +1515,6 @@
                     cropperImage.src = uploadObjectUrl;
 
                     document.getElementById("reopenCropperButton").style.display = 'block';
-
-                    destroyCropperInstance();
 
                     const img = new Image();
 
@@ -1542,6 +1557,7 @@
                     destroyCropperInstance();
                     clearCurrentUploadObjectUrl();
                     uploadedImageDimensions = null;
+                    autoSelectLargestSizePending = false;
                     clearTimeout(previewUpdateTimer);
 
                     document.getElementById("uploadedImage").style.display = "none";
