@@ -5762,21 +5762,29 @@ footer.footer .footer-content,
   height: 22px;
   min-width: 22px;
   padding: 0;
-  border: 1px solid #070707;
+  border: 0;
   border-radius: 50%;
-  background: #070707;
-  color: #fff;
-  font: 600 13px/1 Arial, sans-serif;
+  background: transparent;
   cursor: pointer;
   box-shadow: none;
 }
 
+.quality-info-button img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
 .quality-info-button:hover,
 .quality-info-button:focus-visible {
-  background: #333;
-  border-color: #333;
+  background: transparent;
   outline: 2px solid rgba(7, 7, 7, 0.2);
   outline-offset: 2px;
+}
+
+.quality-info-button:hover img {
+  opacity: 0.75;
 }
 
 .size-quality-message.is-success {
