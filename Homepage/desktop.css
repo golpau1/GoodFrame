@@ -335,12 +335,12 @@ display: flex;
 }
 
 .hero-right {
-  background: url('assets/diogo-lemos-c8r5SVWKaGk-unsplash.jpg') center center/cover no-repeat;
+  background: url('assets/another+week+another+frame+(Blog+Banner)+(1).jpg') center center/cover no-repeat;
   border-top-left-radius: 3px;
 }
 
 .hero-left.hero-image-alt {
-  background: url('assets/another+week+another+frame+(Blog+Banner)+(1).jpg') center center/cover no-repeat;
+  background: url('assets/diogo-lemos-c8r5SVWKaGk-unsplash.jpg') center center/cover no-repeat;
   border-bottom-right-radius: 3px;
 }
 
