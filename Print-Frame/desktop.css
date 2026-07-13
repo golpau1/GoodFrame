@@ -3321,3 +3321,11 @@ h3,
   border-radius: 8px !important;
   line-height: 1 !important;
 }
+.size-quality-message {
+  width: 100%;
+  max-width: 420px;
+  margin: -4px 0 8px;
+  color: #9b2c2c;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}

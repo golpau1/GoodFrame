@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css?v=20260609-cropper-bottom" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css?v=20260608-cart-toast" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260713-ppi-checker" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260713-ppi-checker" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260610-gloock-dollar">
 
 
@@ -94,6 +94,7 @@
                 <option value="594x841mm" disabled>594×841mm</option>
                 <option value="841x1189mm" disabled>841×1189mm</option>
             </select>
+            <p id="sizeQualityMessage" class="size-quality-message" role="status" aria-live="polite" hidden>Image quality too low for this size. Please select a smaller print or upload a higher-resolution photo.</p>
 
             <select id="borderDropdown" class="dropdown">
                 <option value="Full Image" selected>Full Image</option>
@@ -673,7 +674,7 @@
             }
 
             function getResponsiveCropperConfig(orientation) {
-                const aspectRatio = orientation === "Landscape" ? 3 / 2 : 2 / 3;
+                const aspectRatio = orientation === "Landscape" ? 297 / 210 : 210 / 297;
                 
                 return {
                     aspectRatio: aspectRatio,
@@ -696,13 +697,16 @@
                     cropmove: function() {
                         constrainCropBoxScale(this.cropper);
                         queueCropperResizeHandleUpdate();
+                        updateSizeAvailability();
                     },
                     cropend: function() {
                         constrainCropBoxScale(this.cropper, true);
                         queueCropperResizeHandleUpdate();
+                        updateSizeAvailability();
                     },
                     crop: function() {
                         queueCropperResizeHandleUpdate();
+                        updateSizeAvailability();
                     },
                     built: function() {
                         
@@ -772,6 +776,7 @@
                                 );
                                 constrainCropBoxScale(this.cropper, true);
                                 queueCropperResizeHandleUpdate();
+                                updateSizeAvailability();
                             }
                             
                             // ✅ REMOVE CLOSE BUTTONS AFTER READY
@@ -827,22 +832,17 @@
             };
 
             const resolutionMapping = {
-                "210x297mm": {
-                    width: 800,
-                    height: 700
-                },
-                "420x594mm": {
-                    width: 1200,
-                    height: 1100
-                },
-                "594x841mm": {
-                    width: 1700,
-                    height: 1500
-                },
-                "841x1189mm": {
-                    width: 2200,
-                    height: 2000
-                }
+                "210x297mm": { width: 1488, height: 2105 },
+                "420x594mm": { width: 2976, height: 4209 },
+                "594x841mm": { width: 4209, height: 5960 },
+                "841x1189mm": { width: 5960, height: 8426 }
+            };
+
+            const printSizeMillimetres = {
+                "210x297mm": { width: 210, height: 297 },
+                "420x594mm": { width: 420, height: 594 },
+                "594x841mm": { width: 594, height: 841 },
+                "841x1189mm": { width: 841, height: 1189 }
             };
 
             const frameImages = {
@@ -877,7 +877,100 @@
             let currentOrientation = "Landscape";
             let isCartUpdating = false;
             let isAddingToCart = false;
+            let uploadedImageDimensions = null;
             const MAX_CART_ITEMS = 10;
+            const MINIMUM_PRINT_PPI = 180;
+            const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Please select a smaller print or upload a higher-resolution photo.";
+
+            function getCroppedPixelDimensions() {
+                if (cropper) {
+                    const cropData = cropper.getData(true);
+                    if (Number.isFinite(cropData.width) && Number.isFinite(cropData.height)) {
+                        return {
+                            width: Math.floor(Math.abs(cropData.width)),
+                            height: Math.floor(Math.abs(cropData.height))
+                        };
+                    }
+                }
+
+                return uploadedImageDimensions;
+            }
+
+            function getRequiredPixelDimensions(size, orientation) {
+                const portraitDimensions = resolutionMapping[size];
+                if (!portraitDimensions) return null;
+
+                return orientation === "Landscape"
+                    ? { width: portraitDimensions.height, height: portraitDimensions.width }
+                    : portraitDimensions;
+            }
+
+            function getEffectivePpi(size) {
+                const croppedDimensions = getCroppedPixelDimensions();
+                const portraitPrintSize = printSizeMillimetres[size];
+                const orientation = document.getElementById("orientationDropdown").value;
+                if (!croppedDimensions || !portraitPrintSize) return null;
+
+                const printSize = orientation === "Landscape"
+                    ? { width: portraitPrintSize.height, height: portraitPrintSize.width }
+                    : portraitPrintSize;
+
+                return {
+                    width: croppedDimensions.width / (printSize.width / 25.4),
+                    height: croppedDimensions.height / (printSize.height / 25.4)
+                };
+            }
+
+            function isSizeQualityValid(size) {
+                const croppedDimensions = getCroppedPixelDimensions();
+                const orientation = document.getElementById("orientationDropdown").value;
+                const requiredDimensions = getRequiredPixelDimensions(size, orientation);
+                const effectivePpi = getEffectivePpi(size);
+                const roundingTolerance = 0.05;
+
+                return Boolean(
+                    croppedDimensions &&
+                    requiredDimensions &&
+                    effectivePpi &&
+                    effectivePpi.width >= MINIMUM_PRINT_PPI - roundingTolerance &&
+                    effectivePpi.height >= MINIMUM_PRINT_PPI - roundingTolerance &&
+                    croppedDimensions.width >= requiredDimensions.width &&
+                    croppedDimensions.height >= requiredDimensions.height
+                );
+            }
+
+            function updateAddToCartState() {
+                const selectedSize = document.getElementById("sizeDropdown").value;
+                const hasUploadedImage =
+                    Boolean(sessionStorage.getItem('uploadedImageUrl')) &&
+                    /^\d{6}$/.test(sessionStorage.getItem('uniqueCode') || "");
+                document.getElementById("addToCartButton").disabled =
+                    isAddingToCart || !hasUploadedImage || !selectedSize || !isSizeQualityValid(selectedSize);
+            }
+
+            function updateSizeAvailability() {
+                const sizeDropdown = document.getElementById("sizeDropdown");
+                const croppedDimensions = getCroppedPixelDimensions();
+                let hasDisabledSize = false;
+
+                Array.from(sizeDropdown.options).forEach(option => {
+                    if (!option.value) return;
+
+                    const isValid = Boolean(croppedDimensions) && isSizeQualityValid(option.value);
+                    option.disabled = !isValid;
+                    hasDisabledSize = hasDisabledSize || !isValid;
+                });
+
+                if (sizeDropdown.value && !isSizeQualityValid(sizeDropdown.value)) {
+                    sizeDropdown.value = "";
+                    updatePrice();
+                }
+
+                const qualityMessage = document.getElementById("sizeQualityMessage");
+                qualityMessage.textContent = LOW_QUALITY_MESSAGE;
+                qualityMessage.hidden = !croppedDimensions || !hasDisabledSize;
+                updateAddToCartState();
+            }
 
             // ✅ NEW: Global function to update orientation button text (now removed since we don't have text)
             function updateOrientationButtonText() {
@@ -1132,12 +1225,9 @@
 
             function setAddToCartBusy(isBusy) {
                 isAddingToCart = isBusy;
-                const hasUploadedImage =
-                    Boolean(sessionStorage.getItem('uploadedImageUrl')) &&
-                    /^\d{6}$/.test(sessionStorage.getItem('uniqueCode') || "");
                 const addToCartButton = document.getElementById("addToCartButton");
-                addToCartButton.disabled = isBusy || !hasUploadedImage;
                 addToCartButton.textContent = isBusy ? "Uploading preview..." : "Add to cart";
+                updateAddToCartState();
             }
 
             document.querySelectorAll('a[href="../cart.html"]').forEach(link => {
@@ -1229,7 +1319,7 @@
                                         // Store both the URL and unique code for later use
                                         sessionStorage.setItem('uploadedImageUrl', response.url);
                                         sessionStorage.setItem('uniqueCode', uniqueCode);
-                                        document.getElementById('addToCartButton').disabled = false;
+                                        updateSizeAvailability();
                                         load(response.url);
                                     } else {
                                         console.error('No URL in server response:', response);
@@ -1271,6 +1361,7 @@
                     }
 
                     document.getElementById('addToCartButton').disabled = true;
+                    uploadedImageDimensions = null;
                     document.getElementById("sizeDropdown").value = "";
                     const borderDropdown = document.getElementById("borderDropdown");
                     borderDropdown.value = "Full Image";
@@ -1313,21 +1404,8 @@
                         const cropperConfig = getResponsiveCropperConfig(orientation);
                         cropper = new Cropper(cropperImage, cropperConfig);
 
-                        const width = this.width;
-                        const height = this.height;
-                        const imageLongSide = Math.max(width, height);
-                        const imageShortSide = Math.min(width, height);
-                        const sizeDropdown = document.getElementById("sizeDropdown");
-                        const options = sizeDropdown.options;
-
-                        Array.from(options).forEach(option => {
-                            if (!option.value) return;
-
-                            const requiredResolution = resolutionMapping[option.value];
-                            const requiredLongSide = Math.max(requiredResolution.width, requiredResolution.height);
-                            const requiredShortSide = Math.min(requiredResolution.width, requiredResolution.height);
-                            option.disabled = imageLongSide < requiredLongSide || imageShortSide < requiredShortSide;
-                        });
+                        uploadedImageDimensions = { width: this.naturalWidth, height: this.naturalHeight };
+                        updateSizeAvailability();
                     };
                     img.src = uploadObjectUrl;
                 },
@@ -1352,6 +1430,7 @@
                     cropperOverlay.style.display = "none";
                     destroyCropperInstance();
                     clearCurrentUploadObjectUrl();
+                    uploadedImageDimensions = null;
                     clearTimeout(previewUpdateTimer);
 
                     document.getElementById("uploadedImage").style.display = "none";
@@ -1359,6 +1438,7 @@
                     document.getElementById("addToCartButton").disabled = true;
                     sessionStorage.removeItem('uploadedImageUrl');
                     sessionStorage.removeItem('uniqueCode');
+                    document.getElementById("sizeQualityMessage").hidden = true;
                 }
             });
 
@@ -1507,6 +1587,7 @@
                     const orientation = document.getElementById("orientationDropdown").value;
                     setPreviewSources(croppedImage);
                     updatePreviewVisibility(orientation);
+                    updateSizeAvailability();
 
                     const cropperOverlay = document.getElementById("cropperOverlay");
                     cropperOverlay.style.display = "none";
@@ -1540,7 +1621,7 @@
                 frameContainer.style.height = "1000px";
 
                 if (cropper) {
-                    const aspectRatio = orientation === "Landscape" ? 3 / 2 : 2 / 3;
+                    const aspectRatio = orientation === "Landscape" ? 297 / 210 : 210 / 297;
                     cropper.setAspectRatio(aspectRatio);
                     fitCropperCanvasToContainer(cropper);
                     updateCropBoxMinOptions(cropper);
@@ -1583,6 +1664,7 @@
                 
                 // ✅ CLEAN CROPPER: Update orientation button text when orientation changes
                 updateOrientationButtonText();
+                updateSizeAvailability();
             });
 
             function updatePrice() {
@@ -1599,6 +1681,7 @@
                 updateFrameContainerClasses();
                 updatePrice();
                 queueMobileFrameScaleSync();
+                updateSizeAvailability();
             }
 
             const colorButtons = document.querySelectorAll(".color-button");
@@ -1671,6 +1754,11 @@
                 const selectedSize = document.getElementById("sizeDropdown").value;
                 if (!selectedSize) {
                     alert("Please select a size.");
+                    return;
+                }
+                if (!isSizeQualityValid(selectedSize)) {
+                    alert(LOW_QUALITY_MESSAGE);
+                    updateSizeAvailability();
                     return;
                 }
                 const selectedBorder = document.getElementById("borderDropdown").value;

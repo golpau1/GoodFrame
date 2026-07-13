@@ -5661,3 +5661,10 @@ footer.footer .footer-content,
     box-shadow: none !important;
   }
 }
+.size-quality-message {
+  width: 100%;
+  margin: -4px 0 8px;
+  color: #9b2c2c;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
