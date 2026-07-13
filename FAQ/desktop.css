@@ -1196,11 +1196,15 @@ border: none !important;
 
 .faq-section {
     position: relative;
-    max-width: 800px;
-    width: 100%;
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 1040px;
+    width: calc(100% - 80px);
     text-align: center;
-  margin: 0 auto;
-  padding: 48px 20px 0;
+    margin: 0 auto;
+    padding: 48px 0 64px;
     color: #070707;
 }
 
@@ -1846,8 +1850,8 @@ body {
 }
 
 .faq-section {
-  padding-bottom: 72px !important;
-  flex: 0 0 auto;
+  padding-bottom: 64px !important;
+  flex: 1 0 auto;
 }
 
 .footer {
