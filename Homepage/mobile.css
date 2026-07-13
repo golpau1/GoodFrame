@@ -3129,7 +3129,6 @@ footer.footer .footer-content,
     color: #000000 !important;
   }
 
-  .top-banner,
   .info-bar,
   .gallery-row,
   .footer {
@@ -3137,8 +3136,6 @@ footer.footer .footer-content,
     color: #ffffff !important;
   }
 
-  .top-banner,
-  .top-banner *,
   .info-bar,
   .info-bar *,
   .gallery-row,
@@ -3148,27 +3145,15 @@ footer.footer .footer-content,
     color: #ffffff !important;
   }
 
-  .secondary-header,
   .mobile-nav {
     background: #ffffff !important;
     color: #000000 !important;
   }
 
-  .secondary-header .header-title,
-  .secondary-header .cart-nav,
-  .secondary-header .cart-count,
   .mobile-nav,
   .mobile-nav a,
   .mobile-nav-close {
     color: #000000 !important;
-  }
-
-  .secondary-header .cart-nav svg {
-    stroke: #000000 !important;
-  }
-
-  .secondary-header .burger-line {
-    background: #000000 !important;
   }
 
   .mobile-nav a {

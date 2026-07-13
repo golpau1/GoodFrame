@@ -264,6 +264,53 @@ a.btn,
   }
 }
 
+/* Homepage-only mobile banner/header colour swap. */
+@media (max-width: 900px) {
+  body.homepage > header,
+  body.homepage .top-banner {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body.homepage .secondary-header {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  body.homepage .secondary-header .header-title,
+  body.homepage .secondary-header .header-title:hover,
+  body.homepage .secondary-header .header-title:focus-visible,
+  body.homepage .secondary-header .header-title:active {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  body.homepage .secondary-header .cart-nav,
+  body.homepage .secondary-header .cart-count,
+  body.homepage .secondary-header .cart-nav:hover,
+  body.homepage .secondary-header .cart-nav:focus-visible,
+  body.homepage .secondary-header .cart-nav:active {
+    color: #ffffff !important;
+  }
+
+  body.homepage .secondary-header .cart-nav svg,
+  body.homepage .secondary-header .cart-nav:hover svg,
+  body.homepage .secondary-header .cart-nav:focus-visible svg,
+  body.homepage .secondary-header .cart-nav:active svg {
+    stroke: #ffffff !important;
+  }
+
+  body.homepage .secondary-header .burger-line,
+  body.homepage .secondary-header .burger-menu:hover .burger-line,
+  body.homepage .secondary-header .burger-menu:focus-visible .burger-line,
+  body.homepage .secondary-header .burger-menu.active .burger-line {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+  }
+}
+
 @media (max-width: 380px) {
   .secondary-header .header-title,
   .secondary-header .legacy-header-title,
