@@ -968,7 +968,7 @@
 
                 const qualityMessage = document.getElementById("sizeQualityMessage");
                 qualityMessage.textContent = LOW_QUALITY_MESSAGE;
-                qualityMessage.hidden = !croppedDimensions || !hasDisabledSize;
+                qualityMessage.hidden = !croppedDimensions || !hasDisabledSize || Boolean(sizeDropdown.value);
                 updateAddToCartState();
             }
 
