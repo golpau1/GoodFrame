@@ -1169,6 +1169,65 @@
                 document.getElementById("uploadedImagePortrait").src = src;
             }
 
+            function resetUploadState() {
+                clearTimeout(previewUpdateTimer);
+                destroyCropperInstance();
+                clearCurrentUploadObjectUrl();
+
+                uploadedImageDimensions = null;
+                autoSelectLargestSizePending = false;
+                currentOrientation = "Landscape";
+                checkoutData = {
+                    FrameColor: "Black",
+                    Size: "",
+                    Border: "Full Image",
+                    Orientation: "Landscape"
+                };
+
+                sessionStorage.removeItem("uploadedImageUrl");
+                sessionStorage.removeItem("uniqueCode");
+
+                ["uploadedImage", "uploadedImagePortrait"].forEach(id => {
+                    const previewImage = document.getElementById(id);
+                    previewImage.removeAttribute("src");
+                    previewImage.classList.remove("add-border");
+                    previewImage.style.setProperty("display", "none", "important");
+                });
+                document.getElementById("cropperImage").removeAttribute("src");
+
+                const cropperOverlay = document.getElementById("cropperOverlay");
+                cropperOverlay.style.display = "none";
+                document.getElementById("cropperResizeHandle").style.display = "none";
+                document.getElementById("reopenCropperButton").style.display = "none";
+
+                const orientationDropdown = document.getElementById("orientationDropdown");
+                orientationDropdown.value = "Landscape";
+                orientationDropdown.querySelector('option[value="Portrait"]').disabled = true;
+
+                const sizeDropdown = document.getElementById("sizeDropdown");
+                sizeDropdown.value = "";
+                Array.from(sizeDropdown.options).forEach(option => {
+                    if (option.value) option.disabled = true;
+                });
+
+                document.getElementById("borderDropdown").value = "Full Image";
+                document.querySelectorAll(".color-button").forEach(button => {
+                    button.classList.toggle("selected", button.dataset.color === "Black");
+                });
+
+                const frameContainer = document.getElementById("frameContainer");
+                frameContainer.style.removeProperty("width");
+                frameContainer.style.removeProperty("height");
+                updateFrameContainerClasses();
+                document.getElementById("frameOverlay").src = frameImages.Black.landscape;
+
+                document.getElementById("sizeQualityMessage").hidden = true;
+                document.getElementById("priceDisplay").textContent = "Price: $0";
+                setAddToCartBusy(false);
+                queueMobileFrameScaleSync();
+                queueFrameOpeningSync();
+            }
+
             function updateFrameContainerClasses() {
                 const frameContainer = document.getElementById("frameContainer");
                 if (!frameContainer) return;
@@ -1535,38 +1594,7 @@
                     };
                     img.src = uploadObjectUrl;
                 },
-                onremovefile: () => {
-                    document.getElementById("reopenCropperButton").style.display = 'none';
-                    const sizeDropdown = document.getElementById("sizeDropdown");
-                    sizeDropdown.value = "";
-
-                    const sizeOptions = sizeDropdown.querySelectorAll("option");
-                    sizeOptions.forEach(option => {
-                        if (option.value !== "") {
-                            option.disabled = true;
-                        }
-                    });
-
-                    const orientationDropdown = document.getElementById("orientationDropdown");
-                    orientationDropdown.value = "Landscape";
-                    orientationDropdown.querySelector('option[value="Portrait"]').disabled = true;
-                    applyFrameOrientation("Landscape");
-
-                    const cropperOverlay = document.getElementById("cropperOverlay");
-                    cropperOverlay.style.display = "none";
-                    destroyCropperInstance();
-                    clearCurrentUploadObjectUrl();
-                    uploadedImageDimensions = null;
-                    autoSelectLargestSizePending = false;
-                    clearTimeout(previewUpdateTimer);
-
-                    document.getElementById("uploadedImage").style.display = "none";
-                    document.getElementById("uploadedImagePortrait").style.display = "none";
-                    document.getElementById("addToCartButton").disabled = true;
-                    sessionStorage.removeItem('uploadedImageUrl');
-                    sessionStorage.removeItem('uniqueCode');
-                    document.getElementById("sizeQualityMessage").hidden = true;
-                }
+                onremovefile: resetUploadState
             });
 
             function getCroppedImage(orientation = document.getElementById("orientationDropdown").value) {
