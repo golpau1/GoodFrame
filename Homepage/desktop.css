@@ -11,6 +11,7 @@
   src: url('assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -19,6 +20,7 @@
        url('../Assets/NType82-Regular.otf') format('opentype');
   font-weight: 300;
   font-style: normal;
+  font-display: swap;
 }
 :root {
   /* Color Palette */

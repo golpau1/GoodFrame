@@ -6,43 +6,43 @@
             src: url('../Homepage/assets/fonts/Fat Molly/FatMolly-Regular.otf') format('opentype');
             font-weight: normal;
             font-style: normal;
-            font-display: block;
-        }
+            font-display: swap;
+}
 
-        /* Cooper Light Font */
+/* Cooper Light Font */
         @font-face {
             font-family: 'Cooper Light';
             src: url('../Homepage/assets/fonts/Cooper/cooperl.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
-            font-display: block;
-        }
+            font-display: swap;
+}
 
-        @font-face {
+@font-face {
             font-family: 'Trolleybus Trial';
             src: url('../Homepage/assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype');
             font-weight: normal;
             font-style: normal;
-            font-display: block;
-        }
+            font-display: swap;
+}
 
-        @font-face {
+@font-face {
             font-family: 'Even Mono Trial';
             src: url('../Homepage/assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype');
             font-weight: normal;
             font-style: normal;
-            font-display: block;
-        }
+            font-display: swap;
+}
 
-        @font-face {
+@font-face {
             font-family: 'NType82';
             src: url('../Assets/NType82-Regular.otf') format('opentype');
             font-weight: 300;
             font-style: normal;
-            font-display: block;
-        }
+            font-display: swap;
+}
 
-        :root {
+:root {
             --text-primary: #2D3748;
             --text-secondary: #718096;
             --background-primary: #ffffff;
@@ -1213,8 +1213,10 @@
             }
         }
 
-@font-face { font-family: 'Trolleybus Trial'; src: url('../Homepage/assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype'); }
-            @font-face { font-family: 'Even Mono Trial'; src: url('../Homepage/assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype'); }
+@font-face { font-family: 'Trolleybus Trial'; src: url('../Homepage/assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype');   font-display: swap;
+}
+            @font-face { font-family: 'Even Mono Trial'; src: url('../Homepage/assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype');   font-display: swap;
+}
             .top-banner { text-align: center !important; height: 40px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 1rem !important; font-weight: 300 !important; font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important; font-variant-caps: small-caps !important; color: #f9f2e6 !important; background-color: #070707 !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
             header { background: #ffffff !important; width: 100% !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important; position: sticky !important; top: 0 !important; z-index: 1000 !important; }
             .secondary-header { display: grid !important; grid-template-columns: 1fr auto 1fr !important; align-items: center !important; height: 72px !important; padding: 0 40px !important; background: #ffffff !important; }

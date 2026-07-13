@@ -4,22 +4,14 @@
 ==================================================
 */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Cooper+Lt+BT:wght@400&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Fat+Molly:wght@400&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cutive+Mono&family=DM+Serif+Display:ital@0;1&family=Inter:wght@300&family=Lexend:wght@300&family=Manrope:wght@300&family=Montserrat:wght@600&family=Roboto+Mono:wght@300;400;500;600;700&family=Source+Sans+3:wght@300&display=swap');
 
 @font-face {
   font-family: 'JetBrains Mono Bold';
   src: url('assets/fonts/ttf/JetBrainsMono-Bold.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -27,6 +19,7 @@
   src: url('assets/fonts/Cooper/cooperl.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -34,6 +27,7 @@
   src: url('assets/fonts/Fat Molly/FatMolly-Regular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -41,6 +35,7 @@
   src: url('assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -48,6 +43,7 @@
   src: url('assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -55,6 +51,7 @@
   src: url('assets/BolditalicStudioTrials/Gearz/CopyrightBolditalicStudio-GearzThinTrial.otf') format('opentype');
   font-weight: 100;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -62,6 +59,7 @@
   src: url('assets/BolditalicStudioTrials/Brog/CopyrightBolditalicStudio-BrogRegularTrial.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -69,6 +67,7 @@
   src: url('../Assets/NType82-Regular.otf') format('opentype');
   font-weight: 300;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -76,6 +75,7 @@
   src: url('assets/BolditalicStudioTrials/Chowder/CopyrightBolditalicStudio-ChowderLightTrial.otf') format('opentype');
   font-weight: 300;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -83,6 +83,7 @@
   src: url('assets/BolditalicStudioTrials/Chowder/CopyrightBolditalicStudio-ChowderMediumTrial.otf') format('opentype');
   font-weight: 500;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -90,6 +91,7 @@
   src: url('assets/BolditalicStudioTrials/Tsarga/CopyrightBolditalicStudio-TsargaBoldTrial.otf') format('opentype');
   font-weight: 700;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -97,6 +99,7 @@
   src: url('assets/BolditalicStudioTrials/Apophis/CopyrightBolditalicStudio-ApoTxtRegularTrial.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -104,6 +107,7 @@
   src: url('assets/fonts/Cooper/cooperli.ttf') format('truetype');
   font-weight: normal;
   font-style: italic;
+  font-display: swap;
 }
 
 @font-face {
@@ -111,6 +115,7 @@
   src: url('assets/fonts/New folder/Questrial/Questrial-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -118,6 +123,7 @@
   src: url('assets/fonts/New folder/San Francisco/otf/SFNSText-Light.otf') format('opentype');
   font-weight: 300;
   font-style: normal;
+  font-display: swap;
 }
 
 :root {
@@ -1202,6 +1208,7 @@ border-color: #070707;
     src: url('../Homepage/assets/fonts/Cooper/cooperl.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
+  font-display: swap;
 }
 
 /* FAQ section font overrides */
@@ -1283,6 +1290,7 @@ body {
     src: url('../Homepage/assets/fonts/Cooper/cooperl.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
+  font-display: swap;
 }
 
 header, .secondary-header {
@@ -2590,12 +2598,14 @@ header {
 @font-face {
         font-family: 'Trolleybus Trial';
         src: url('../Homepage/assets/Trolleybus/CopyrightBolditalicStudio-TrolleybusTrial.otf') format('opentype');
-      }
+        font-display: swap;
+}
 
       @font-face {
         font-family: 'Even Mono Trial';
         src: url('../Homepage/assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype');
-      }
+        font-display: swap;
+}
 
       .top-banner { text-align: center !important; height: 40px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 1rem !important; font-weight: 300 !important; font-family: var(--font-family-subheading) !important; font-variant-caps: small-caps !important; color: #f9f2e6 !important; background-color: #070707 !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
       header { background: #ffffff !important; width: 100% !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important; position: sticky !important; top: 0 !important; z-index: 1000 !important; }
