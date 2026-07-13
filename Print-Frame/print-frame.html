@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css?v=20260713-frame-image-area-fix" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css?v=20260713-frame-image-area-fix" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260713-portrait-preview-fix" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260713-portrait-preview-fix" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260610-gloock-dollar">
 
 
@@ -933,6 +933,18 @@
                 frameContainer.style.setProperty("--frame-opening-top", `${top}px`);
                 frameContainer.style.setProperty("--frame-opening-width", `${right - left}px`);
                 frameContainer.style.setProperty("--frame-opening-height", `${bottom - top}px`);
+
+                const frameImageArea = document.getElementById("frameImageWindow");
+                frameImageArea.style.setProperty("position", "absolute", "important");
+                frameImageArea.style.setProperty("left", `${left}px`, "important");
+                frameImageArea.style.setProperty("top", `${top}px`, "important");
+                frameImageArea.style.setProperty("right", "auto", "important");
+                frameImageArea.style.setProperty("bottom", "auto", "important");
+                frameImageArea.style.setProperty("width", `${right - left}px`, "important");
+                frameImageArea.style.setProperty("height", `${bottom - top}px`, "important");
+                frameImageArea.style.setProperty("margin", "0", "important");
+                frameImageArea.style.setProperty("transform", "none", "important");
+                frameImageArea.style.setProperty("overflow", "hidden", "important");
             }
 
             function queueFrameOpeningSync() {
@@ -1085,11 +1097,11 @@
                 const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
 
                 if (orientation === "Landscape") {
-                    uploadedImage.style.display = "block";
-                    uploadedImagePortrait.style.display = "none";
+                    uploadedImage.style.setProperty("display", "block", "important");
+                    uploadedImagePortrait.style.setProperty("display", "none", "important");
                 } else {
-                    uploadedImage.style.display = "none";
-                    uploadedImagePortrait.style.display = "block";
+                    uploadedImage.style.setProperty("display", "none", "important");
+                    uploadedImagePortrait.style.setProperty("display", "block", "important");
                 }
             }
 
@@ -1113,16 +1125,33 @@
                 queueFrameOpeningSync();
             }
 
-            function setPreviewSources(src) {
+            function resetPreviewStyles() {
                 ["uploadedImage", "uploadedImagePortrait"].forEach(id => {
                     const previewImage = document.getElementById(id);
-                    [
-                        "inset", "top", "right", "bottom", "left", "width", "height",
-                        "min-width", "min-height", "max-width", "max-height", "margin",
-                        "transform", "transform-origin"
-                    ].forEach(property => previewImage.style.removeProperty(property));
-                    previewImage.src = src;
+                    previewImage.style.setProperty("position", "absolute", "important");
+                    previewImage.style.setProperty("inset", "auto", "important");
+                    previewImage.style.setProperty("left", "0", "important");
+                    previewImage.style.setProperty("top", "0", "important");
+                    previewImage.style.setProperty("right", "auto", "important");
+                    previewImage.style.setProperty("bottom", "auto", "important");
+                    previewImage.style.setProperty("margin", "0", "important");
+                    previewImage.style.setProperty("transform", "none", "important");
+                    previewImage.style.setProperty("transform-origin", "center center", "important");
+                    previewImage.style.setProperty("width", "100%", "important");
+                    previewImage.style.setProperty("height", "100%", "important");
+                    previewImage.style.setProperty("min-width", "100%", "important");
+                    previewImage.style.setProperty("min-height", "100%", "important");
+                    previewImage.style.setProperty("max-width", "none", "important");
+                    previewImage.style.setProperty("max-height", "none", "important");
+                    previewImage.style.setProperty("object-fit", "cover", "important");
+                    previewImage.style.setProperty("object-position", "center center", "important");
                 });
+            }
+
+            function setPreviewSources(src) {
+                resetPreviewStyles();
+                document.getElementById("uploadedImage").src = src;
+                document.getElementById("uploadedImagePortrait").src = src;
             }
 
             function updateFrameContainerClasses() {
@@ -1465,8 +1494,7 @@
                     const uploadedImage = document.getElementById("uploadedImage");
                     const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
                     const uploadObjectUrl = setCurrentUploadObjectUrl(file.file);
-                    uploadedImage.src = uploadObjectUrl;
-                    uploadedImagePortrait.src = uploadObjectUrl;
+                    setPreviewSources(uploadObjectUrl);
                     cropperImage.src = uploadObjectUrl;
 
                     document.getElementById("reopenCropperButton").style.display = 'block';
@@ -1525,16 +1553,17 @@
                 }
             });
 
-            function getCroppedImage() {
+            function getCroppedImage(orientation = document.getElementById("orientationDropdown").value) {
                 if (!cropper) {
                     console.error("Cropper not initialized");
                     return null;
                 }
 
                 try {
+                    const isPortrait = orientation === "Portrait";
                     const canvas = cropper.getCroppedCanvas({
-                        maxWidth: 1600,
-                        maxHeight: 1600,
+                        width: isPortrait ? 1488 : 2105,
+                        height: isPortrait ? 2105 : 1488,
                         imageSmoothingEnabled: true,
                         imageSmoothingQuality: "high"
                     });
@@ -1542,7 +1571,7 @@
                         console.error("Failed to get cropped canvas");
                         return null;
                     }
-                    return canvas.toDataURL("image/jpeg", 0.9);
+                    return canvas.toDataURL("image/jpeg", 0.95);
                 } catch (error) {
                     console.error("Error getting cropped image:", error);
                     return null;
@@ -1696,58 +1725,30 @@
 
             document.getElementById("orientationDropdown").addEventListener("change", () => {
                 const orientation = document.getElementById("orientationDropdown").value;
-
-                currentOrientation = orientation;
-
-                const frameContainer = document.getElementById("frameContainer");
-                frameContainer.style.width = "1000px";
-                frameContainer.style.height = "1000px";
+                resetPreviewStyles();
+                applyFrameOrientation(orientation);
 
                 if (cropper) {
                     const aspectRatio = orientation === "Landscape" ? 297 / 210 : 210 / 297;
                     cropper.setAspectRatio(aspectRatio);
-                    fitCropperCanvasToContainer(cropper);
                     updateCropBoxMinOptions(cropper);
-                    cropper.setCropBoxData(getCenteredCropBoxDataForScale(cropper, INITIAL_CROP_BOX_SCALE));
-                    constrainCropBoxScale(cropper, true);
-                    queueCropperResizeHandleUpdate();
-                }
-
-                const selectedColor = checkoutData.FrameColor;
-                const frameOverlay = document.getElementById("frameOverlay");
-                const borderDropdown = document.getElementById("borderDropdown");
-
-                if (borderDropdown.value === "Add Border") {
-                    frameOverlay.src = frameImages[selectedColor][orientation.toLowerCase() + "AddBorder"];
-                } else {
-                    frameOverlay.src = frameImages[selectedColor][orientation.toLowerCase()];
-                }
-
-                const uploadedImage = document.getElementById("uploadedImage");
-                const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
-                if (orientation === "Landscape") {
-                    uploadedImage.style.display = "block";
-                    uploadedImagePortrait.style.display = "none";
-                } else {
-                    uploadedImage.style.display = "none";
-                    uploadedImagePortrait.style.display = "block";
                 }
 
                 clearTimeout(previewUpdateTimer);
-                previewUpdateTimer = setTimeout(() => {
-                    const cropperOverlay = document.getElementById("cropperOverlay");
-                    if (cropper && cropperOverlay.style.display !== "flex") {
-                        const croppedImage = getCroppedImage();
+                requestAnimationFrame(() => {
+                    syncFrameOpening();
+                    if (cropper) {
+                        constrainCropBoxScale(cropper, true);
+                        queueCropperResizeHandleUpdate();
+                        const croppedImage = getCroppedImage(orientation);
                         if (croppedImage) {
                             setPreviewSources(croppedImage);
                             updatePreviewVisibility(orientation);
                         }
                     }
-                }, 120);
-                
-                // ✅ CLEAN CROPPER: Update orientation button text when orientation changes
-                updateOrientationButtonText();
-                updateSizeAvailability();
+                    updateOrientationButtonText();
+                    updateSizeAvailability();
+                });
             });
 
             function updatePrice() {
