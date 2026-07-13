@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/Checkout/desktop.css?v=20260713-fouc-fix" media="screen and (min-width: 901px)">
     <link rel="stylesheet" href="/Checkout/mobile.css?v=20260713-fouc-fix" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="/Shared/logo.css?v=20260713-fouc-fix">
+    <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260714-mobile-consistency">
     <style>
         @font-face {
             font-family: 'Girthquake';
@@ -220,50 +221,8 @@
 </head>
 
 <body>
-    <header>
-        <div class="top-banner">
-            Free Shipping Over $100 - Frame Now
-        </div>
-    </header>
-
-    <div class="secondary-header">
-        <a href="../index.html" class="header-title">Good Frame</a>
-
-        <nav class="nav">
-            <a href="../Print-Frame/print-frame.html">Print & Frame</a>
-            <a href="../Pricing/pricing.html">Pricing</a>
-            <a href="../About Us/AboutUs.html">About Us</a>
-            <a href="../FAQ/FAQ.html">FAQ</a>
-        </nav>
-
-        <!-- Mobile Burger Menu Button -->
-        <div class="burger-menu" id="burgerMenu">
-            <div class="burger-line"></div>
-            <div class="burger-line"></div>
-            <div class="burger-line"></div>
-        </div>
-
-        <a href="../cart.html" class="cart-nav" id="cartNav">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-            </svg>
-            <span class="cart-count">0</span>
-        </a>
-    </div>
-
-    <!-- Mobile navigation overlay and panel -->
-    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-
-    <div class="mobile-nav" id="mobileNav">
-        <div class="mobile-nav-close" id="mobileNavClose">&times;</div>
-        <a href="../index.html">Home</a>
-        <a href="../Print-Frame/print-frame.html">Print & Frame</a>
-        <a href="../Pricing/pricing.html">Pricing</a>
-        <a href="../About Us/AboutUs.html">About Us</a>
-        <a href="../FAQ/FAQ.html">FAQ</a>
-    </div>
+    <div data-site-header data-root="../"></div>
+    <script src="/Shared/site-header.js?v=20260714-mobile-consistency"></script>
 
     <main class="success-container">
         <!-- Success Message -->
