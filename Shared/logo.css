@@ -273,7 +273,17 @@ a.btn,
     color: #000000 !important;
   }
 
+  body.homepage .top-banner {
+    min-height: 42px !important;
+    padding: 10px 20px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.3 !important;
+  }
+
   body.homepage .secondary-header {
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
     background: #000000 !important;
     background-color: #000000 !important;
     color: #ffffff !important;
@@ -295,6 +305,19 @@ a.btn,
     color: #ffffff !important;
   }
 
+  body.homepage .secondary-header .cart-nav {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    justify-content: flex-start !important;
+  }
+
+  body.homepage .secondary-header .cart-nav svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
   body.homepage .secondary-header .cart-nav svg,
   body.homepage .secondary-header .cart-nav:hover svg,
   body.homepage .secondary-header .cart-nav:focus-visible svg,
@@ -308,6 +331,14 @@ a.btn,
   body.homepage .secondary-header .burger-menu.active .burger-line {
     background: #ffffff !important;
     background-color: #ffffff !important;
+  }
+
+  body.homepage .secondary-header .burger-menu {
+    box-sizing: border-box !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    padding: 12px 10px !important;
   }
 }
 
