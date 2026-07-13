@@ -12,8 +12,8 @@
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="desktop.css?v=20260713-160ppi-info" media="screen and (min-width: 901px)">
-    <link rel="stylesheet" href="mobile.css?v=20260713-160ppi-info" media="screen and (max-width: 900px)">
+    <link rel="stylesheet" href="desktop.css?v=20260713-info-button" media="screen and (min-width: 901px)">
+    <link rel="stylesheet" href="mobile.css?v=20260713-info-button" media="screen and (max-width: 900px)">
     <link rel="stylesheet" href="../Shared/logo.css?v=20260610-gloock-dollar">
 
 
@@ -91,7 +91,9 @@
                 <span>Print size</span>
                 <button class="quality-info-button" id="qualityInfoButton" type="button"
                     aria-label="View photo quality requirements" aria-expanded="false"
-                    aria-controls="quality-info-panel">i</button>
+                    aria-controls="quality-info-panel" title="Photo quality requirements">
+                    <span aria-hidden="true">i</span>
+                </button>
             </div>
 
             <select id="sizeDropdown" class="dropdown">
@@ -134,7 +136,6 @@
                 <li>Large — 594 × 841 mm: 3742 × 5298 px</li>
                 <li>Extra-large — 841 × 1189 mm: 5298 × 7490 px</li>
             </ul>
-            <p>For landscape photos, the pixel dimensions are reversed.</p>
             <p>For the best results, upload the original full-resolution photo rather than a screenshot or an image downloaded from social media.</p>
         </div>
     </div>

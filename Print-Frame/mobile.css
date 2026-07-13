@@ -5758,22 +5758,25 @@ footer.footer .footer-content,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
   padding: 0;
-  border: 1px solid rgba(7, 7, 7, 0.35);
+  border: 1px solid #070707;
   border-radius: 50%;
-  background: transparent;
-  color: #070707;
-  font: 600 12px/1 var(--font-family);
+  background: #070707;
+  color: #fff;
+  font: 600 13px/1 Arial, sans-serif;
   cursor: pointer;
+  box-shadow: none;
 }
 
 .quality-info-button:hover,
 .quality-info-button:focus-visible {
-  border-color: #070707;
-  outline: none;
+  background: #333;
+  border-color: #333;
+  outline: 2px solid rgba(7, 7, 7, 0.2);
+  outline-offset: 2px;
 }
 
 .size-quality-message.is-success {
