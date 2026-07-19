@@ -3119,7 +3119,7 @@ footer.footer .footer-content,
     width: max-content !important;
     margin: 0 !important;
     animation: none !important;
-    transform: none !important;
+    transform: none;
     white-space: normal !important;
   }
 
@@ -3487,12 +3487,20 @@ footer.footer .footer-content,
 
 /* Phone-only fixes: contained information carousel and compact How It Works cards. */
 @media (max-width: 767px) {
+  body.homepage .mobile-home-hero,
+  body.homepage .mobile-home-hero__content,
+  body.homepage .mobile-home-hero__image,
+  body.homepage .mobile-home-hero__image img {
+    border-radius: 0 !important;
+  }
+
   body.homepage .info-bar {
     position: relative !important;
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-height: 112px !important;
+    height: 120px !important;
+    min-height: 120px !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
@@ -3533,9 +3541,10 @@ footer.footer .footer-content,
     justify-content: center !important;
     width: 100% !important;
     min-width: 100% !important;
-    min-height: 112px !important;
+    height: 120px !important;
+    min-height: 120px !important;
     margin: 0 !important;
-    padding: 20px 34px 40px !important;
+    padding: 18px 24px 38px !important;
     color: #ffffff !important;
     border: 0 !important;
     font-size: 0.9375rem !important;
@@ -3624,6 +3633,6 @@ footer.footer .footer-content,
 
 @media (max-width: 767px) and (prefers-reduced-motion: reduce) {
   body.homepage .info-bar-carousel.is-animating {
-    transition-duration: 1ms;
+    transition: none !important;
   }
 }

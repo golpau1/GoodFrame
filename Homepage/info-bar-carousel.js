@@ -5,6 +5,11 @@
   const slides = track ? Array.from(track.querySelectorAll(".info-bar-item")) : [];
 
   if (!bar || !track || slides.length < 2) return;
+  if (bar.dataset.infoBarCarouselInitialized === "true") return;
+  bar.dataset.infoBarCarouselInitialized = "true";
+
+  const AUTOPLAY_DELAY = 3500;
+  const RESUME_DELAY = 2000;
 
   let activeIndex = 0;
   let autoplayTimer = 0;
@@ -43,7 +48,7 @@
       activeIndex = (activeIndex + 1) % slides.length;
       dragOffset = 0;
       render(true);
-    }, 4000);
+    }, AUTOPLAY_DELAY);
   }
 
   function pauseForInteraction() {
@@ -53,7 +58,7 @@
 
   function resumeAfterInteraction() {
     window.clearTimeout(resumeTimer);
-    resumeTimer = window.setTimeout(startAutoplay, 2500);
+    resumeTimer = window.setTimeout(startAutoplay, RESUME_DELAY);
   }
 
   function goTo(index, animate) {
@@ -64,6 +69,11 @@
 
   function onPointerDown(event) {
     if (!mobileQuery.matches || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (event.target.closest(".info-bar-pagination")) {
+      pauseForInteraction();
+      return;
+    }
+
     pointerId = event.pointerId;
     dragStartX = event.clientX;
     dragOffset = 0;
@@ -94,8 +104,19 @@
     resumeAfterInteraction();
   }
 
+  function cancelPointer(event) {
+    if (event.pointerId !== pointerId) return;
+
+    if (bar.hasPointerCapture(pointerId)) bar.releasePointerCapture(pointerId);
+    pointerId = null;
+    bar.classList.remove("is-interacting");
+    goTo(activeIndex, true);
+    resumeAfterInteraction();
+  }
+
   function enable() {
     if (bar.classList.contains("is-carousel-ready")) {
+      if (pagination) pagination.hidden = false;
       render(false);
       startAutoplay();
       return;
@@ -137,6 +158,13 @@
   function disable() {
     stopAutoplay();
     window.clearTimeout(resumeTimer);
+    if (pointerId !== null && bar.hasPointerCapture(pointerId)) {
+      bar.releasePointerCapture(pointerId);
+    }
+    pointerId = null;
+    dragOffset = 0;
+    bar.classList.remove("is-interacting");
+    if (pagination) pagination.hidden = true;
     track.classList.remove("is-animating");
     track.style.removeProperty("transform");
   }
@@ -144,15 +172,21 @@
   bar.addEventListener("pointerdown", onPointerDown);
   bar.addEventListener("pointermove", onPointerMove);
   bar.addEventListener("pointerup", finishPointer);
-  bar.addEventListener("pointercancel", finishPointer);
+  bar.addEventListener("pointercancel", cancelPointer);
   bar.addEventListener("mouseenter", pauseForInteraction);
   bar.addEventListener("mouseleave", resumeAfterInteraction);
   bar.addEventListener("focusin", pauseForInteraction);
   bar.addEventListener("focusout", resumeAfterInteraction);
   window.addEventListener("resize", () => mobileQuery.matches && render(false));
   document.addEventListener("visibilitychange", () => document.hidden ? stopAutoplay() : startAutoplay());
-  mobileQuery.addEventListener("change", (event) => event.matches ? enable() : disable());
-  reducedMotion.addEventListener("change", startAutoplay);
+  const onMobileChange = (event) => event.matches ? enable() : disable();
+  if (mobileQuery.addEventListener) {
+    mobileQuery.addEventListener("change", onMobileChange);
+    reducedMotion.addEventListener("change", startAutoplay);
+  } else {
+    mobileQuery.addListener(onMobileChange);
+    reducedMotion.addListener(startAutoplay);
+  }
 
   if (mobileQuery.matches) enable();
 })();
