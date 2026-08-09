@@ -103,6 +103,16 @@
     -webkit-text-fill-color: #ffffff !important;
   }
 
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
+    width: 170px !important;
+    height: auto !important;
+    transform: none !important;
+  }
+
+  body > .secondary-header.site-navigation > .header-title--logo .header-logo {
+    filter: invert(1);
+  }
+
   body > .secondary-header.site-navigation > .cart-nav {
     position: static !important;
     grid-column: 1 !important;
@@ -194,5 +204,9 @@
 
   body > .secondary-header.site-navigation > .header-title {
     font-size: 1.3rem !important;
+  }
+
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
+    width: 150px !important;
   }
 }

@@ -14,7 +14,11 @@
     </header>
 
     <div class="secondary-header site-navigation">
-      <a href="${href("index.html")}" class="header-title">Good Frame</a>
+      <a href="${href("index.html")}" class="header-title header-title--logo" aria-label="Good Frame home">
+        <svg class="header-logo" viewBox="333 1534 5392 770" aria-hidden="true" focusable="false">
+          <image href="${href("Assets/good-frame-logo.png")}" width="6000" height="4000"></image>
+        </svg>
+      </a>
 
       <nav class="nav" aria-label="Primary navigation">
         <a href="${href("Print-Frame/print-frame.html")}">Print &amp; Frame</a>

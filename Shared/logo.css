@@ -207,6 +207,24 @@ a.btn,
   -webkit-text-fill-color: #070707 !important;
 }
 
+/* Supplied Good Frame wordmark. The SVG view box trims the PNG's transparent canvas. */
+.header-title.header-title--logo,
+.secondary-header .header-title.header-title--logo {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: 190px !important;
+  height: auto !important;
+  overflow: visible !important;
+  transform: none !important;
+}
+
+.header-title--logo .header-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
 @media (max-width: 900px) {
   .secondary-header,
   .legacy-secondary-header {
@@ -262,6 +280,13 @@ a.btn,
     display: block !important;
     background-color: #070707 !important;
   }
+
+  .secondary-header .header-title.header-title--logo {
+    width: 170px !important;
+    height: auto !important;
+    margin-left: 0 !important;
+    transform: none !important;
+  }
 }
 
 /* Homepage-only mobile banner/header colour swap. */
@@ -295,6 +320,10 @@ a.btn,
   body.homepage .secondary-header .header-title:active {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
+  }
+
+  body.homepage .header-title--logo .header-logo {
+    filter: invert(1);
   }
 
   body.homepage .secondary-header .cart-nav,
@@ -347,6 +376,10 @@ a.btn,
   .secondary-header .legacy-header-title,
   .legacy-secondary-header .legacy-header-title {
     font-size: 1.3rem !important;
+  }
+
+  .secondary-header .header-title.header-title--logo {
+    width: 150px !important;
   }
 }
 
