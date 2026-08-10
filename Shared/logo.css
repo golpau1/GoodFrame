@@ -212,7 +212,7 @@ a.btn,
 .secondary-header .header-title.header-title--logo {
   display: inline-flex !important;
   align-items: center !important;
-  width: 190px !important;
+  width: 240px !important;
   height: auto !important;
   overflow: visible !important;
   transform: none !important;
@@ -282,7 +282,7 @@ a.btn,
   }
 
   .secondary-header .header-title.header-title--logo {
-    width: 170px !important;
+    width: 210px !important;
     height: auto !important;
     margin-left: 0 !important;
     transform: none !important;
@@ -379,7 +379,7 @@ a.btn,
   }
 
   .secondary-header .header-title.header-title--logo {
-    width: 150px !important;
+    width: 190px !important;
   }
 }
 

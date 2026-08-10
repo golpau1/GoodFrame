@@ -104,7 +104,7 @@
   }
 
   body > .secondary-header.site-navigation > .header-title.header-title--logo {
-    width: 170px !important;
+    width: 210px !important;
     height: auto !important;
     transform: none !important;
   }
@@ -207,6 +207,6 @@
   }
 
   body > .secondary-header.site-navigation > .header-title.header-title--logo {
-    width: 150px !important;
+    width: 190px !important;
   }
 }
