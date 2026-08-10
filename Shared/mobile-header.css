@@ -60,7 +60,7 @@
     inset: auto !important;
     z-index: 1000 !important;
     display: grid !important;
-    grid-template-columns: 72px minmax(0, 1fr) 72px !important;
+    grid-template-columns: 64px minmax(0, 1fr) 64px !important;
     grid-template-rows: 70px !important;
     align-items: center !important;
     width: 100% !important;
@@ -104,7 +104,7 @@
   }
 
   body > .secondary-header.site-navigation > .header-title.header-title--logo {
-    width: 210px !important;
+    width: 225px !important;
     height: auto !important;
     transform: none !important;
   }
@@ -207,6 +207,6 @@
   }
 
   body > .secondary-header.site-navigation > .header-title.header-title--logo {
-    width: 190px !important;
+    width: 205px !important;
   }
 }
