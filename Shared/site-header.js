@@ -16,7 +16,7 @@
     <div class="secondary-header site-navigation">
       <a href="${href("index.html")}" class="header-title header-title--logo" aria-label="Good Frame home">
         <svg class="header-logo" viewBox="333 1534 5450 770" aria-hidden="true" focusable="false">
-          <image href="${href("Assets/good-frame-logo.png?v=20260810-v3")}" width="6000" height="4000"></image>
+          <image href="${href("Assets/good-frame-logo.png?v=20260817-v4")}" width="6000" height="4000"></image>
         </svg>
       </a>
 
