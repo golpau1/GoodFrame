@@ -3636,3 +3636,86 @@ footer.footer .footer-content,
     transition: none !important;
   }
 }
+
+/* Contemporary gallery homepage refinement. */
+@media (max-width: 900px) {
+  body.homepage .top-banner {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 16px !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1 !important;
+  }
+
+  body.homepage .secondary-header {
+    min-height: 64px !important;
+    height: 64px !important;
+    max-height: 64px !important;
+    padding: 0 clamp(16px, 5vw, 24px) !important;
+  }
+
+  body.homepage .mobile-home-hero {
+    padding: clamp(28px, 8vw, 44px) var(--home-mobile-gutter) 28px !important;
+  }
+
+  body.homepage .mobile-home-hero h1 {
+    max-width: 540px !important;
+    margin-bottom: 18px !important;
+    font-size: clamp(3rem, 14vw, 4.6rem) !important;
+    letter-spacing: -0.045em !important;
+    line-height: 0.94 !important;
+    text-wrap: balance;
+  }
+
+  body.homepage .mobile-home-hero p {
+    max-width: 420px !important;
+    font-size: clamp(0.95rem, 3.6vw, 1.05rem) !important;
+    line-height: 1.5 !important;
+  }
+
+  body.homepage .mobile-home-hero__actions {
+    gap: 10px !important;
+    margin: 22px 0 !important;
+  }
+
+  body.homepage .mobile-home-hero__primary,
+  body.homepage .mobile-home-hero__secondary {
+    min-height: 46px !important;
+    padding: 12px 16px !important;
+    border-radius: 0 !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.045em !important;
+    text-transform: uppercase !important;
+  }
+
+  body.homepage .mobile-home-hero__primary:focus-visible,
+  body.homepage .mobile-home-hero__secondary:focus-visible {
+    outline: 2px solid currentColor !important;
+    outline-offset: 3px !important;
+  }
+
+  body.homepage .mobile-home-hero__image {
+    height: clamp(250px, 69vw, 390px) !important;
+    border-radius: 0 !important;
+  }
+
+  body.homepage .info-bar {
+    min-height: 76px !important;
+    height: 76px !important;
+  }
+
+  body.homepage .info-bar .info-bar-item,
+  body.homepage .info-bar .info-bar-item:nth-child(n) {
+    height: 76px !important;
+    min-height: 76px !important;
+    padding: 14px 24px 28px !important;
+    font-size: clamp(0.78rem, 3.4vw, 0.875rem) !important;
+    line-height: 1.35 !important;
+  }
+
+  body.homepage .info-bar-pagination {
+    bottom: 10px !important;
+  }
+}

@@ -1966,3 +1966,176 @@ h3,
   word-spacing: 0.12em !important;
   line-height: 1.3 !important;
 }
+
+/* Contemporary gallery homepage refinement. */
+@media (min-width: 901px) {
+  body.homepage {
+    --home-grid-gutter: clamp(28px, 4vw, 64px);
+    --home-content-width: 1440px;
+  }
+
+  body.homepage .top-banner {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 var(--home-grid-gutter) !important;
+    border: 0 !important;
+    font-size: 0.75rem !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.025em !important;
+    line-height: 1 !important;
+  }
+
+  body.homepage .secondary-header {
+    box-sizing: border-box !important;
+    grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr) !important;
+    min-height: 76px !important;
+    height: 76px !important;
+    padding: 0 var(--home-grid-gutter) !important;
+    border-bottom: 1px solid rgba(7, 7, 7, 0.12) !important;
+  }
+
+  body.homepage .secondary-header .nav {
+    gap: clamp(24px, 2.8vw, 44px) !important;
+  }
+
+  body.homepage .secondary-header .nav a {
+    padding: 9px 0 !important;
+    font-size: 0.9375rem !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+  }
+
+  body.homepage .secondary-header .nav a::after {
+    height: 1px !important;
+  }
+
+  body.homepage .secondary-header .cart-nav {
+    align-self: center !important;
+    gap: 7px !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+  }
+
+  body.homepage .desktop-home-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    width: 100% !important;
+    min-height: clamp(520px, 66svh, 720px) !important;
+    height: auto !important;
+  }
+
+  body.homepage .desktop-home-hero > .hero-left,
+  body.homepage .desktop-home-hero > .hero-right {
+    min-width: 0 !important;
+  }
+
+  body.homepage .desktop-home-hero > .hero-left {
+    box-sizing: border-box !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding: clamp(48px, 6vw, 96px) clamp(32px, 4vw, 64px) !important;
+    text-align: left !important;
+  }
+
+  body.homepage .desktop-home-hero > .hero-left > * {
+    width: min(100%, 620px);
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  body.homepage .desktop-home-hero .carousel {
+    display: none !important;
+  }
+
+  body.homepage .desktop-home-hero h1 {
+    max-width: 620px !important;
+    margin-top: 0 !important;
+    margin-bottom: clamp(20px, 2vw, 28px) !important;
+    font-size: clamp(3.25rem, 5.1vw, 5.75rem) !important;
+    font-weight: 400 !important;
+    letter-spacing: -0.035em !important;
+    line-height: 0.98 !important;
+    text-align: left !important;
+    text-wrap: balance;
+  }
+
+  body.homepage .desktop-home-hero h2 {
+    max-width: 470px !important;
+    margin: 0 auto 30px 0 !important;
+    color: #343434 !important;
+    font-size: clamp(1rem, 1.25vw, 1.2rem) !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.5 !important;
+    text-align: left !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-button {
+    width: auto !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    padding: 13px 24px !important;
+    border: 1px solid #070707 !important;
+    border-radius: 0 !important;
+    background: #070707 !important;
+    color: #f9f2e6 !important;
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.055em !important;
+    line-height: 1.2 !important;
+    text-transform: uppercase !important;
+    transition: background-color 180ms ease, color 180ms ease !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-button:hover {
+    background: #ffffff !important;
+    color: #070707 !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-button:focus-visible {
+    outline: 2px solid #070707 !important;
+    outline-offset: 4px !important;
+  }
+
+  body.homepage .desktop-home-hero > .hero-right {
+    min-height: clamp(520px, 66svh, 720px) !important;
+    border-radius: 0 !important;
+    background-position: center !important;
+  }
+
+  body.homepage .info-bar {
+    box-sizing: border-box !important;
+    display: block !important;
+    min-height: 72px !important;
+    height: 72px !important;
+    padding: 0 var(--home-grid-gutter) !important;
+  }
+
+  body.homepage .info-bar-carousel {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: min(100%, var(--home-content-width)) !important;
+    height: 100% !important;
+    margin: 0 auto !important;
+  }
+
+  body.homepage .info-bar .info-bar-item {
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    padding: 0 clamp(18px, 2.5vw, 38px) !important;
+    border-right: 1px solid rgba(249, 242, 230, 0.28) !important;
+    font-size: clamp(0.78rem, 0.9vw, 0.9rem) !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.01em !important;
+    line-height: 1.35 !important;
+    text-align: center !important;
+  }
+
+  body.homepage .info-bar .info-bar-item:last-child {
+    border-right: 0 !important;
+  }
+}
