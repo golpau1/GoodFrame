@@ -1386,9 +1386,9 @@ body.homepage .editorial-hero-pair {
     justify-content: flex-start !important;
     align-self: start !important;
     min-width: 0 !important;
-    width: calc(100% - clamp(20px, 1.25vw, 26px)) !important;
+    width: 100% !important;
     height: auto !important;
-    margin-left: auto !important;
+    margin-left: 0 !important;
     margin-right: 0 !important;
     padding: 0 !important;
     background: transparent !important;
