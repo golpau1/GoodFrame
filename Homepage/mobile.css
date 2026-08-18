@@ -4072,3 +4072,28 @@ footer.footer .footer-content,
     text-transform: capitalize !important;
   }
 }
+
+/* Centre split-hero title groups within their own content panels. */
+@media (max-width: 900px) {
+  body.homepage .mobile-home-hero__content,
+  body.homepage .mobile-section-content {
+    align-items: center !important;
+  }
+
+  body.homepage .mobile-home-hero h1,
+  body.homepage .mobile-section-content h2 {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+
+  body.homepage .mobile-home-hero p,
+  body.homepage .mobile-section-content > .hero-subheading,
+  body.homepage .mobile-home-hero__actions,
+  body.homepage .mobile-section-content .mobile-section-button {
+    align-self: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+}

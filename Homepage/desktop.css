@@ -2458,3 +2458,28 @@ h3,
     text-transform: capitalize !important;
   }
 }
+
+/* Centre split-hero title groups within their own content panels. */
+@media (min-width: 901px) {
+  body.homepage .desktop-home-hero .hero-copy,
+  body.homepage .hero-section.reverse .feature-copy {
+    align-items: center !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy h1,
+  body.homepage .hero-section.reverse .feature-copy h1 {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy h2,
+  body.homepage .hero-section.reverse .feature-copy .hero-subheading,
+  body.homepage .desktop-home-hero .hero-copy .hero-button,
+  body.homepage .hero-section.reverse .feature-copy .hero-button {
+    align-self: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+}
