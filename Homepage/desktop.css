@@ -2438,3 +2438,23 @@ h3,
     color: #070707 !important;
   }
 }
+
+/* Final compact hero CTA dimensions. */
+@media (min-width: 901px) {
+  body.homepage a.hero-button,
+  body.homepage .desktop-home-hero .hero-copy .hero-button,
+  body.homepage .hero-section.reverse .feature-copy .hero-button {
+    width: 185px !important;
+    min-width: 185px !important;
+    max-width: 185px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    padding: 0 16px !important;
+    border-radius: 8px !important;
+    font-size: 17px !important;
+    font-weight: 400 !important;
+    line-height: 1 !important;
+    text-transform: capitalize !important;
+  }
+}
