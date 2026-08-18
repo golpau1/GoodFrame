@@ -380,19 +380,20 @@ a.btn,
 
   body.homepage .desktop-home-hero h1.girthquake-heading {
     width: 100% !important;
-    max-width: 600px !important;
-    margin: 0 0 32px !important;
+    max-width: 341px !important;
+    margin: 0 0 26.94px !important;
     font-family: 'Gloock', 'Times New Roman', serif !important;
-    font-size: 54px !important;
+    font-size: 34px !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
-    line-height: 0.94 !important;
+    line-height: 1 !important;
   }
 
   body.homepage .desktop-home-hero h2 {
-    margin: 0 0 22px !important;
+    margin: 0 0 20px !important;
     font-size: 18px !important;
-    line-height: 1.15 !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
   }
 
   body.homepage .desktop-home-hero .hero-button,
@@ -407,7 +408,21 @@ a.btn,
   }
 
   body.homepage .desktop-home-hero .hero-button {
+    width: 136.047px !important;
+    height: 45px !important;
+    min-width: 136.047px !important;
     margin: 0 !important;
+    padding: 0 26px !important;
+    border-radius: 5px !important;
+    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    font-variant-caps: normal !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
   }
 
   body.homepage .hero-section.reverse .hero-button {
