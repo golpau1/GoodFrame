@@ -3776,3 +3776,87 @@ footer.footer .footer-content,
     outline-offset: 3px !important;
   }
 }
+
+/* Final responsive alignment for split hero copy and information dividers. */
+@media (max-width: 900px) {
+  body.homepage .mobile-home-hero p,
+  body.homepage .mobile-section-content > .hero-subheading {
+    align-self: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+
+  body.homepage .mobile-home-hero__actions {
+    align-self: center !important;
+  }
+
+  body.homepage .mobile-home-hero__primary,
+  body.homepage .mobile-home-hero__secondary,
+  body.homepage .mobile-section-content .mobile-section-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  body.homepage .mobile-section-content .mobile-section-button {
+    align-self: center !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 900px) {
+  body.homepage .info-bar {
+    height: 96px !important;
+    min-height: 96px !important;
+    overflow: hidden !important;
+  }
+
+  body.homepage .info-bar-carousel {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  body.homepage .info-bar .info-bar-item,
+  body.homepage .info-bar .info-bar-item:nth-child(n) {
+    position: relative !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 18px !important;
+    border: 0 !important;
+    font-size: 0.78rem !important;
+    text-align: center !important;
+  }
+
+  body.homepage .info-bar .info-bar-item::before,
+  body.homepage .info-bar .info-bar-item::after {
+    content: none !important;
+  }
+
+  body.homepage .info-bar .info-bar-item:nth-child(-n + 2)::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 50% !important;
+    right: 0 !important;
+    width: 1px !important;
+    height: 32px !important;
+    background: #303030 !important;
+    transform: translateY(-50%) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  body.homepage .info-bar .info-bar-item::before,
+  body.homepage .info-bar .info-bar-item::after {
+    content: none !important;
+  }
+}
