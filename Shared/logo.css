@@ -173,7 +173,7 @@
   body.homepage .editorial-hero--feature h1.girthquake-heading {
     width: 100% !important;
     max-width: 560px !important;
-    margin: 0 0 30px !important;
+    margin: 0 0 60px !important;
     color: #070707 !important;
     font-family: 'Gloock', 'Times New Roman', serif !important;
     font-size: clamp(44px, 3.1vw, 54px) !important;
@@ -283,7 +283,7 @@
     font-size: clamp(38px, 11vw, 46px) !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
-    line-height: 0.98 !important;
+    line-height: 1.08 !important;
     text-align: center !important;
   }
 
@@ -346,7 +346,7 @@
 
   body.homepage .editorial-hero--feature h1.girthquake-heading {
     max-width: 390px !important;
-    margin: 0 0 24px !important;
+    margin: 0 0 34px !important;
     color: #070707 !important;
     font-family: 'Gloock', 'Times New Roman', serif !important;
     font-size: clamp(38px, 11vw, 46px) !important;
@@ -1428,7 +1428,7 @@ body.homepage .editorial-hero-pair {
     max-width: 280px !important;
     margin: 0 0 24px !important;
     font-size: clamp(16px, 0.85vw, 18px) !important;
-    line-height: 1.4 !important;
+    line-height: 1.45 !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--feature .hero-button {
