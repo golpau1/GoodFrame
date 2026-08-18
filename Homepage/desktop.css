@@ -2139,3 +2139,55 @@ h3,
     border-right: 0 !important;
   }
 }
+
+/* Desktop hero copy-group refinement. */
+@media (min-width: 901px) {
+  body.homepage .desktop-home-hero > .hero-left {
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: min(100%, 520px) !important;
+    margin: 0 auto !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy h1 {
+    width: 100% !important;
+    max-width: 500px !important;
+    margin: 0 0 clamp(36px, 3vw, 44px) !important;
+    font-size: clamp(2.75rem, 4.15vw, 4.75rem) !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1.045 !important;
+    text-align: left !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy h1 span {
+    display: block;
+    white-space: nowrap;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy h2 {
+    width: 100% !important;
+    max-width: 470px !important;
+    margin: 0 0 clamp(24px, 2.2vw, 30px) !important;
+    font-size: clamp(1rem, 1.2vw, 1.18rem) !important;
+    line-height: 1.5 !important;
+    text-align: left !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy .hero-button {
+    width: auto !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 14px 25px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.035em !important;
+    line-height: 1.2 !important;
+  }
+}
