@@ -1290,6 +1290,11 @@ body .faq-section .faq-nav .nav-btn {
 }
 
 /* Final cascade lock for the isolated homepage editorial heroes. */
+body.homepage .editorial-hero-pair {
+  box-sizing: border-box !important;
+  border-top: 1px solid #e8e6e1 !important;
+}
+
 @media (min-width: 901px) {
   body.homepage .editorial-hero-pair {
     display: grid !important;
@@ -1299,7 +1304,7 @@ body .faq-section .faq-nav .nav-btn {
     height: clamp(650px, 75vh, 760px) !important;
     min-height: 0 !important;
     gap: 0 !important;
-    background: #f3efe7 !important;
+    background: #ffffff !important;
   }
 
   body.homepage .editorial-hero-pair > .editorial-hero {
@@ -1370,7 +1375,7 @@ body .faq-section .faq-nav .nav-btn {
     height: 100% !important;
     min-height: 100% !important;
     padding: clamp(48px, 5vw, 102px) !important;
-    background: #f3efe7 !important;
+    background: #ffffff !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--feature > .hero-right.blue-bg {
@@ -1431,7 +1436,7 @@ body .faq-section .faq-nav .nav-btn {
 @media (max-width: 900px) {
   body.homepage .editorial-hero-pair,
   body.homepage .editorial-hero-pair .editorial-hero--feature {
-    background: #f3efe7 !important;
+    background: #ffffff !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero.editorial-hero--image {
