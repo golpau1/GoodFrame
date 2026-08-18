@@ -29,14 +29,6 @@
 }
 
 @font-face {
-  font-family: 'Good Frame Display';
-  src: url('../Assets/Gloock-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}
-
-@font-face {
   font-family: 'Potatoe Pie';
   src: url('../Assets/PotatoPie-Regular.otf') format('opentype');
   font-weight: 400;
@@ -63,34 +55,6 @@
 :root {
   --gf-font-body: 'NType82', 'Helvetica Neue', Arial, sans-serif;
   --gf-font-heading: 'Gloock', 'Times New Roman', serif;
-}
-
-/* Shared display face used by the primary hero and major page titles. */
-body .gf-display-heading {
-  font-family: 'Good Frame Display' !important;
-  font-weight: 400 !important;
-  font-style: normal !important;
-  letter-spacing: 0 !important;
-  line-height: 1 !important;
-  font-synthesis: none !important;
-}
-
-@media (min-width: 901px) {
-  body .pricing-page-title.gf-display-heading {
-    font-size: 64px !important;
-  }
-}
-
-@media (min-width: 601px) and (max-width: 900px) {
-  body .pricing-page-title.gf-display-heading {
-    font-size: 48px !important;
-  }
-}
-
-@media (max-width: 600px) {
-  body .pricing-page-title.gf-display-heading {
-    font-size: 40px !important;
-  }
 }
 
 html,
@@ -142,7 +106,7 @@ body .girthquake-heading {
   text-transform: uppercase !important;
   text-decoration: none !important;
   white-space: nowrap !important;
-  margin-left: 0 !important;
+  margin-left: 18px !important;
   -webkit-text-stroke: 0;
   text-shadow: none !important;
   -webkit-text-fill-color: #070707 !important;
@@ -248,7 +212,7 @@ a.btn,
 .secondary-header .header-title.header-title--logo {
   display: inline-flex !important;
   align-items: center !important;
-  width: 210px !important;
+  width: 190px !important;
   height: auto !important;
   overflow: visible !important;
   transform: none !important;
@@ -318,10 +282,252 @@ a.btn,
   }
 
   .secondary-header .header-title.header-title--logo {
-    width: 185px !important;
+    width: 170px !important;
     height: auto !important;
     margin-left: 0 !important;
     transform: none !important;
+  }
+}
+
+/*
+ * Compact desktop scale
+ *
+ * The desktop artwork was originally composed at a larger visual scale. These
+ * explicit component dimensions reproduce the supplied 75% reference at a
+ * normal browser zoom without scaling the document. Keep this block desktop
+ * only so the existing tablet and mobile layouts remain unchanged.
+ */
+@media (min-width: 1024px) {
+  .top-banner,
+  .legacy-top-banner {
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 16px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+  }
+
+  .secondary-header,
+  .legacy-secondary-header {
+    height: 66px !important;
+    min-height: 66px !important;
+    padding: 0 30px !important;
+  }
+
+  .header-title.header-title--logo,
+  .secondary-header .header-title.header-title--logo {
+    width: 150px !important;
+  }
+
+  .nav,
+  .legacy-nav {
+    gap: 30px !important;
+  }
+
+  .secondary-header .nav a,
+  .legacy-secondary-header .legacy-nav a,
+  .nav a,
+  .legacy-nav a {
+    padding: 6px 3px !important;
+    font-size: 13px !important;
+  }
+
+  .cart-nav,
+  .legacy-cart-nav {
+    gap: 4px !important;
+  }
+
+  .cart-nav svg,
+  .legacy-cart-nav svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .cart-count,
+  .cart-nav .cart-count,
+  .legacy-cart-nav .cart-count {
+    font-size: 11px !important;
+  }
+
+  body.homepage .desktop-home-hero {
+    height: 640px !important;
+    min-height: 640px !important;
+  }
+
+  body.homepage .desktop-home-hero > .hero-left,
+  body.homepage .desktop-home-hero > .hero-right {
+    flex: 0 0 50% !important;
+    width: 50% !important;
+    min-width: 0 !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-left {
+    padding: 42px 48px !important;
+  }
+
+  body.homepage .desktop-home-hero .carousel {
+    margin-bottom: 18px !important;
+  }
+
+  body.homepage .desktop-home-hero .carousel-text {
+    font-size: 12px !important;
+  }
+
+  body.homepage .desktop-home-hero h1.girthquake-heading {
+    width: 100% !important;
+    max-width: 600px !important;
+    margin: 0 0 12px !important;
+    font-size: 54px !important;
+    line-height: 0.94 !important;
+  }
+
+  body.homepage .desktop-home-hero h2 {
+    margin: 0 0 14px !important;
+    font-size: 18px !important;
+    line-height: 1.15 !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-button,
+  body.homepage .hero-section.reverse .hero-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 45px !important;
+    margin-top: 6px !important;
+    padding: 0 26px !important;
+    border-radius: 5px !important;
+    font-size: 14px !important;
+  }
+
+  body.homepage .container > .hero-button {
+    margin-top: 10px !important;
+    padding: 11px 24px !important;
+    border-radius: 5px !important;
+    font-size: 13px !important;
+  }
+
+  body.homepage .info-bar {
+    min-height: 68px !important;
+    padding: 0 28px !important;
+    font-size: 13px !important;
+  }
+
+  body.homepage .info-bar-carousel {
+    width: 100% !important;
+  }
+
+  body.homepage .info-bar-item {
+    padding: 0 28px !important;
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+  }
+
+  body.homepage .hero-section.reverse {
+    height: 480px !important;
+  }
+
+  body.homepage .hero-section.reverse .hero-right {
+    padding: 36px 48px !important;
+  }
+
+  body.homepage .hero-section.reverse .hero-right h1 {
+    margin-bottom: 12px !important;
+    font-size: 34px !important;
+    line-height: 1 !important;
+  }
+
+  body.homepage .hero-section.reverse .hero-right .hero-subheading {
+    margin-bottom: 14px !important;
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+  }
+
+  body.homepage .container {
+    max-width: 960px !important;
+    padding: 68px 0 44px !important;
+  }
+
+  body.homepage .frame-options-row {
+    gap: 24px !important;
+  }
+
+  .pricing-container,
+  .about-desktop-editorial,
+  .faq-section {
+    max-width: 780px !important;
+  }
+
+  .pricing-container {
+    gap: 66px !important;
+  }
+
+  .pricing-page main,
+  .pricing-main,
+  .about-desktop-editorial,
+  .faq-section {
+    padding-top: 36px !important;
+    padding-bottom: 48px !important;
+  }
+
+  .about-desktop-editorial .editorial-feature {
+    gap: 33px !important;
+  }
+
+  .about-desktop-editorial .editorial-collage {
+    min-height: 540px !important;
+  }
+
+  .about-desktop-editorial .editorial-copy {
+    gap: 22px !important;
+    padding-top: 81px !important;
+  }
+
+  .faq-section .faq-nav {
+    margin: 24px 0 !important;
+    gap: 8px !important;
+  }
+
+  .faq-section .nav-btn {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+
+  footer.footer,
+  .footer {
+    padding: 30px 21px !important;
+    font-size: 12px !important;
+  }
+
+  footer.footer .footer-content,
+  .footer .footer-content {
+    max-width: 735px !important;
+    gap: 24px 54px !important;
+  }
+
+  footer.footer .footer-col,
+  .footer .footer-col {
+    gap: 10px !important;
+  }
+
+  footer.footer .footer-col h3,
+  footer.footer .footer-title,
+  .footer .footer-col h3,
+  .footer .footer-title {
+    font-size: 14px !important;
+  }
+
+  footer.footer .footer-col ul,
+  .footer .footer-col ul {
+    gap: 8px !important;
+  }
+
+  footer.footer a,
+  footer.footer p,
+  footer.footer li,
+  .footer a,
+  .footer p,
+  .footer li {
+    font-size: 12px !important;
   }
 }
 
@@ -415,7 +621,7 @@ a.btn,
   }
 
   .secondary-header .header-title.header-title--logo {
-    width: 170px !important;
+    width: 150px !important;
   }
 }
 
@@ -482,18 +688,6 @@ body .success-title:not(.header-title):not(.legacy-header-title):not(#cropperCan
   font-family: var(--gf-font-heading) !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
-}
-
-/* Keep the hero and Pricing title locked to the exact same local font file. */
-body .desktop-home-hero h1.gf-display-heading:not(.header-title):not(.legacy-header-title):not(#cropperCancelButton),
-body .pricing-container h2.pricing-page-title.gf-display-heading:not(.header-title):not(.legacy-header-title):not(#cropperCancelButton) {
-  font-family: 'Good Frame Display' !important;
-  font-weight: 400 !important;
-  font-style: normal !important;
-  letter-spacing: 0 !important;
-  line-height: 1 !important;
-  font-synthesis: none !important;
-  text-transform: none !important;
 }
 
 body .faq-section .faq-nav .nav-btn {
