@@ -106,7 +106,7 @@ body .girthquake-heading {
   text-transform: uppercase !important;
   text-decoration: none !important;
   white-space: nowrap !important;
-  margin-left: 18px !important;
+  margin-left: 0 !important;
   -webkit-text-stroke: 0;
   text-shadow: none !important;
   -webkit-text-fill-color: #070707 !important;
