@@ -57,6 +57,32 @@
   --gf-font-heading: 'Gloock', 'Times New Roman', serif;
 }
 
+/* Shared display face used by the primary hero and major page titles. */
+body .gf-display-heading {
+  font-family: 'Gloock' !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+}
+
+@media (min-width: 901px) {
+  body .pricing-page-title.gf-display-heading {
+    font-size: 64px !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  body .pricing-page-title.gf-display-heading {
+    font-size: 48px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  body .pricing-page-title.gf-display-heading {
+    font-size: 40px !important;
+  }
+}
+
 html,
 body {
   font-family: var(--gf-font-body) !important;
