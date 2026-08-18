@@ -29,6 +29,14 @@
 }
 
 @font-face {
+  font-family: 'Good Frame Display';
+  src: url('../Assets/Gloock-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
   font-family: 'Potatoe Pie';
   src: url('../Assets/PotatoPie-Regular.otf') format('opentype');
   font-weight: 400;
@@ -59,10 +67,12 @@
 
 /* Shared display face used by the primary hero and major page titles. */
 body .gf-display-heading {
-  font-family: 'Gloock' !important;
+  font-family: 'Good Frame Display' !important;
   font-weight: 400 !important;
+  font-style: normal !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
+  font-synthesis: none !important;
 }
 
 @media (min-width: 901px) {
@@ -472,6 +482,18 @@ body .success-title:not(.header-title):not(.legacy-header-title):not(#cropperCan
   font-family: var(--gf-font-heading) !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
+}
+
+/* Keep the hero and Pricing title locked to the exact same local font file. */
+body .desktop-home-hero h1.gf-display-heading:not(.header-title):not(.legacy-header-title):not(#cropperCancelButton),
+body .pricing-container h2.pricing-page-title.gf-display-heading:not(.header-title):not(.legacy-header-title):not(#cropperCancelButton) {
+  font-family: 'Good Frame Display' !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  font-synthesis: none !important;
+  text-transform: none !important;
 }
 
 body .faq-section .faq-nav .nav-btn {
