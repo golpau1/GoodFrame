@@ -1296,8 +1296,8 @@ body .faq-section .faq-nav .nav-btn {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     align-items: stretch !important;
     width: 100% !important;
-    height: calc(100svh - 100px) !important;
-    min-height: 680px !important;
+    height: clamp(650px, 75vh, 760px) !important;
+    min-height: 0 !important;
     gap: 0 !important;
     background: #f3efe7 !important;
   }
@@ -1364,7 +1364,7 @@ body .faq-section .faq-nav .nav-btn {
     grid-template-columns: minmax(0, 35%) minmax(0, 37%) !important;
     grid-template-areas: 'copy image' !important;
     align-items: start !important;
-    align-content: start !important;
+    align-content: center !important;
     justify-content: center !important;
     column-gap: 9% !important;
     height: 100% !important;
