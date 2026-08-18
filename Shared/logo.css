@@ -1384,7 +1384,7 @@ body.homepage .editorial-hero-pair {
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: minmax(0, 1fr) !important;
     place-items: center !important;
-    width: clamp(220px, 15vw, 300px) !important;
+    width: clamp(246px, 16.8vw, 336px) !important;
     aspect-ratio: 2 / 3 !important;
     min-width: 0 !important;
   }
@@ -1399,7 +1399,7 @@ body.homepage .editorial-hero-pair {
     align-self: end !important;
     justify-self: start !important;
     min-width: 0 !important;
-    width: min(240px, 30%) !important;
+    width: min(380px, 42%) !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -1429,12 +1429,12 @@ body.homepage .editorial-hero-pair {
     z-index: 1 !important;
     align-self: start !important;
     justify-self: center !important;
-    width: min(600px, calc(50vw - 96px)) !important;
+    width: min(600px, calc(50vw - 128px)) !important;
     max-width: 600px !important;
-    margin: -52px 0 0 !important;
+    margin: -44px 0 0 !important;
     color: #070707 !important;
     font-family: 'Gloock', 'Times New Roman', serif !important;
-    font-size: clamp(44px, 3.1vw, 54px) !important;
+    font-size: clamp(46px, 2.5vw, 50px) !important;
     font-style: normal !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
@@ -1454,9 +1454,9 @@ body.homepage .editorial-hero-pair {
 
   body.homepage .editorial-hero-pair .editorial-hero--feature .hero-subheading {
     width: 100% !important;
-    max-width: 240px !important;
-    margin: 0 0 26px !important;
-    font-size: clamp(16px, 0.85vw, 18px) !important;
+    max-width: 380px !important;
+    margin: 0 !important;
+    font-size: 16px !important;
     line-height: 1.45 !important;
   }
 
