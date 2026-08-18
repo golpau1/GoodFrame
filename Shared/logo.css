@@ -377,6 +377,15 @@
   }
 }
 
+/* Hero 1 display face: the original Gloock treatment from the editorial reference. */
+@media (min-width: 901px) {
+  body.homepage .editorial-hero-pair .editorial-hero--image h1.hero-one-heading {
+    font-family: 'Gloock', 'Times New Roman', serif !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+  }
+}
+
 @font-face {
   font-family: 'Girthquake';
   src: url('../Assets/12 Font Bundle/The Fonts/Girthquake/Girthquake-Regular.otf') format('opentype');
