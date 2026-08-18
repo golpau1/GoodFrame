@@ -362,6 +362,11 @@ a.btn,
   }
 
   body.homepage .desktop-home-hero .hero-left {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
     padding: 42px 48px !important;
   }
 
@@ -376,13 +381,16 @@ a.btn,
   body.homepage .desktop-home-hero h1.girthquake-heading {
     width: 100% !important;
     max-width: 600px !important;
-    margin: 0 0 12px !important;
+    margin: 0 0 32px !important;
+    font-family: 'Gloock', 'Times New Roman', serif !important;
     font-size: 54px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
     line-height: 0.94 !important;
   }
 
   body.homepage .desktop-home-hero h2 {
-    margin: 0 0 14px !important;
+    margin: 0 0 22px !important;
     font-size: 18px !important;
     line-height: 1.15 !important;
   }
@@ -393,10 +401,17 @@ a.btn,
     align-items: center !important;
     justify-content: center !important;
     min-height: 45px !important;
-    margin-top: 6px !important;
     padding: 0 26px !important;
     border-radius: 5px !important;
     font-size: 14px !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-button {
+    margin: 0 !important;
+  }
+
+  body.homepage .hero-section.reverse .hero-button {
+    margin: 6px 0 0 !important;
   }
 
   body.homepage .container > .hero-button {
@@ -432,7 +447,10 @@ a.btn,
 
   body.homepage .hero-section.reverse .hero-right h1 {
     margin-bottom: 12px !important;
+    font-family: 'Gloock', 'Times New Roman', serif !important;
     font-size: 34px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
     line-height: 1 !important;
   }
 
