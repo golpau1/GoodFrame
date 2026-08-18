@@ -380,13 +380,13 @@ a.btn,
 
   body.homepage .desktop-home-hero h1.girthquake-heading {
     width: 100% !important;
-    max-width: 341px !important;
+    max-width: 600px !important;
     margin: 0 0 26.94px !important;
     font-family: 'Gloock', 'Times New Roman', serif !important;
-    font-size: 34px !important;
+    font-size: 54px !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
-    line-height: 1 !important;
+    line-height: 0.94 !important;
   }
 
   body.homepage .desktop-home-hero h2 {
@@ -463,7 +463,7 @@ a.btn,
   body.homepage .hero-section.reverse .hero-right h1 {
     margin-bottom: 12px !important;
     font-family: 'Gloock', 'Times New Roman', serif !important;
-    font-size: 34px !important;
+    font-size: 54px !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
     line-height: 1 !important;
