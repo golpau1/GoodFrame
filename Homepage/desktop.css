@@ -2483,3 +2483,35 @@ h3,
     text-align: center !important;
   }
 }
+
+/* Final primary hero scale and rhythm. */
+@media (min-width: 901px) {
+  body.homepage .desktop-home-hero .hero-copy {
+    width: min(100%, 620px) !important;
+    max-width: 620px !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy h1 {
+    width: 100% !important;
+    max-width: 620px !important;
+    margin: 0 auto 32px !important;
+    font-size: clamp(54px, 4vw, 76px) !important;
+    line-height: 1 !important;
+    text-align: center !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy h2 {
+    margin: 0 auto 24px !important;
+    text-align: center !important;
+  }
+
+  body.homepage .desktop-home-hero .hero-copy .hero-button {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  body.homepage .desktop-home-hero > .hero-right {
+    background-size: cover !important;
+    background-repeat: no-repeat !important;
+  }
+}
