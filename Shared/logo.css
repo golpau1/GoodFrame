@@ -1361,13 +1361,15 @@ body .faq-section .faq-nav .nav-btn {
 
   body.homepage .editorial-hero-pair .editorial-hero--feature {
     display: grid !important;
-    grid-template-columns: minmax(0, 1.15fr) minmax(190px, 0.85fr) !important;
+    grid-template-columns: minmax(0, 35%) minmax(0, 37%) !important;
     grid-template-areas: 'copy image' !important;
-    align-items: stretch !important;
-    column-gap: clamp(28px, 2.5vw, 48px) !important;
+    align-items: start !important;
+    align-content: start !important;
+    justify-content: center !important;
+    column-gap: 9% !important;
     height: 100% !important;
     min-height: 100% !important;
-    padding-right: clamp(28px, 2.5vw, 48px) !important;
+    padding: clamp(48px, 5vw, 102px) !important;
     background: #f3efe7 !important;
   }
 
@@ -1376,20 +1378,23 @@ body .faq-section .faq-nav .nav-btn {
     flex: none !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
+    align-self: start !important;
     min-width: 0 !important;
-    height: 100% !important;
-    padding: clamp(52px, 6vw, 92px) 0 clamp(52px, 6vw, 92px) clamp(28px, 3.4vw, 60px) !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
     background: transparent !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--feature > .hero-left.hero-image-alt {
     display: block !important;
     flex: none !important;
-    align-self: center !important;
-    justify-self: end !important;
-    width: 75% !important;
-    height: calc(75% - clamp(75px, 9vh, 108px)) !important;
+    align-self: start !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 2 / 3 !important;
     min-width: 0 !important;
     min-height: 0 !important;
     margin: 0 !important;
@@ -1398,11 +1403,19 @@ body .faq-section .faq-nav .nav-btn {
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--feature h1.girthquake-heading {
+    width: 100% !important;
+    max-width: none !important;
     margin: 0 0 24px !important;
+    font-size: clamp(40px, 2.1vw, 44px) !important;
+    line-height: 0.98 !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--feature .hero-subheading {
+    width: 100% !important;
+    max-width: 250px !important;
     margin: 0 0 24px !important;
+    font-size: 10px !important;
+    line-height: 1.45 !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--feature .hero-button {
