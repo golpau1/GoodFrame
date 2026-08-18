@@ -65,20 +65,30 @@
   --gf-font-heading: 'Gloock', 'Times New Roman', serif;
 }
 
+/* Shared display face used by the primary hero and major page titles. */
+body .gf-display-heading {
+  font-family: 'Good Frame Display' !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  font-synthesis: none !important;
+}
+
 @media (min-width: 901px) {
-  body .pricing-page-title.page-hero-title {
+  body .pricing-page-title.gf-display-heading {
     font-size: 64px !important;
   }
 }
 
 @media (min-width: 601px) and (max-width: 900px) {
-  body .pricing-page-title.page-hero-title {
+  body .pricing-page-title.gf-display-heading {
     font-size: 48px !important;
   }
 }
 
 @media (max-width: 600px) {
-  body .pricing-page-title.page-hero-title {
+  body .pricing-page-title.gf-display-heading {
     font-size: 40px !important;
   }
 }
@@ -474,34 +484,16 @@ body .success-title:not(.header-title):not(.legacy-header-title):not(#cropperCan
   letter-spacing: 0 !important;
 }
 
-/*
- * One authoritative display treatment for the homepage hero and every
- * internal-page title. This deliberately follows all legacy type rules.
- */
-html body :is(h1, h2).page-hero-title:not(#gf-page-title-override):not(#gf-page-title-override-2) {
+/* Keep the hero and Pricing title locked to the exact same local font file. */
+body .desktop-home-hero h1.gf-display-heading:not(.header-title):not(.legacy-header-title):not(#cropperCancelButton),
+body .pricing-container h2.pricing-page-title.gf-display-heading:not(.header-title):not(.legacy-header-title):not(#cropperCancelButton) {
   font-family: 'Good Frame Display' !important;
   font-weight: 400 !important;
   font-style: normal !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
   font-synthesis: none !important;
-  font-variant: normal !important;
-  font-variant-caps: normal !important;
-  text-decoration: none !important;
-  text-shadow: none !important;
   text-transform: none !important;
-}
-
-/* Homepage line-break spans must not reintroduce the broad body font rule. */
-html body :is(h1, h2).page-hero-title:not(#gf-page-title-override):not(#gf-page-title-override-2) > span {
-  font-family: inherit !important;
-  font-weight: inherit !important;
-  font-style: inherit !important;
-  letter-spacing: inherit !important;
-  line-height: inherit !important;
-  font-synthesis: inherit !important;
-  font-variant: inherit !important;
-  text-transform: inherit !important;
 }
 
 body .faq-section .faq-nav .nav-btn {
