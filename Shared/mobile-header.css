@@ -211,25 +211,15 @@
   }
 }
 
-/* Canonical compact phone announcement bar. */
+/* Rebuilt phone announcement bar: literal text lives in each page's HTML. */
 @media (max-width: 767px) {
   body > header.site-announcement {
-    position: relative !important;
-    z-index: 1001 !important;
-    display: block !important;
-    width: 100% !important;
-    height: 36px !important;
-    min-height: 36px !important;
-    max-height: 36px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    overflow: visible !important;
+    display: none !important;
   }
 
-  body > header.site-announcement .top-banner {
+  body > .mobile-announcement-bar {
     position: relative !important;
-    z-index: 1 !important;
+    z-index: 1100 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -238,17 +228,23 @@
     min-height: 36px !important;
     max-height: 36px !important;
     margin: 0 !important;
-    padding: 0 12px !important;
-    overflow: visible !important;
-    background: #ffffff !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
     color: #000000 !important;
     -webkit-text-fill-color: #000000 !important;
-    font-size: 0.78rem !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
     line-height: 1 !important;
     text-align: center !important;
+    text-indent: 0 !important;
+    transform: none !important;
     visibility: visible !important;
     opacity: 1 !important;
     white-space: nowrap !important;
+    overflow: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
   }
 
   /* Homepage phone navigation proportions. */
@@ -296,5 +292,11 @@
     min-height: 40px !important;
     margin: 0 !important;
     padding: 12px 9px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  body > .mobile-announcement-bar {
+    display: none !important;
   }
 }
