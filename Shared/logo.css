@@ -1882,7 +1882,8 @@ body .faq-section h1.faq-girthquake {
     min-height: 60px !important;
     max-height: 60px !important;
     margin: 0 !important;
-    padding: 0 32px !important;
+    padding-block: 0 !important;
+    padding-inline: clamp(24px, 3vw, 32px) !important;
     background: #ffffff !important;
     border: 0 !important;
     border-top: 0 !important;
@@ -1911,6 +1912,7 @@ body .faq-section h1.faq-girthquake {
     width: 190px !important;
     height: auto !important;
     margin: 0 !important;
+    margin-inline: 0 !important;
     padding: 0 !important;
     transform: none !important;
   }
@@ -1965,8 +1967,11 @@ body .faq-section h1.faq-girthquake {
     min-width: 0 !important;
     min-height: 0 !important;
     margin: 0 !important;
+    margin-inline: 0 !important;
     padding: 0 !important;
     color: #070707 !important;
+    position: static !important;
+    inset: auto !important;
     transform: none !important;
   }
 
