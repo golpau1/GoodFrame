@@ -3758,3 +3758,35 @@ footer.footer .footer-content,
     height: auto;
   }
 }
+
+/* Centred, uncropped gallery-wall image on phones. */
+@media (max-width: 767px) {
+  body.homepage .mobile-section-image {
+    position: static !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 40px 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    transform: none !important;
+  }
+
+  body.homepage .mobile-section-image img {
+    position: static !important;
+    display: block !important;
+    width: 74% !important;
+    max-width: 74% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    transform: none !important;
+  }
+}
