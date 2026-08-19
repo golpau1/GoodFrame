@@ -1,5 +1,5 @@
 (function setupInfoBarCarousel() {
-  const mobileQuery = window.matchMedia("(max-width: 767px)");
+  const mobileQuery = window.matchMedia("(max-width: 1180px)");
   const bar = document.querySelector(".info-bar");
   const track = bar && bar.querySelector(".info-bar-carousel");
   const slides = track ? Array.from(track.querySelectorAll(".info-bar-item")) : [];

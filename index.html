@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/Homepage/mobile.css?v=20260819-smaller-gallery-wall" media="screen and (max-width: 900px)" />
   <link rel="stylesheet" href="/Shared/logo.css?v=20260819-global-header" />
   <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement" />
+  <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260819-gallery-section" />
 </head>
 
 <body class="homepage">
@@ -103,14 +104,6 @@
       </section>
     </div>
 
-    <div class="info-bar">
-      <div class="info-bar-carousel">
-        <div class="info-bar-item">Handmade In Our Burleigh Heads Studio</div>
-        <div class="info-bar-item">Tasmanian Oak Mouldings</div>
-        <div class="info-bar-item">Gallery Quality, Archival Giclee Printing &amp; Custom Framing</div>
-      </div>
-    </div>
-
     <div class="mobile-only-section">
       <div class="mobile-section-image" id="mobile-gallery-wall-section">
         <img
@@ -120,9 +113,18 @@
         />
       </div>
 
-      <div class="mobile-section-content">
-        <a href="Print-Frame/print-frame.html" class="mobile-section-button">Start framing</a>
+    </div>
+
+    <div class="info-bar">
+      <div class="info-bar-carousel">
+        <div class="info-bar-item">Handmade In Our Burleigh Heads Studio</div>
+        <div class="info-bar-item">Tasmanian Oak Mouldings</div>
+        <div class="info-bar-item">Gallery Quality, Archival Giclee Printing &amp; Custom Framing</div>
       </div>
+    </div>
+
+    <div class="mobile-section-content mobile-gallery-cta">
+      <a href="Print-Frame/print-frame.html" class="mobile-section-button">Start framing</a>
     </div>
 
     <div class="container">
@@ -323,7 +325,7 @@
       </div>
     </footer>
 
-  <script src="/Homepage/info-bar-carousel.js?v=20260720-mobile-info-carousel"></script>
+  <script src="/Homepage/info-bar-carousel.js?v=20260819-mobile-tablet-carousel"></script>
   <script>
     const cartPageUrl = new URL("cart.html", window.location.href);
     const headerCartLink = document.getElementById("cartNav");
