@@ -1664,7 +1664,8 @@ body.homepage .editorial-hero-pair {
 
 /* Matched homepage framing CTAs across desktop and mobile. */
 body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button,
-body.homepage .frame-guide-section a.hero-button {
+body.homepage .frame-guide-section a.hero-button,
+body.homepage .container > a.hero-button {
   box-sizing: border-box !important;
   display: inline-flex !important;
   flex: 0 0 108px !important;
@@ -1688,7 +1689,8 @@ body.homepage .frame-guide-section a.hero-button {
   white-space: nowrap !important;
 }
 
-body.homepage .frame-guide-section a.hero-button {
+body.homepage .frame-guide-section a.hero-button,
+body.homepage .container > a.hero-button {
   background: #070707 !important;
   border: 1px solid #070707 !important;
   color: #ffffff !important;
