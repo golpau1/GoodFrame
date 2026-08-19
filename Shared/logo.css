@@ -1646,11 +1646,11 @@ body.homepage .editorial-hero-pair {
 /* Compact left-hero CTA with a label-to-arrow interaction. */
 @media (min-width: 901px) {
   body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button {
-    width: auto !important;
-    min-width: 112px !important;
+    width: 100px !important;
+    min-width: 100px !important;
     height: 36px !important;
     min-height: 36px !important;
-    padding: 0 18px !important;
+    padding: 0 12px !important;
     border-radius: 6px !important;
   }
 
