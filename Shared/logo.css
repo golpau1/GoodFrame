@@ -1849,3 +1849,152 @@ body .faq-section h1.faq-girthquake {
   font-variant-caps: normal !important;
   text-transform: none !important;
 }
+
+.header-wordmark {
+  display: none;
+}
+
+/* Refined, consistently centred desktop site header. */
+@media (min-width: 901px) {
+  .top-banner,
+  .legacy-top-banner {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 24px !important;
+    border: 0 !important;
+    border-top: 0 !important;
+    border-bottom: 0 !important;
+    color: #ffffff !important;
+    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.01em !important;
+    line-height: 1 !important;
+  }
+
+  body > .secondary-header.site-navigation {
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    max-height: 60px !important;
+    margin: 0 !important;
+    padding: 0 32px !important;
+    background: #ffffff !important;
+    border: 0 !important;
+    border-top: 0 !important;
+    box-shadow: none !important;
+    position: relative !important;
+  }
+
+  body > .secondary-header.site-navigation::after,
+  body.homepage > .secondary-header.site-navigation::after {
+    content: '' !important;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background: rgba(7, 7, 7, 0.08);
+    pointer-events: none;
+  }
+
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
+    grid-column: 1 !important;
+    justify-self: start !important;
+    align-self: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  body > .secondary-header.site-navigation > .header-title.header-title--logo::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  body > .secondary-header.site-navigation > .header-title--logo .header-logo {
+    display: none !important;
+  }
+
+  body > .secondary-header.site-navigation > .header-title--logo .header-wordmark {
+    display: inline-block !important;
+    color: #070707 !important;
+    -webkit-text-fill-color: #070707 !important;
+    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+    font-size: 29px !important;
+    font-weight: 600 !important;
+    font-synthesis: weight;
+    letter-spacing: -0.035em !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  body > .secondary-header.site-navigation > .nav {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 24px !important;
+    width: max-content !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: translate(-50%, -50%) !important;
+    white-space: nowrap !important;
+  }
+
+  body > .secondary-header.site-navigation > .nav a {
+    padding: 5px 2px !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    transform: none !important;
+  }
+
+  body > .secondary-header.site-navigation > .cart-nav {
+    grid-column: 3 !important;
+    justify-self: end !important;
+    align-self: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 5px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #070707 !important;
+    transform: none !important;
+  }
+
+  body > .secondary-header.site-navigation > .cart-nav svg {
+    display: block;
+    width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px;
+    stroke: currentColor !important;
+  }
+
+  body > .secondary-header.site-navigation > .cart-nav .cart-count {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #070707 !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+  }
+}
