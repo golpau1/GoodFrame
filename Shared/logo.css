@@ -1642,3 +1642,31 @@ body.homepage .editorial-hero-pair {
     margin-top: 0 !important;
   }
 }
+
+/* Compact left-hero CTA with a label-to-arrow interaction. */
+@media (min-width: 901px) {
+  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button {
+    width: auto !important;
+    min-width: 112px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 18px !important;
+    border-radius: 6px !important;
+  }
+
+  body.homepage .editorial-hero-pair .editorial-hero--image .hero-button__hover-arrow {
+    display: none;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button:hover .hero-button__label,
+  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button:focus-visible .hero-button__label {
+    display: none;
+  }
+
+  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button:hover .hero-button__hover-arrow,
+  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button:focus-visible .hero-button__hover-arrow {
+    display: inline-block;
+  }
+}
