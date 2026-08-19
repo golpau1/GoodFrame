@@ -210,3 +210,66 @@
     width: 150px !important;
   }
 }
+
+/* Homepage phone header proportions. */
+@media (max-width: 767px) {
+  body.homepage > header.site-announcement,
+  body.homepage > header.site-announcement .top-banner {
+    width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 0.78rem !important;
+    line-height: 1 !important;
+  }
+
+  body.homepage > .secondary-header.site-navigation {
+    grid-template-columns: 44px minmax(0, 1fr) 44px !important;
+    grid-template-rows: 76px !important;
+    width: 100% !important;
+    height: 76px !important;
+    min-height: 76px !important;
+    max-height: 76px !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+  }
+
+  body.homepage > .secondary-header.site-navigation > .header-title.header-title--logo {
+    place-self: center !important;
+    width: 150px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage > .secondary-header.site-navigation > .cart-nav {
+    place-self: center start !important;
+    gap: 4px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage > .secondary-header.site-navigation > .cart-nav svg {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  body.homepage > .secondary-header.site-navigation > .cart-nav .cart-count {
+    font-size: 0.8rem !important;
+  }
+
+  body.homepage > .secondary-header.site-navigation > .burger-menu {
+    place-self: center end !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: 12px 9px !important;
+  }
+}

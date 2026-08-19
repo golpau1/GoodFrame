@@ -6,11 +6,14 @@
   const root = mount.dataset.root || "";
   const cartHref = mount.dataset.cartHref || `${root}cart.html`;
   const href = (path) => `${root}${path}`;
+  const announcement = document.body.classList.contains("homepage")
+    ? "Free Shipping Over $100 &ndash; Frame Now."
+    : "Free Shipping Over $100 - Frame Now";
   const template = document.createElement("template");
 
   template.innerHTML = `
     <header class="site-announcement">
-      <div class="top-banner">Free Shipping Over $100 - Frame Now</div>
+      <div class="top-banner">${announcement}</div>
     </header>
 
     <div class="secondary-header site-navigation">

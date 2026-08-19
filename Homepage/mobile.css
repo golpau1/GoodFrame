@@ -3636,3 +3636,125 @@ footer.footer .footer-content,
     transition: none !important;
   }
 }
+
+/* Final phone homepage composition. Desktop and tablet remain unchanged. */
+@media (max-width: 767px) {
+  body.homepage {
+    --home-mobile-gutter: 24px;
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+  }
+
+  body.homepage main {
+    overflow-x: hidden !important;
+    overflow-x: clip !important;
+  }
+
+  body.homepage .mobile-home-hero {
+    position: relative !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 100% !important;
+    height: clamp(480px, 125vw, 570px) !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 40px 24px !important;
+    overflow: hidden !important;
+    background: #181512 !important;
+    color: #ffffff !important;
+  }
+
+  body.homepage .mobile-home-hero::before {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.42);
+    pointer-events: none;
+  }
+
+  body.homepage .mobile-home-hero__content {
+    position: static !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    max-width: 430px !important;
+    height: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    text-align: center !important;
+  }
+
+  body.homepage .mobile-home-hero h1 {
+    position: relative !important;
+    z-index: 2;
+    width: 100% !important;
+    margin: 0 !important;
+    color: #ffffff !important;
+    font-size: clamp(1.85rem, 8.4vw, 2.8rem) !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.08 !important;
+    text-align: center !important;
+    text-wrap: balance;
+  }
+
+  body.homepage .mobile-home-hero h1 span {
+    display: block !important;
+    white-space: nowrap;
+  }
+
+  body.homepage .mobile-home-hero__actions {
+    position: relative !important;
+    z-index: 2;
+    display: flex !important;
+    justify-content: center !important;
+    width: auto !important;
+    margin: clamp(40px, 11vw, 50px) 0 0 !important;
+  }
+
+  body.homepage .mobile-home-hero__primary {
+    width: auto !important;
+    min-width: 150px !important;
+    min-height: 46px !important;
+    padding: 0 22px !important;
+    border-radius: 7px !important;
+    font-size: 0.9375rem !important;
+    white-space: nowrap !important;
+  }
+
+  body.homepage .mobile-home-hero__image {
+    position: absolute !important;
+    z-index: 0;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body.homepage .mobile-home-hero__image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: 51% 58% !important;
+  }
+
+  body.homepage :is(.container, .frame-guide-section, .gallery-section) {
+    box-sizing: border-box;
+    max-width: 100% !important;
+    padding-inline: 24px !important;
+  }
+
+  body.homepage :is(.frame-options-row, .frame-guide-steps) {
+    grid-template-columns: minmax(0, 1fr) !important;
+    max-width: 100% !important;
+  }
+
+  body.homepage main img {
+    max-width: 100%;
+    height: auto;
+  }
+}
