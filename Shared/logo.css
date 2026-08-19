@@ -418,8 +418,8 @@ body > .secondary-header.site-navigation::after {
 /* Hero 1 display face. */
 @media (min-width: 901px) {
   body.homepage .editorial-hero-pair .editorial-hero--image h1.girthquake-heading.hero-one-heading:not(#cropperCancelButton) {
-    font-family: 'Satoshi', 'Helvetica Neue', Arial, sans-serif !important;
-    font-weight: 700 !important;
+    font-family: 'Girthquake', 'Helvetica Neue', Arial, sans-serif !important;
+    font-weight: 400 !important;
     letter-spacing: 0 !important;
     text-transform: uppercase !important;
   }
