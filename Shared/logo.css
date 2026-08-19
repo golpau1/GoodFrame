@@ -12,14 +12,14 @@
   font-display: swap;
 }
 
-/* Homepage wordmark placement and punctuation. */
+/* Site-wide desktop wordmark placement and punctuation. */
 @media (min-width: 901px) {
-  body.homepage > .secondary-header.site-navigation > .header-title.header-title--logo {
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
     position: relative !important;
     transform: translate(-4px, -2px) !important;
   }
 
-  body.homepage > .secondary-header.site-navigation > .header-title.header-title--logo::after {
+  body > .secondary-header.site-navigation > .header-title.header-title--logo::after {
     content: '' !important;
     position: absolute;
     right: 10px;
