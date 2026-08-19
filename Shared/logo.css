@@ -421,6 +421,7 @@ body > .secondary-header.site-navigation::after {
     font-family: 'Satoshi', 'Helvetica Neue', Arial, sans-serif !important;
     font-weight: 700 !important;
     letter-spacing: 0 !important;
+    text-transform: uppercase !important;
   }
 }
 
