@@ -1398,7 +1398,7 @@ body.homepage .editorial-hero-pair {
     margin: 0 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-    font-size: clamp(44px, 3.1vw, 54px) !important;
+    font-size: clamp(36px, 2.6vw, 46px) !important;
     line-height: 0.96 !important;
   }
 
