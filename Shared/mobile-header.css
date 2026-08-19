@@ -1,5 +1,5 @@
-/* Canonical phone header. Tablet and desktop rules remain page-owned. */
-@media (max-width: 767px) {
+/* Canonical mobile and tablet header shared by every page. */
+@media (max-width: 900px) {
   html,
   body {
     box-sizing: border-box !important;

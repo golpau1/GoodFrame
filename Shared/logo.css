@@ -56,19 +56,6 @@ body > .secondary-header.site-navigation::after {
   background: rgba(7, 7, 7, 0.1);
 }
 
-/* The desktop homepage hero already supplies this divider. */
-@media (min-width: 901px) {
-  body.homepage > .secondary-header.site-navigation::after {
-    content: none;
-  }
-}
-
-@media (max-width: 767px) {
-  body.homepage > .secondary-header.site-navigation::after {
-    background: rgba(255, 255, 255, 0.18);
-  }
-}
-
 /* Homepage editorial hero pair. Scoped to the two lead panels only. */
 @media (min-width: 901px) {
   body.homepage .editorial-hero-pair {
@@ -996,88 +983,6 @@ a.btn,
   }
 }
 
-/* Homepage-only mobile banner/header colour swap. */
-@media (max-width: 900px) {
-  body.homepage > header,
-  body.homepage .top-banner {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  body.homepage .top-banner {
-    min-height: 42px !important;
-    padding: 10px 20px !important;
-    font-size: 0.9rem !important;
-    line-height: 1.3 !important;
-  }
-
-  body.homepage .secondary-header {
-    height: 70px !important;
-    min-height: 70px !important;
-    max-height: 70px !important;
-    background: #000000 !important;
-    background-color: #000000 !important;
-    color: #ffffff !important;
-  }
-
-  body.homepage .secondary-header .header-title,
-  body.homepage .secondary-header .header-title:hover,
-  body.homepage .secondary-header .header-title:focus-visible,
-  body.homepage .secondary-header .header-title:active {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-  }
-
-  body.homepage .header-title--logo .header-logo {
-    filter: invert(1);
-  }
-
-  body.homepage .secondary-header .cart-nav,
-  body.homepage .secondary-header .cart-count,
-  body.homepage .secondary-header .cart-nav:hover,
-  body.homepage .secondary-header .cart-nav:focus-visible,
-  body.homepage .secondary-header .cart-nav:active {
-    color: #ffffff !important;
-  }
-
-  body.homepage .secondary-header .cart-nav {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    justify-content: flex-start !important;
-  }
-
-  body.homepage .secondary-header .cart-nav svg {
-    width: 22px !important;
-    height: 22px !important;
-  }
-
-  body.homepage .secondary-header .cart-nav svg,
-  body.homepage .secondary-header .cart-nav:hover svg,
-  body.homepage .secondary-header .cart-nav:focus-visible svg,
-  body.homepage .secondary-header .cart-nav:active svg {
-    stroke: #ffffff !important;
-  }
-
-  body.homepage .secondary-header .burger-line,
-  body.homepage .secondary-header .burger-menu:hover .burger-line,
-  body.homepage .secondary-header .burger-menu:focus-visible .burger-line,
-  body.homepage .secondary-header .burger-menu.active .burger-line {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-  }
-
-  body.homepage .secondary-header .burger-menu {
-    box-sizing: border-box !important;
-    width: 44px !important;
-    height: 44px !important;
-    margin: 0 !important;
-    padding: 12px 10px !important;
-  }
-}
-
 @media (max-width: 380px) {
   .secondary-header .header-title,
   .secondary-header .legacy-header-title,
@@ -1891,8 +1796,7 @@ body .faq-section h1.faq-girthquake {
     position: relative !important;
   }
 
-  body > .secondary-header.site-navigation::after,
-  body.homepage > .secondary-header.site-navigation::after {
+  body > .secondary-header.site-navigation::after {
     content: '' !important;
     position: absolute;
     right: 0;
@@ -2004,12 +1908,6 @@ body .faq-section h1.faq-girthquake {
   body > .secondary-header.site-navigation > .header-title.header-title--logo {
     width: 170px !important;
   }
-}
-
-/* The shared header divider is the homepage's only boundary line. */
-body.homepage > .secondary-header.site-navigation {
-  border-bottom: 0 !important;
-  box-shadow: none !important;
 }
 
 body.homepage .editorial-hero-pair {
