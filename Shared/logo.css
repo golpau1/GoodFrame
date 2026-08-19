@@ -1399,7 +1399,7 @@ body.homepage .editorial-hero-pair {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     font-size: clamp(36px, 2.6vw, 46px) !important;
-    line-height: 0.96 !important;
+    line-height: 1.15 !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--image .hero-button {
