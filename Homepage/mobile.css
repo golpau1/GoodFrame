@@ -3759,9 +3759,9 @@ footer.footer .footer-content,
   }
 }
 
-/* Centred, uncropped gallery-wall image on phones. */
+/* Exact gallery-wall element sizing on phones. */
 @media (max-width: 767px) {
-  body.homepage .mobile-section-image {
+  body.homepage #mobile-gallery-wall-section {
     position: static !important;
     display: flex !important;
     align-items: center !important;
@@ -3771,20 +3771,26 @@ footer.footer .footer-content,
     height: auto !important;
     min-height: 0 !important;
     margin: 0 !important;
-    padding: 40px 0 !important;
+    padding: 48px 20px !important;
     overflow: visible !important;
     background: #ffffff !important;
     transform: none !important;
   }
 
-  body.homepage .mobile-section-image img {
+  body.homepage #mobile-gallery-wall-image {
     position: static !important;
     display: block !important;
-    width: 74% !important;
-    max-width: 74% !important;
+    width: 68% !important;
+    max-width: 280px !important;
+    min-width: 0 !important;
     height: auto !important;
-    margin: 0 !important;
+    margin-top: 0 !important;
+    margin-right: auto !important;
+    margin-bottom: 0 !important;
+    margin-left: auto !important;
     padding: 0 !important;
+    flex: 0 1 auto !important;
+    align-self: center !important;
     object-fit: contain !important;
     object-position: center !important;
     transform: none !important;
