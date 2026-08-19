@@ -1843,3 +1843,9 @@ body.homepage .editorial-hero-pair .editorial-hero--image > .hero-left::before {
 body.homepage .editorial-hero-pair .editorial-hero--image .hero-button {
   margin-top: calc(24px + clamp(50px, 6vw, 60px)) !important;
 }
+
+body .pricing-container .intro h2.pricing-girthquake,
+body .faq-section h1.faq-girthquake {
+  font-variant-caps: normal !important;
+  text-transform: none !important;
+}
