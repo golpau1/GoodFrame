@@ -2002,3 +2002,14 @@ body .faq-section h1.faq-girthquake {
     width: 170px !important;
   }
 }
+
+/* The shared header divider is the homepage's only boundary line. */
+body.homepage > .secondary-header.site-navigation {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+body.homepage .editorial-hero-pair {
+  border-top: 0 !important;
+  box-shadow: none !important;
+}
