@@ -1914,7 +1914,7 @@ body .faq-section h1.faq-girthquake {
     margin: 0 !important;
     margin-inline: 0 !important;
     padding: 0 !important;
-    transform: none !important;
+    transform: translateY(-5px) !important;
   }
 
   body > .secondary-header.site-navigation > .header-title.header-title--logo::after {
