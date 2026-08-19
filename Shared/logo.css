@@ -1914,7 +1914,8 @@ body .faq-section h1.faq-girthquake {
     margin: 0 !important;
     margin-inline: 0 !important;
     padding: 0 !important;
-    transform: translateY(-5px) !important;
+    line-height: 1 !important;
+    transform: none !important;
   }
 
   body > .secondary-header.site-navigation > .header-title.header-title--logo::after {
@@ -1933,9 +1934,10 @@ body .faq-section h1.faq-girthquake {
   }
 
   body > .secondary-header.site-navigation > .nav {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
+    grid-column: 2 !important;
+    justify-self: center !important;
+    align-self: center !important;
+    position: static !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -1943,7 +1945,7 @@ body .faq-section h1.faq-girthquake {
     width: max-content !important;
     margin: 0 !important;
     padding: 0 !important;
-    transform: translate(-50%, -50%) !important;
+    transform: none !important;
     white-space: nowrap !important;
   }
 
@@ -1970,6 +1972,7 @@ body .faq-section h1.faq-girthquake {
     margin-inline: 0 !important;
     padding: 0 !important;
     color: #070707 !important;
+    line-height: 1 !important;
     position: static !important;
     inset: auto !important;
     transform: none !important;
