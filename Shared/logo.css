@@ -29,6 +29,13 @@ body > .secondary-header.site-navigation::after {
   background: rgba(7, 7, 7, 0.1);
 }
 
+/* The desktop homepage hero already supplies this divider. */
+@media (min-width: 901px) {
+  body.homepage > .secondary-header.site-navigation::after {
+    content: none;
+  }
+}
+
 @media (max-width: 767px) {
   body.homepage > .secondary-header.site-navigation::after {
     background: rgba(255, 255, 255, 0.18);
