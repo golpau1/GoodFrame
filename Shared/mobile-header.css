@@ -211,22 +211,47 @@
   }
 }
 
-/* Homepage phone header proportions. */
+/* Canonical compact phone announcement bar. */
 @media (max-width: 767px) {
-  body.homepage > header.site-announcement,
-  body.homepage > header.site-announcement .top-banner {
+  body > header.site-announcement {
+    position: relative !important;
+    z-index: 1001 !important;
+    display: block !important;
+    width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  body > header.site-announcement .top-banner {
+    position: relative !important;
+    z-index: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     width: 100% !important;
     height: 36px !important;
     min-height: 36px !important;
     max-height: 36px !important;
     margin: 0 !important;
     padding: 0 12px !important;
+    overflow: visible !important;
     background: #ffffff !important;
     color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
     font-size: 0.78rem !important;
     line-height: 1 !important;
+    text-align: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    white-space: nowrap !important;
   }
 
+  /* Homepage phone navigation proportions. */
   body.homepage > .secondary-header.site-navigation {
     grid-template-columns: 44px minmax(0, 1fr) 44px !important;
     grid-template-rows: 76px !important;

@@ -6,9 +6,7 @@
   const root = mount.dataset.root || "";
   const cartHref = mount.dataset.cartHref || `${root}cart.html`;
   const href = (path) => `${root}${path}`;
-  const announcement = document.body.classList.contains("homepage")
-    ? "Free Shipping Over $100 &ndash; Frame Now."
-    : "Free Shipping Over $100 - Frame Now";
+  const announcement = "Free Shipping Over $100 &ndash; Frame Now";
   const template = document.createElement("template");
 
   template.innerHTML = `
