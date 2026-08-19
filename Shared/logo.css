@@ -1914,3 +1914,22 @@ body.homepage .editorial-hero-pair {
   border-top: 0 !important;
   box-shadow: none !important;
 }
+
+/* One exact hero face at every breakpoint: the mobile heading's NType82 file. */
+@font-face {
+  font-family: 'Good Frame Hero';
+  src: url('../Assets/NType82-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+#homepage-root#homepage-root .hero-heading-unified {
+  font-family: 'Good Frame Hero' !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-synthesis: none !important;
+  letter-spacing: normal !important;
+  line-height: 1.08 !important;
+  text-transform: none !important;
+}

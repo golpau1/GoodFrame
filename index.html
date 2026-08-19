@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="/Homepage/desktop.css?v=20260713-fouc-fix" media="screen and (min-width: 901px)" />
   <link rel="stylesheet" href="/Homepage/mobile.css?v=20260819-smaller-gallery-wall" media="screen and (max-width: 900px)" />
-  <link rel="stylesheet" href="/Shared/logo.css?v=20260819-global-header" />
+  <link rel="stylesheet" href="/Shared/logo.css?v=20260819-shared-hero-font" />
   <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement" />
   <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260819-tablet-hero-type" />
 </head>
@@ -22,7 +22,7 @@
   <div data-site-header data-root=""></div>
   <script src="/Shared/site-header.js?v=20260819-visible-announcement"></script>
 
-  <main>
+  <main id="homepage-root">
     <div style="display: none">
       <nav class="nav">
         <a href="Print-Frame/print-frame.html">Print & Frame</a>
@@ -52,7 +52,7 @@
 
     <section class="mobile-home-hero" aria-labelledby="mobile-home-hero-title" hidden>
       <div class="mobile-home-hero__content">
-        <h1 id="mobile-home-hero-title">
+        <h1 id="mobile-home-hero-title" class="hero-heading-unified">
           <span>Gallery Quality</span>
           <span>Prints &amp;</span>
           <span>Handcrafted Frames</span>
@@ -83,7 +83,7 @@
             </div>
           </div>
 
-          <h1 class="girthquake-heading hero-one-heading" style="color: #070707;">Gallery Quality Prints &amp;<br />Handcrafted Frames</h1>
+          <h1 class="girthquake-heading hero-one-heading hero-heading-unified" style="color: #070707;">Gallery Quality Prints &amp;<br />Handcrafted Frames</h1>
           <a
             href="Print-Frame/print-frame.html"
             class="hero-button"

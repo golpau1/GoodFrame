@@ -198,19 +198,6 @@
   }
 }
 
-/* Match the mobile hero face on iPad and desktop. */
-@media (min-width: 768px) {
-  body.homepage .editorial-hero-pair .editorial-hero--image h1.girthquake-heading.hero-one-heading {
-    font-family: 'Gloock', 'Times New Roman', serif !important;
-    font-weight: 400 !important;
-    font-style: normal !important;
-    font-synthesis: none !important;
-    letter-spacing: 0 !important;
-    line-height: 0.98 !important;
-    text-transform: none !important;
-  }
-}
-
 @media (min-width: 768px) and (max-width: 1180px) {
   body.homepage .editorial-hero-pair .editorial-hero--image h1.girthquake-heading.hero-one-heading {
     position: relative !important;
