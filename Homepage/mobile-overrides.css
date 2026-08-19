@@ -23,6 +23,35 @@
     box-shadow: none !important;
   }
 
+  /* Remove the large desktop gallery-wall panel from responsive layouts. */
+  body.homepage .editorial-hero-pair .editorial-hero--feature,
+  body.homepage .editorial-hero-pair .editorial-hero--feature > .hero-feature-visual,
+  body.homepage .editorial-hero-pair .editorial-hero--feature .hero-image-alt {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body.homepage .editorial-hero-pair {
+    display: block !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.homepage .editorial-hero-pair > .editorial-hero--image {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
   body.homepage .mobile-only-section::before,
   body.homepage .mobile-only-section::after,
   body.homepage #mobile-gallery-wall-section::before,
