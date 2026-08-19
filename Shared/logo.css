@@ -1722,9 +1722,11 @@ body.homepage .container > a.hero-button:focus-visible .hero-button__hover-arrow
   display: inline-block;
 }
 
-body.homepage .frame-guide-section h2.frame-guide-title.girthquake-heading {
-  font-family: 'Girthquake', 'Helvetica Neue', Arial, sans-serif !important;
+body.homepage .frame-guide-section h2.frame-guide-title.girthquake-heading,
+body.homepage .frame-guide-section .frame-guide-subtitle {
+  font-family: 'NType82', sans-serif !important;
   font-weight: 400 !important;
+  font-synthesis: none;
 }
 
 /* Pure-white text on every established black surface. Colour only. */
