@@ -22,8 +22,8 @@
   body.homepage > .secondary-header.site-navigation > .header-title.header-title--logo::after {
     content: '.' !important;
     position: absolute;
-    right: -7px;
-    bottom: -2px;
+    right: -2px;
+    bottom: 0;
     color: currentColor;
     font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif;
     font-size: 24px;
