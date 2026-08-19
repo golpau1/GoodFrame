@@ -12,6 +12,29 @@
   font-display: swap;
 }
 
+/* Subtle site-wide light bar beneath the main navigation. */
+body > .secondary-header.site-navigation {
+  position: relative !important;
+}
+
+body > .secondary-header.site-navigation::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  pointer-events: none;
+  background: rgba(7, 7, 7, 0.1);
+}
+
+@media (max-width: 767px) {
+  body.homepage > .secondary-header.site-navigation::after {
+    background: rgba(255, 255, 255, 0.18);
+  }
+}
+
 /* Homepage editorial hero pair. Scoped to the two lead panels only. */
 @media (min-width: 901px) {
   body.homepage .editorial-hero-pair {
