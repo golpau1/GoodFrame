@@ -1409,7 +1409,7 @@ body.homepage .editorial-hero-pair {
     height: 42px !important;
     margin: 24px 0 0 !important;
     padding: 0 22px !important;
-    border-radius: 999px !important;
+    border-radius: 8px !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--feature {
@@ -1640,40 +1640,5 @@ body.homepage .editorial-hero-pair {
     padding: 0 20px !important;
     border-radius: 999px !important;
     margin-top: 0 !important;
-  }
-}
-
-/* Compact editorial CTA for the left desktop homepage hero. */
-@media (min-width: 901px) {
-  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button {
-    gap: 10px !important;
-    width: fit-content !important;
-    min-width: 0 !important;
-    height: auto !important;
-    min-height: 0 !important;
-    margin: 30px auto 0 !important;
-    padding: 18px 34px !important;
-    background: #f9f2e6 !important;
-    border: 1px solid #f9f2e6 !important;
-    border-radius: 999px !important;
-    box-shadow: none !important;
-    color: #070707 !important;
-    font-size: 18px !important;
-    font-weight: 500 !important;
-    line-height: 1 !important;
-    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease !important;
-  }
-
-  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button:hover,
-  body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button:focus-visible {
-    background: transparent !important;
-    border-color: #ffffff !important;
-    color: #ffffff !important;
-  }
-
-  body.homepage .editorial-hero-pair .editorial-hero--image .hero-button__arrow {
-    display: inline-block;
-    font-size: 0.9em;
-    line-height: 1;
   }
 }
