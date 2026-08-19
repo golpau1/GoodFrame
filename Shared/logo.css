@@ -13,9 +13,9 @@
 }
 
 @font-face {
-  font-family: 'Sao Torpes';
-  src: url('../Assets/SaoTorpes.otf') format('opentype');
-  font-weight: 400;
+  font-family: 'Satoshi';
+  src: url('../Assets/Satoshi-Bold.otf') format('opentype');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -418,8 +418,8 @@ body > .secondary-header.site-navigation::after {
 /* Hero 1 display face. */
 @media (min-width: 901px) {
   body.homepage .editorial-hero-pair .editorial-hero--image h1.girthquake-heading.hero-one-heading:not(#cropperCancelButton) {
-    font-family: 'Sao Torpes', 'Times New Roman', serif !important;
-    font-weight: 400 !important;
+    font-family: 'Satoshi', 'Helvetica Neue', Arial, sans-serif !important;
+    font-weight: 700 !important;
     letter-spacing: 0 !important;
   }
 }
