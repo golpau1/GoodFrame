@@ -1726,3 +1726,104 @@ body.homepage .frame-guide-section h2.frame-guide-title.girthquake-heading {
   font-family: 'Girthquake', 'Helvetica Neue', Arial, sans-serif !important;
   font-weight: 400 !important;
 }
+
+/* Pure-white text on every established black surface. Colour only. */
+body :is(
+  .top-banner,
+  .legacy-top-banner,
+  .info-bar,
+  footer.footer,
+  .footer,
+  .product-info-section,
+  .add-cart-toast,
+  .primary-button,
+  .checkout-button,
+  .nav-btn.active,
+  #addToCartButton,
+  #reopenCropperButton,
+  #saveCropButton,
+  #cropperOverlay #saveCropButton,
+  .editorial-hero--feature .hero-button,
+  .frame-guide-section > .hero-button,
+  .container > .hero-button,
+  .mobile-home-hero__primary,
+  .mobile-section-button,
+  .frame-option-button
+) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+body :is(
+  .top-banner,
+  .legacy-top-banner,
+  .info-bar,
+  footer.footer,
+  .footer,
+  .product-info-section,
+  .add-cart-toast,
+  .primary-button,
+  .checkout-button,
+  .nav-btn.active,
+  #addToCartButton,
+  #reopenCropperButton,
+  #saveCropButton,
+  #cropperOverlay #saveCropButton,
+  .editorial-hero--feature .hero-button,
+  .frame-guide-section > .hero-button,
+  .container > .hero-button,
+  .mobile-home-hero__primary,
+  .mobile-section-button,
+  .frame-option-button
+) * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+body :is(
+  .top-banner,
+  .legacy-top-banner,
+  .info-bar,
+  footer.footer,
+  .footer,
+  .product-info-section,
+  .add-cart-toast,
+  .primary-button,
+  .checkout-button,
+  .nav-btn.active,
+  #addToCartButton,
+  #reopenCropperButton,
+  #saveCropButton,
+  #cropperOverlay #saveCropButton,
+  .editorial-hero--feature .hero-button,
+  .frame-guide-section > .hero-button,
+  .container > .hero-button,
+  .mobile-home-hero__primary,
+  .mobile-section-button,
+  .frame-option-button
+) a:is(:link, :visited, :hover, :active, :focus, :focus-visible),
+body a:is(
+  .primary-button,
+  .checkout-button,
+  .nav-btn.active,
+  .mobile-home-hero__primary,
+  .mobile-section-button,
+  .frame-option-button
+):is(:link, :visited, :hover, :active, :focus, :focus-visible),
+body :is(.editorial-hero--feature, .frame-guide-section, .container) a.hero-button:is(:link, :visited, :hover, :active, :focus, :focus-visible) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+@media (max-width: 900px) {
+  body > .secondary-header.site-navigation,
+  body > .secondary-header.site-navigation * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  body > .secondary-header.site-navigation a:is(:link, :visited, :hover, :active, :focus, :focus-visible) {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+}
