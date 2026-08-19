@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/Homepage/mobile.css?v=20260819-smaller-gallery-wall" media="screen and (max-width: 900px)" />
   <link rel="stylesheet" href="/Shared/logo.css?v=20260819-global-header" />
   <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement" />
-  <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260819-mobile-gallery-cta-removed" />
+  <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260819-tablet-hero-type" />
 </head>
 
 <body class="homepage">
@@ -122,29 +122,6 @@
       </div>
 
     </div>
-
-    <template id="tablet-gallery-cta-template">
-      <div class="mobile-section-content mobile-gallery-cta">
-        <a href="Print-Frame/print-frame.html" class="mobile-section-button">Start Framing</a>
-      </div>
-    </template>
-    <script>
-      (() => {
-        const gallerySection = document.querySelector('.mobile-only-section');
-        const template = document.getElementById('tablet-gallery-cta-template');
-        const tablet = window.matchMedia('(min-width: 768px) and (max-width: 1180px)');
-
-        const syncGalleryCta = () => {
-          const existing = gallerySection.querySelector('.mobile-gallery-cta');
-          if (tablet.matches && !existing) gallerySection.append(template.content.cloneNode(true));
-          if (!tablet.matches && existing) existing.remove();
-        };
-
-        syncGalleryCta();
-        if (tablet.addEventListener) tablet.addEventListener('change', syncGalleryCta);
-        else tablet.addListener(syncGalleryCta);
-      })();
-    </script>
 
     <div class="container">
       <div class="frame-options-row">
