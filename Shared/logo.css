@@ -1908,7 +1908,7 @@ body .faq-section h1.faq-girthquake {
     align-self: center !important;
     display: inline-flex !important;
     align-items: center !important;
-    width: auto !important;
+    width: 190px !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -1921,20 +1921,13 @@ body .faq-section h1.faq-girthquake {
   }
 
   body > .secondary-header.site-navigation > .header-title--logo .header-logo {
-    display: none !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
   }
 
   body > .secondary-header.site-navigation > .header-title--logo .header-wordmark {
-    display: inline-block !important;
-    color: #070707 !important;
-    -webkit-text-fill-color: #070707 !important;
-    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
-    font-size: 29px !important;
-    font-weight: 600 !important;
-    font-synthesis: weight;
-    letter-spacing: -0.035em !important;
-    line-height: 1 !important;
-    white-space: nowrap !important;
+    display: none !important;
   }
 
   body > .secondary-header.site-navigation > .nav {
@@ -1996,5 +1989,11 @@ body .faq-section h1.faq-girthquake {
     color: #070707 !important;
     font-size: 12px !important;
     line-height: 1 !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
+    width: 170px !important;
   }
 }
