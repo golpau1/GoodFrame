@@ -1666,28 +1666,18 @@ body.homepage .editorial-hero-pair {
 @media (min-width: 901px) {
   body.homepage .editorial-hero-pair .editorial-hero--image a.hero-button,
   body.homepage .frame-guide-section a.hero-button {
-    width: 216px !important;
-    min-width: 216px !important;
-    height: 72px !important;
-    min-height: 72px !important;
-    padding: 18px 24px !important;
-    background: #f9f2e6 !important;
-    border: 0 !important;
-    border-radius: 12px !important;
-    box-shadow: none !important;
-    color: #070707 !important;
-    font-family: 'Gloock', 'Times New Roman', serif !important;
-    font-size: 22px !important;
-    font-weight: 400 !important;
-    letter-spacing: 0 !important;
-    line-height: 1 !important;
-    text-transform: none !important;
+    width: 108px !important;
+    min-width: 108px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
   }
 
   body.homepage .editorial-hero-pair .editorial-hero--image .hero-button__hover-arrow,
   body.homepage .frame-guide-section .hero-button__hover-arrow {
     display: none;
-    font-size: 22px;
+    font-size: 18px;
     line-height: 1;
   }
 
