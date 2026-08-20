@@ -589,6 +589,13 @@ border-color: #000000;
   filter: brightness(0) invert(1);
 }
 
+/* New desktop/tablet-only elements (see the min-width: 769px block below);
+   hidden here so they don't appear in the unchanged phone layout. */
+.frame-guide-step-num,
+.frame-guide-eyebrow {
+  display: none;
+}
+
 .frame-guide-icon {
   display: none;
 }
@@ -2250,6 +2257,153 @@ border-color: #000000;
 
       .frame-option-price {
         display: none !important;
+      }
+
+      /* How It Works: modern outlined-icon redesign, tablet (769-900px).
+         Phone (<=768px) keeps the existing card layout above (and the
+         numbered layout below 767px in mobile-overrides.css) unchanged;
+         desktop (901px+) gets the equivalent treatment in desktop.css.
+         Selectors are boosted with an "html body.homepage" prefix to
+         reliably outrank the pre-existing "body.homepage .frame-guide-*"
+         card design that otherwise also matches up to 900px. */
+      .frame-guide-eyebrow {
+        display: block !important;
+        margin: 0 0 12px !important;
+        color: #8a8a8a !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        font-family: var(--homepage-font-subheading) !important;
+        letter-spacing: 0.16em !important;
+        text-transform: uppercase !important;
+      }
+
+      html body.homepage .frame-guide-subtitle {
+        margin-bottom: 56px !important;
+      }
+
+      html body.homepage .frame-guide-steps {
+        position: relative !important;
+        display: flex !important;
+        grid-template-columns: none !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        gap: 40px !important;
+        width: 100% !important;
+        max-width: 700px !important;
+        margin: 0 auto 64px !important;
+      }
+
+      .frame-guide-steps::before {
+        content: '' !important;
+        position: absolute !important;
+        top: 30px !important;
+        left: calc(100% / 6) !important;
+        right: calc(100% / 6) !important;
+        height: 1px !important;
+        background: #d9d9d9 !important;
+        z-index: 0 !important;
+      }
+
+      html body.homepage .frame-guide-step {
+        position: relative !important;
+        z-index: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        max-width: 240px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        text-align: center !important;
+      }
+
+      html body.homepage .frame-guide-step-icon {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 60px !important;
+        height: 60px !important;
+        background: #ffffff !important;
+        border: 1px solid rgba(7, 7, 7, 0.45) !important;
+        border-radius: 50% !important;
+        margin: 0 0 22px !important;
+        transition: transform 180ms ease, border-color 180ms ease !important;
+      }
+
+      html body.homepage .frame-guide-step-icon img {
+        width: 24px !important;
+        height: 24px !important;
+        filter: none !important;
+      }
+
+      html body.homepage .frame-guide-step:hover .frame-guide-step-icon {
+        transform: scale(1.04) !important;
+        border-color: #070707 !important;
+      }
+
+      html body.homepage .frame-guide-box {
+        min-width: 0 !important;
+        width: 100% !important;
+        text-align: center !important;
+      }
+
+      html body.homepage .frame-guide-box h3 {
+        text-align: center !important;
+      }
+
+      html body.homepage .frame-guide-box p {
+        text-align: center !important;
+      }
+
+      .frame-guide-step-num {
+        display: flex !important;
+        position: absolute !important;
+        top: -6px !important;
+        right: -6px !important;
+        z-index: 2 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 22px !important;
+        height: 22px !important;
+        padding: 0 6px !important;
+        border-radius: 999px !important;
+        background: #070707 !important;
+        color: #f9f2e6 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        font-family: var(--homepage-font-body) !important;
+      }
+
+      body.homepage .frame-guide-section a.hero-button {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        border-radius: 999px !important;
+        transition: transform 180ms ease, opacity 180ms ease !important;
+      }
+
+      body.homepage .frame-guide-section a.hero-button .hero-button__hover-arrow {
+        display: inline-block !important;
+        font-size: 16px !important;
+        line-height: 1 !important;
+      }
+
+      body.homepage .frame-guide-section a.hero-button:hover {
+        background-color: #070707 !important;
+        color: #f9f2e6 !important;
+        border-color: #070707 !important;
+        box-shadow: none !important;
+        transform: translateY(-2px) !important;
+        opacity: 0.85 !important;
+      }
+
+      body.homepage .frame-guide-section a.hero-button:hover .hero-button__label {
+        display: inline-block !important;
       }
     }
 
