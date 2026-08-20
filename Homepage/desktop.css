@@ -744,19 +744,39 @@ border-color: #070707;
   display: none;
 }
 
-/* Pill CTA: label + arrow shown together, no color/box-shadow change on hover. */
+/* Pill CTA: arrow hidden by default, slides/fades in on hover. No color/box-shadow change on hover. */
 body.homepage .frame-guide-section a.hero-button {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 8px !important;
   border-radius: 999px !important;
   transition: transform 180ms ease, opacity 180ms ease !important;
 }
 
+/* Override the shared 108px compact-CTA sizing (also used by other
+   buttons this selector list targets elsewhere on the page) so this
+   button can grow enough for the arrow to slide in at full width. */
+html body.homepage .frame-guide-section a.hero-button {
+  flex: none !important;
+  width: auto !important;
+  min-width: 132px !important;
+  max-width: none !important;
+}
+
 body.homepage .frame-guide-section a.hero-button .hero-button__hover-arrow {
   display: inline-block !important;
+  overflow: hidden !important;
+  width: 0 !important;
+  margin-left: 0 !important;
+  opacity: 0 !important;
   font-size: 16px !important;
   line-height: 1 !important;
+  transition: width 180ms ease-out, margin-left 180ms ease-out, opacity 180ms ease-out !important;
+}
+
+body.homepage .frame-guide-section a.hero-button:hover .hero-button__hover-arrow {
+  width: 16px !important;
+  margin-left: 8px !important;
+  opacity: 1 !important;
 }
 
 body.homepage .frame-guide-section a.hero-button:hover {
