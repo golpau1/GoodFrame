@@ -10,6 +10,8 @@
   const template = document.createElement("template");
 
   template.innerHTML = `
+    <div class="mobile-announcement-bar">Free Shipping Over $100 – Frame Now</div>
+
     <header class="site-announcement">
       <div class="top-banner">${announcement}</div>
     </header>
@@ -61,21 +63,71 @@
   const burger = fragment.querySelector("#burgerMenu");
   const mobileNav = fragment.querySelector("#mobileNav");
   const close = fragment.querySelector("#mobileNavClose");
+  const overlay = fragment.querySelector("#mobileNavOverlay");
+  const cartCount = fragment.querySelector(".cart-count");
+  const links = Array.from(fragment.querySelectorAll(".nav a, .mobile-nav a"));
+
+  const normalizedPath = (value) => {
+    try {
+      const path = new URL(value, window.location.href).pathname;
+      return decodeURIComponent(path).replace(/\/+$/, "") || "/";
+    } catch (_error) {
+      return "";
+    }
+  };
+
+  const currentPath = normalizedPath(window.location.href);
+  links.forEach((link) => {
+    if (normalizedPath(link.href) === currentPath) link.setAttribute("aria-current", "page");
+  });
+
+  function updateCartCount() {
+    try {
+      const cart = JSON.parse(window.localStorage.getItem("myAppVisualCart") || "[]");
+      cartCount.textContent = Array.isArray(cart) ? String(cart.length) : "0";
+    } catch (_error) {
+      cartCount.textContent = "0";
+    }
+  }
+
+  function setMenuOpen(open) {
+    burger.classList.toggle("active", open);
+    mobileNav.classList.toggle("active", open);
+    overlay.style.display = open ? "block" : "none";
+    burger.setAttribute("aria-expanded", String(open));
+  }
+
+  function toggleMenu(event) {
+    event?.stopImmediatePropagation();
+    setMenuOpen(!mobileNav.classList.contains("active"));
+  }
+
+  function closeMenu(event) {
+    event?.stopImmediatePropagation();
+    setMenuOpen(false);
+  }
+
+  burger.addEventListener("click", toggleMenu);
+  close.addEventListener("click", closeMenu);
+  overlay.addEventListener("click", closeMenu);
+  fragment.querySelectorAll(".mobile-nav a").forEach((link) => link.addEventListener("click", closeMenu));
 
   [burger, close].forEach((control) => {
     control.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      control.click();
+      if (control === burger) toggleMenu(event);
+      else closeMenu(event);
     });
   });
 
-  new MutationObserver(() => {
-    burger.setAttribute("aria-expanded", String(mobileNav.classList.contains("active")));
-  }).observe(mobileNav, { attributes: true, attributeFilter: ["class"] });
-
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && mobileNav.classList.contains("active")) close.click();
+    if (event.key === "Escape" && mobileNav.classList.contains("active")) closeMenu(event);
+  });
+
+  updateCartCount();
+  window.addEventListener("storage", (event) => {
+    if (event.key === "myAppVisualCart") updateCartCount();
   });
 
   mount.replaceWith(fragment);
