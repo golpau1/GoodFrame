@@ -1910,6 +1910,21 @@ body .faq-section h1.faq-girthquake {
   }
 }
 
+/* Slightly smaller wordmark, desktop only (~13% narrower than the
+   values above). Tablet's own reduction lives in mobile-header.css;
+   mobile (<=768px) is untouched. */
+@media (min-width: 901px) and (max-width: 1023px) {
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
+    width: 165px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
+    width: 150px !important;
+  }
+}
+
 body.homepage .editorial-hero-pair {
   border-top: 0 !important;
   box-shadow: none !important;

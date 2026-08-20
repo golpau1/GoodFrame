@@ -196,6 +196,15 @@
   }
 }
 
+/* Slightly smaller wordmark, tablet only (769-900px; ~12% narrower
+   than the 170px above). Phone (<=768px, including the 360px and
+   767px overrides below) is untouched. */
+@media (min-width: 769px) and (max-width: 900px) {
+  body > .secondary-header.site-navigation > .header-title.header-title--logo {
+    width: 150px !important;
+  }
+}
+
 @media (max-width: 360px) {
   body > .secondary-header.site-navigation {
     grid-template-columns: 64px minmax(0, 1fr) 64px !important;
