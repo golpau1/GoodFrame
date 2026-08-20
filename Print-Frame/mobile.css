@@ -3407,6 +3407,23 @@ header {
             margin-top: auto;
         }
 
+/* Bug fix, mobile only: the flex-column rules above (body display:flex)
+   turn the shared footer into a flex item. A flex item's automatic
+   minimum size is normally its content height, but that protection is
+   dropped when the item also has overflow:hidden - which .site-footer
+   does, correctly, in Shared/site-shell.css (shared with every page,
+   left untouched here). The result was this page's footer flex-shrinking
+   down to whatever space happened to be left over and clipping
+   everything past the nav/contact columns: the divider, location and
+   copyright. The homepage never hits this because its <body> isn't a
+   flex container. Locking flex-shrink to 0 restores the footer's
+   natural full height without changing the footer component itself. */
+@media (max-width: 768px) {
+  .site-footer {
+    flex-shrink: 0 !important;
+  }
+}
+
         /* Remove extra spacing that might cause white space */
         .product-info-section,
         .feature-section {
