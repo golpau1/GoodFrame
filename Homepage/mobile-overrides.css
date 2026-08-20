@@ -438,3 +438,59 @@
     overflow: hidden !important;
   }
 }
+
+/* Final phone-only frame selector values, kept after tablet rules in the cascade. */
+@media screen and (max-width: 767px) {
+  body.homepage .container:has(> .frame-options-row) {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  body.homepage .container > .frame-options-row {
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 390px !important;
+  }
+
+  body.homepage .frame-options-row > .frame-option {
+    padding: 16px !important;
+    border: 1px solid #deded9 !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+  }
+
+  body.homepage .frame-option > .frame-image {
+    height: 200px !important;
+    min-height: 190px !important;
+    max-height: 210px !important;
+    margin: 0 0 16px !important;
+    padding: 12px !important;
+    aspect-ratio: auto !important;
+    background: #faf8f3 !important;
+    border-radius: 10px !important;
+  }
+
+  body.homepage .frame-option > .frame-option-content {
+    column-gap: 12px !important;
+    row-gap: 6px !important;
+    margin-bottom: 16px !important;
+  }
+
+  body.homepage .frame-option-text > p:first-child {
+    font-size: 15px !important;
+  }
+
+  body.homepage .frame-option-content > .frame-option-price {
+    font-size: 16px !important;
+    white-space: nowrap !important;
+  }
+
+  body.homepage .frame-option-text > p:last-child {
+    color: #74746f !important;
+    font-size: 13px !important;
+  }
+
+  body.homepage .frame-option > .frame-option-button {
+    border-radius: 9px !important;
+  }
+}
