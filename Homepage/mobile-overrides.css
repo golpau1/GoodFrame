@@ -2,6 +2,113 @@
   display: none !important;
 }
 
+/* Final flush-left phone footer without a wordmark. */
+@media screen and (max-width: 767px) {
+  body.homepage footer.footer {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 32px 24px 24px !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-brand {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage footer.footer > :is(.footer-mobile-nav, .footer-content, .footer-mobile-meta) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-nav,
+  body.homepage footer.footer > .footer-content {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  body.homepage footer.footer :is(ul, li, p, a, .footer-col) {
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer :is(.footer-content, .footer-col, ul) {
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-nav ul {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-nav li {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-nav a {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 7px 0 !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > .footer-content > .footer-col:nth-child(2) {
+    width: 100% !important;
+    margin: 26px 0 0 !important;
+    padding: 26px 0 0 !important;
+    border-top: 1px solid #2d2d2d !important;
+  }
+
+  body.homepage footer.footer > .footer-content > .footer-col:nth-child(3) {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage footer.footer .footer-col a {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 7px 0 !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-meta {
+    width: 100% !important;
+    margin: 26px 0 0 !important;
+    padding: 26px 0 0 !important;
+    border-top: 1px solid #2d2d2d !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-meta p {
+    width: 100% !important;
+    margin: 0 !important;
+    text-align: left !important;
+  }
+}
+
 .footer-mobile-brand,
 .footer-mobile-nav,
 .footer-mobile-meta {
@@ -1318,5 +1425,46 @@
     font-size: 12px !important;
     line-height: 1.5 !important;
     text-align: left !important;
+  }
+}
+
+/* Authoritative flush-left footer values at the end of the phone cascade. */
+@media screen and (max-width: 767px) {
+  body.homepage footer.footer {
+    padding: 32px 24px 24px !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > :is(.footer-mobile-nav, .footer-content, .footer-mobile-meta) {
+    width: 100% !important;
+    max-width: none !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-nav a,
+  body.homepage footer.footer .footer-col a {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 7px 0 !important;
+    text-align: left !important;
+  }
+
+  body.homepage footer.footer > .footer-content > .footer-col:nth-child(2) {
+    margin: 26px 0 0 !important;
+    padding: 26px 0 0 !important;
+  }
+
+  body.homepage footer.footer > .footer-content > .footer-col:nth-child(3) {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage footer.footer > .footer-mobile-meta {
+    margin: 26px 0 0 !important;
+    padding: 26px 0 0 !important;
   }
 }
