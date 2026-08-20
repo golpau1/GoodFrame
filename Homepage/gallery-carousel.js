@@ -1,9 +1,8 @@
 (() => {
   const viewport = document.querySelector(".gallery-row");
   const track = viewport?.querySelector(".gallery-carousel");
-  const pagination = viewport?.querySelector(".mobile-gallery-pagination");
 
-  if (!viewport || !track || !pagination) return;
+  if (!viewport || !track) return;
 
   const phoneQuery = window.matchMedia("(max-width: 767px)");
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -19,20 +18,11 @@
     return phoneQuery.matches;
   }
 
-  function updateDots() {
-    pagination.querySelectorAll(".mobile-gallery-dot").forEach((dot, dotIndex) => {
-      const active = dotIndex === index;
-      dot.classList.toggle("is-active", active);
-      dot.setAttribute("aria-current", active ? "true" : "false");
-    });
-  }
-
   function render(animate = true) {
     if (!isActive()) return;
     const useTransition = animate && !reducedMotionQuery.matches;
     track.style.transition = useTransition ? "transform 500ms ease" : "none";
     track.style.transform = `translate3d(-${index * 100}%, 0, 0)`;
-    updateDots();
   }
 
   function stopAutoplay() {
@@ -50,32 +40,14 @@
     }, autoplayDelay);
   }
 
-  function buildDots() {
-    pagination.replaceChildren();
-    slides.forEach((slide, dotIndex) => {
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.className = "mobile-gallery-dot";
-      dot.setAttribute("aria-label", `Show gallery image ${dotIndex + 1} of ${slides.length}`);
-      dot.addEventListener("click", () => {
-        index = dotIndex;
-        render(true);
-        startAutoplay();
-      });
-      pagination.appendChild(dot);
-    });
-  }
-
   function activate() {
     if (!isActive()) {
       stopAutoplay();
       track.style.removeProperty("transform");
       track.style.removeProperty("transition");
-      pagination.replaceChildren();
       return;
     }
     index = Math.min(index, slides.length - 1);
-    if (!pagination.children.length) buildDots();
     render(false);
     startAutoplay();
   }

@@ -929,3 +929,58 @@
     display: none !important;
   }
 }
+
+/* Control-free phone carousels and compact black information caption bar. */
+@media screen and (max-width: 767px) {
+  body.homepage #homepage-root .gallery-row {
+    height: auto !important;
+    padding-bottom: 0 !important;
+  }
+
+  body.homepage #homepage-root .gallery-row > .gallery-carousel {
+    margin-bottom: 0 !important;
+  }
+
+  body.homepage :is(.mobile-gallery-pagination, .info-bar-pagination) {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body.homepage #homepage-root .info-bar {
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+    padding: 0 !important;
+  }
+
+  body.homepage #homepage-root .info-bar > .info-bar-carousel {
+    height: 68px !important;
+    min-height: 68px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.homepage #homepage-root .info-bar .info-bar-item,
+  body.homepage #homepage-root .info-bar .info-bar-item:nth-child(n) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+    margin: 0 !important;
+    padding: 16px 20px !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    line-height: 1.3 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow: visible !important;
+  }
+}

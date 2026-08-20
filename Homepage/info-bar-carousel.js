@@ -1,5 +1,6 @@
 (function setupInfoBarCarousel() {
   const mobileQuery = window.matchMedia("(max-width: 1180px)");
+  const phoneQuery = window.matchMedia("(max-width: 767px)");
   const bar = document.querySelector(".info-bar");
   const track = bar && bar.querySelector(".info-bar-carousel");
   const slides = track ? Array.from(track.querySelectorAll(".info-bar-item")) : [];
@@ -48,7 +49,7 @@
       activeIndex = (activeIndex + 1) % slides.length;
       dragOffset = 0;
       render(true);
-    }, AUTOPLAY_DELAY);
+    }, phoneQuery.matches ? 4500 : AUTOPLAY_DELAY);
   }
 
   function pauseForInteraction() {
@@ -114,29 +115,20 @@
     resumeAfterInteraction();
   }
 
-  function enable() {
-    if (bar.classList.contains("is-carousel-ready")) {
-      if (pagination) pagination.hidden = false;
-      render(false);
-      startAutoplay();
+  function syncPagination() {
+    if (!mobileQuery.matches || phoneQuery.matches) {
+      if (pagination) pagination.remove();
+      pagination = null;
+      dots = [];
       return;
     }
 
-    bar.classList.add("is-carousel-ready");
-    bar.setAttribute("role", "region");
-    bar.setAttribute("aria-roledescription", "carousel");
-    bar.setAttribute("aria-label", "Good Frame information");
-    track.setAttribute("aria-live", "polite");
-
+    if (pagination) return;
     pagination = document.createElement("div");
     pagination.className = "info-bar-pagination";
     pagination.setAttribute("aria-label", "Choose information slide");
 
     dots = slides.map((slide, index) => {
-      slide.setAttribute("role", "group");
-      slide.setAttribute("aria-roledescription", "slide");
-      slide.setAttribute("aria-label", `${index + 1} of ${slides.length}`);
-
       const dot = document.createElement("button");
       dot.type = "button";
       dot.className = "info-bar-dot";
@@ -151,6 +143,29 @@
     });
 
     bar.appendChild(pagination);
+  }
+
+  function enable() {
+    if (bar.classList.contains("is-carousel-ready")) {
+      syncPagination();
+      render(false);
+      startAutoplay();
+      return;
+    }
+
+    bar.classList.add("is-carousel-ready");
+    bar.setAttribute("role", "region");
+    bar.setAttribute("aria-roledescription", "carousel");
+    bar.setAttribute("aria-label", "Good Frame information");
+    track.setAttribute("aria-live", "polite");
+
+    slides.forEach((slide, index) => {
+      slide.setAttribute("role", "group");
+      slide.setAttribute("aria-roledescription", "slide");
+      slide.setAttribute("aria-label", `${index + 1} of ${slides.length}`);
+    });
+
+    syncPagination();
     render(false);
     startAutoplay();
   }
@@ -164,7 +179,7 @@
     pointerId = null;
     dragOffset = 0;
     bar.classList.remove("is-interacting");
-    if (pagination) pagination.hidden = true;
+    syncPagination();
     track.classList.remove("is-animating");
     track.style.removeProperty("transform");
   }
@@ -182,9 +197,19 @@
   const onMobileChange = (event) => event.matches ? enable() : disable();
   if (mobileQuery.addEventListener) {
     mobileQuery.addEventListener("change", onMobileChange);
+    phoneQuery.addEventListener("change", () => {
+      syncPagination();
+      render(false);
+      startAutoplay();
+    });
     reducedMotion.addEventListener("change", startAutoplay);
   } else {
     mobileQuery.addListener(onMobileChange);
+    phoneQuery.addListener(() => {
+      syncPagination();
+      render(false);
+      startAutoplay();
+    });
     reducedMotion.addListener(startAutoplay);
   }
 
