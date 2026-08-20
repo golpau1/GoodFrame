@@ -2,6 +2,115 @@
   display: none !important;
 }
 
+.mobile-gallery-pagination {
+  display: none;
+}
+
+/* One full-width gallery slide at a time on phones. */
+@media screen and (max-width: 767px) {
+  body.homepage .gallery-row {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    aspect-ratio: auto !important;
+    background: #ffffff !important;
+    touch-action: pan-y;
+  }
+
+  body.homepage .gallery-row .gallery-carousel {
+    display: flex !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: visible !important;
+    aspect-ratio: 16 / 10 !important;
+    animation: none !important;
+    transform: translate3d(0, 0, 0);
+    transition: transform 500ms ease;
+    will-change: transform;
+    touch-action: pan-y;
+  }
+
+  body.homepage .gallery-row .gallery-image,
+  body.homepage .gallery-row .gallery-image:nth-child(n) {
+    display: block !important;
+    flex: 0 0 100% !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    background: #111111 !important;
+    border-radius: 0 !important;
+  }
+
+  body.homepage .gallery-row .gallery-image:nth-child(n + 6) {
+    display: none !important;
+  }
+
+  body.homepage .gallery-row .gallery-image img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    border-radius: 0 !important;
+  }
+
+  body.homepage .gallery-row .mobile-gallery-pagination {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    width: 100% !important;
+    height: 26px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.homepage .mobile-gallery-dot {
+    display: block !important;
+    width: 6px !important;
+    min-width: 6px !important;
+    height: 6px !important;
+    min-height: 6px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #d2d2ce !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    box-shadow: none !important;
+    cursor: pointer;
+  }
+
+  body.homepage .mobile-gallery-dot.is-active {
+    background: #000000 !important;
+  }
+
+  body.homepage .mobile-gallery-dot:focus-visible {
+    outline: 2px solid #000000;
+    outline-offset: 3px;
+  }
+}
+
+@media screen and (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  body.homepage .gallery-row .gallery-carousel {
+    transition: none !important;
+  }
+}
+
 /* Editorial How It Works treatment for phones only. */
 @media screen and (max-width: 767px) {
   body.homepage .gallery-row {
@@ -787,6 +896,36 @@
   body.homepage #homepage-root .container > a.hero-button .hero-button__hover-arrow,
   body.homepage #homepage-root .container > a.hero-button:hover .hero-button__hover-arrow,
   body.homepage #homepage-root .container > a.hero-button:focus-visible .hero-button__hover-arrow {
+    display: none !important;
+  }
+}
+
+/* Keep the phone gallery viewport and dot rail authoritative in the final cascade. */
+@media screen and (max-width: 767px) {
+  body.homepage #homepage-root .gallery-row {
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: auto !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+
+  body.homepage #homepage-root .gallery-row > .gallery-carousel {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: 16 / 10 !important;
+    animation: none !important;
+  }
+
+  body.homepage #homepage-root .gallery-row > .gallery-carousel > .gallery-image {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 100% !important;
+  }
+
+  body.homepage #homepage-root .gallery-row > .gallery-carousel > .gallery-image:nth-child(n + 6) {
     display: none !important;
   }
 }
