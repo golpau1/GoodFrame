@@ -2379,51 +2379,11 @@ border-color: #000000;
         font-family: var(--homepage-font-body) !important;
       }
 
-      body.homepage .frame-guide-section a.hero-button {
-        display: inline-flex !important;
-        align-items: center !important;
-        border-radius: 999px !important;
-        transition: transform 180ms ease, opacity 180ms ease !important;
-      }
-
-      /* Override the shared 108px compact-CTA sizing so this button can
-         grow enough for the arrow to slide in at full width. */
-      html body.homepage .frame-guide-section a.hero-button {
-        flex: none !important;
-        width: auto !important;
-        min-width: 132px !important;
-        max-width: none !important;
-      }
-
-      body.homepage .frame-guide-section a.hero-button .hero-button__hover-arrow {
-        display: inline-block !important;
-        overflow: hidden !important;
-        width: 0 !important;
-        margin-left: 0 !important;
-        opacity: 0 !important;
-        font-size: 16px !important;
-        line-height: 1 !important;
-        transition: width 180ms ease-out, margin-left 180ms ease-out, opacity 180ms ease-out !important;
-      }
-
-      body.homepage .frame-guide-section a.hero-button:hover .hero-button__hover-arrow {
-        width: 16px !important;
-        margin-left: 8px !important;
-        opacity: 1 !important;
-      }
-
-      body.homepage .frame-guide-section a.hero-button:hover {
-        background-color: #070707 !important;
-        color: #f9f2e6 !important;
-        border-color: #070707 !important;
-        box-shadow: none !important;
-        transform: translateY(-2px) !important;
-        opacity: 0.85 !important;
-      }
-
-      body.homepage .frame-guide-section a.hero-button:hover .hero-button__label {
-        display: inline-block !important;
-      }
+      /* Start Framing intentionally has no button styling of its own
+         here - it uses the same shared .hero-button component (sizing,
+         padding, border-radius, font, and the label<->arrow hover swap)
+         as the other homepage primary buttons; see the "Matched
+         homepage framing CTAs" rules in Shared/logo.css. */
     }
 
 .header-title {
