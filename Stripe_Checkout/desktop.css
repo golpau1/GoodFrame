@@ -93,7 +93,6 @@ body {
             font-family: var(--font-family);
             background: var(--background-primary);
             color: var(--text-primary);
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
             line-height: 1.6;
@@ -110,7 +109,7 @@ body {
 main.cart-page-container {
             max-width: 1200px;
             width: 100%;
-            margin: 48px auto 60px;
+            margin: 40px auto;
             padding: 0 20px;
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -271,7 +270,7 @@ main.cart-page-container.cart-empty {
             text-align: center;
             font-size: 1.1rem;
             color: var(--text-secondary);
-            padding: 80px 40px;
+            padding: 56px 40px;
             font-weight: 500;
             background-color: var(--background-secondary);
             border: 1px solid var(--border-color);
