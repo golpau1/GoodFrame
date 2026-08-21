@@ -81,10 +81,7 @@
 
             <p id="priceDisplay">Price: $0</p>
             <button id="addToCartButton" disabled>Add to cart</button>
-            <a id="viewCartLink" class="view-cart-link" href="../cart.html" hidden>
-                <span class="view-cart-label">View cart</span>
-                <span class="view-cart-count" aria-hidden="true">0</span>
-            </a>
+            <a id="viewCartLink" class="view-cart-link" href="../cart.html" hidden>View cart (0)</a>
         </div>
     </div>
 
@@ -2292,11 +2289,7 @@
                 }
 
                 if (viewCartLink) {
-                    const viewCartCount = viewCartLink.querySelector(".view-cart-count");
-                    if (viewCartCount) {
-                        viewCartCount.textContent = visualCartItems.length;
-                    }
-                    viewCartLink.setAttribute("aria-label", `View cart (${visualCartItems.length})`);
+                    viewCartLink.textContent = `View cart (${visualCartItems.length})`;
                     viewCartLink.hidden = visualCartItems.length === 0;
                 }
 
