@@ -277,7 +277,7 @@ app.post('/create-checkout-session', async (req, res) => {
                 order_codes: orderCodeMetadataValue
             }
             sessionOptions.payment_intent_data = {
-                description: 'Good Frame custom frame order',
+                description: 'Good Frame Order',
                 metadata: {
                     order_codes: orderCodeMetadataValue
                 }

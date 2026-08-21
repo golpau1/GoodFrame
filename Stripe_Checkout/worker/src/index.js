@@ -195,7 +195,7 @@ function createStripePayload(lineItems, siteBaseUrl) {
   if (orderCodes.length > 0) {
     payload.set('client_reference_id', orderCodes[0]);
     payload.set('metadata[order_codes]', orderCodeMetadataValue);
-    payload.set('payment_intent_data[description]', 'Good Frame custom frame order');
+    payload.set('payment_intent_data[description]', 'Good Frame Order');
     payload.set('payment_intent_data[metadata][order_codes]', orderCodeMetadataValue);
   }
 
