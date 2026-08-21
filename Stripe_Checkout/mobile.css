@@ -90,6 +90,8 @@
             font-family: var(--font-family);
             background: var(--background-primary);
             color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             line-height: 1.6;
@@ -238,6 +240,7 @@
          * =========================================
          */
         main.cart-page-container {
+            flex: 1;
             max-width: 1200px;
             width: 100%;
             margin: 48px auto;
@@ -246,6 +249,7 @@
             grid-template-columns: 2fr 1fr;
             gap: 40px;
             align-items: flex-start;
+            align-content: center;
             background: transparent;
             border: none;
             box-shadow: none;
