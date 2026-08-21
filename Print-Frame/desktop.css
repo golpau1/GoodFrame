@@ -537,6 +537,24 @@ etc. --- */
   transform: none;
 }
 
+.view-cart-link {
+  align-self: center;
+  margin-top: -6px;
+  color: #070707;
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.view-cart-link[hidden] {
+  display: none !important;
+}
+
 .add-cart-toast {
   position: fixed;
   right: 24px;

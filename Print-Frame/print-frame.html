@@ -81,6 +81,7 @@
 
             <p id="priceDisplay">Price: $0</p>
             <button id="addToCartButton" disabled>Add to cart</button>
+            <a id="viewCartLink" class="view-cart-link" href="../cart.html" hidden>View cart (0)</a>
         </div>
     </div>
 
@@ -2280,10 +2281,16 @@
                 const cartTotalElement = document.getElementById("cartTotal");
                 const cartNav = document.getElementById("cartNav");
                 const navCartCountSpan = cartNav ? cartNav.querySelector(".cart-count") : null;
+                const viewCartLink = document.getElementById("viewCartLink");
 
                 
                 if (navCartCountSpan) {
                     navCartCountSpan.textContent = visualCartItems.length;
+                }
+
+                if (viewCartLink) {
+                    viewCartLink.textContent = `View cart (${visualCartItems.length})`;
+                    viewCartLink.hidden = visualCartItems.length === 0;
                 }
 
                 const total = visualCartItems.reduce((sum, item) => sum + (item.price || 0), 0);
