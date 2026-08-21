@@ -538,17 +538,60 @@ etc. --- */
 }
 
 .view-cart-link {
-  align-self: center;
-  margin-top: -6px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  margin-top: -8px;
+  padding: 10px 16px;
   color: #070707;
-  font-family: var(--font-family);
-  font-size: 14px;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 15px;
   line-height: 1.4;
   text-align: center;
-  text-decoration: underline;
-  background: none;
-  border: 0;
+  text-decoration: none;
+  background: #ffffff;
+  border: 1px solid #070707;
+  border-radius: 10px;
   box-shadow: none;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.view-cart-label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.view-cart-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #070707;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.view-cart-link:hover {
+  color: #070707;
+  background: #f0f0f0;
+  border-color: #070707;
+}
+
+.view-cart-link:active {
+  background: #e0e0e0;
+  transform: scale(0.99);
 }
 
 .view-cart-link[hidden] {
