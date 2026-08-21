@@ -260,6 +260,236 @@ async function createCheckoutSession(request, env) {
   });
 }
 
+/*
+ * =========================================================
+ * STRIPE WEBHOOK -> ORDER CONFIRMATION EMAIL (via Resend)
+ * =========================================================
+ *
+ * Fires on checkout.session.completed. Requires these to be configured
+ * on the Worker (none of this lives in the repo - see the deploy notes
+ * in this file's header comment / the project README):
+ *
+ *   wrangler secret put STRIPE_WEBHOOK_SECRET   (from the Stripe
+ *     Dashboard webhook endpoint you create, see below)
+ *   wrangler secret put RESEND_API_KEY          (from resend.com)
+ *
+ * And in wrangler.jsonc `vars` (not secret, just a from-address):
+ *   RESEND_FROM_EMAIL  e.g. "Good Frame <orders@goodframe.com.au>"
+ *     (the domain in this address must be a verified sender in Resend)
+ *
+ * Stripe Dashboard setup (Developers -> Webhooks -> Add endpoint):
+ *   URL: https://<your-worker-subdomain>.workers.dev/stripe-webhook
+ *   Event: checkout.session.completed
+ *   Copy the generated "Signing secret" into STRIPE_WEBHOOK_SECRET.
+ *
+ * The email HTML itself is NOT duplicated here - it's fetched at
+ * send-time from Checkout/payment-confirmation-email.html on the live
+ * site (via SITE_BASE_URL) and its {{tokens}} are filled in below, so
+ * editing that one file is enough to change what customers receive.
+ */
+
+async function timingSafeEqualHex(a, b) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
+async function verifyStripeSignature(rawBody, signatureHeader, secret) {
+  if (!signatureHeader) {
+    return false;
+  }
+
+  const parts = Object.fromEntries(
+    signatureHeader.split(',').map(pair => {
+      const [key, value] = pair.split('=');
+      return [key, value];
+    })
+  );
+
+  const timestamp = parts.t;
+  const expectedSignature = parts.v1;
+  if (!timestamp || !expectedSignature) {
+    return false;
+  }
+
+  // Reject stale requests (5 minute tolerance, matches Stripe's own SDKs)
+  // to guard against replayed webhook deliveries.
+  const ageSeconds = Math.abs(Date.now() / 1000 - Number(timestamp));
+  if (!Number.isFinite(ageSeconds) || ageSeconds > 300) {
+    return false;
+  }
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signatureBuffer = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(`${timestamp}.${rawBody}`)
+  );
+  const computedSignature = [...new Uint8Array(signatureBuffer)]
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+
+  return timingSafeEqualHex(computedSignature, expectedSignature);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function formatCurrency(amountInCents, currency) {
+  const amount = (Number(amountInCents) || 0) / 100;
+  try {
+    return new Intl.NumberFormat('en-AU', {
+      style: 'currency',
+      currency: (currency || 'aud').toUpperCase()
+    }).format(amount);
+  } catch {
+    return `$${amount.toFixed(2)}`;
+  }
+}
+
+async function fetchLineItems(sessionId, env) {
+  const response = await fetch(
+    `https://api.stripe.com/v1/checkout/sessions/${sessionId}/line_items?limit=100`,
+    { headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` } }
+  );
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+  return Array.isArray(data.data) ? data.data : [];
+}
+
+function buildItemLabel(lineItems) {
+  const framedItems = lineItems.filter(
+    item => !(item.description || '').toLowerCase().includes('shipping')
+  );
+
+  if (framedItems.length === 0) {
+    return 'Your order';
+  }
+
+  const name = framedItems[0].description || 'Print & Frame';
+  return framedItems.length === 1
+    ? name
+    : `${name} + ${framedItems.length - 1} more`;
+}
+
+async function sendOrderConfirmationEmail(session, env) {
+  if (!env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY is not configured - skipping confirmation email');
+    return;
+  }
+
+  const customerEmail = session.customer_details?.email || session.customer_email;
+  if (!customerEmail) {
+    console.error('Checkout session has no customer email - skipping confirmation email');
+    return;
+  }
+
+  const lineItems = await fetchLineItems(session.id, env);
+  const orderNumber = session.client_reference_id
+    ? `#GF-${session.client_reference_id}`
+    : `#GF-${session.id.slice(-8).toUpperCase()}`;
+  const itemName = buildItemLabel(lineItems);
+  const totalPaid = formatCurrency(session.amount_total, session.currency);
+
+  const siteBaseUrl = String(env.SITE_BASE_URL || 'https://goodframe.com.au').replace(/\/$/, '');
+  const templateResponse = await fetch(`${siteBaseUrl}/Checkout/payment-confirmation-email.html`);
+  if (!templateResponse.ok) {
+    throw new Error(`Could not load email template (${templateResponse.status})`);
+  }
+
+  const supportEmail = env.SUPPORT_EMAIL || 'contact.goodframe@gmail.com';
+  const trackOrderUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(`Order tracking — ${orderNumber}`)}`;
+
+  let html = await templateResponse.text();
+  html = html
+    .replaceAll('{{orderNumber}}', escapeHtml(orderNumber))
+    .replaceAll('{{itemName}}', escapeHtml(itemName))
+    .replaceAll('{{totalPaid}}', escapeHtml(totalPaid))
+    .replaceAll('{{trackOrderUrl}}', trackOrderUrl)
+    .replaceAll('{{homeUrl}}', `${siteBaseUrl}/`)
+    .replaceAll('{{year}}', String(new Date().getFullYear()));
+
+  const emailResponse = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: env.RESEND_FROM_EMAIL || 'Good Frame <orders@goodframe.com.au>',
+      to: [customerEmail],
+      subject: 'Your Good Frame order is confirmed',
+      html
+    })
+  });
+
+  if (!emailResponse.ok) {
+    const errorText = await emailResponse.text();
+    throw new Error(`Resend API error (${emailResponse.status}): ${errorText}`);
+  }
+}
+
+async function handleStripeWebhook(request, env) {
+  if (!env.STRIPE_WEBHOOK_SECRET) {
+    return new Response('Webhook secret is not configured', { status: 500 });
+  }
+
+  const rawBody = await request.text();
+  const isValid = await verifyStripeSignature(
+    rawBody,
+    request.headers.get('Stripe-Signature'),
+    env.STRIPE_WEBHOOK_SECRET
+  );
+
+  if (!isValid) {
+    return new Response('Invalid signature', { status: 400 });
+  }
+
+  let event;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return new Response('Invalid JSON payload', { status: 400 });
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    try {
+      await sendOrderConfirmationEmail(event.data.object, env);
+    } catch (error) {
+      // The payment already succeeded regardless of whether the email
+      // goes out, so log and still acknowledge the webhook - returning
+      // an error here would just make Stripe retry a delivery that will
+      // fail the same way again (e.g. a bad API key), risking duplicate
+      // emails on the deliveries that *do* succeed partway through.
+      console.error('Order confirmation email failed:', error);
+    }
+  }
+
+  return new Response(JSON.stringify({ received: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -277,6 +507,10 @@ export default {
 
     if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
       return createCheckoutSession(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/stripe-webhook') {
+      return handleStripeWebhook(request, env);
     }
 
     return jsonResponse(request, env, { error: 'Not found' }, 404);
