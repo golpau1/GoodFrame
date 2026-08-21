@@ -25,7 +25,6 @@
 
         :root {
             --success-badge-bg: #EDF2F7;
-            --success-label-color: #A0AEC0;
         }
 
         body {
@@ -117,120 +116,6 @@
             line-height: 1.55 !important;
             color: var(--text-secondary) !important;
             text-align: center !important;
-        }
-
-        /* Order summary */
-        .order-details {
-            width: 100% !important;
-            margin: 34px 0 0 !important;
-            padding: 22px 24px !important;
-            background: #F4F6F8 !important;
-            border: none !important;
-            border-radius: 12px !important;
-            text-align: left !important;
-        }
-
-        .order-info-item {
-            display: flex !important;
-            align-items: baseline !important;
-            justify-content: space-between !important;
-            gap: 16px !important;
-            padding: 11px 0 !important;
-            border-bottom: 1px solid var(--border-color) !important;
-        }
-
-        .order-info-item:first-child {
-            padding-top: 0 !important;
-        }
-
-        .order-info-item:last-child {
-            padding-bottom: 0 !important;
-            border-bottom: none !important;
-        }
-
-        .order-info-label {
-            font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
-            font-size: 0.72rem !important;
-            font-weight: 500 !important;
-            letter-spacing: 0.08em !important;
-            text-transform: uppercase !important;
-            color: var(--success-label-color) !important;
-            white-space: nowrap !important;
-        }
-
-        .order-info-value {
-            font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
-            font-size: 0.95rem !important;
-            font-weight: 500 !important;
-            color: var(--text-primary) !important;
-            text-align: right !important;
-        }
-
-        /* Progress tracker */
-        .order-progress {
-            position: relative !important;
-            display: flex !important;
-            justify-content: space-between !important;
-            width: 100% !important;
-            max-width: 420px !important;
-            margin: 36px auto 4px !important;
-            padding: 0 !important;
-            list-style: none !important;
-        }
-
-        .order-progress::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 13px !important;
-            left: 13px !important;
-            right: 13px !important;
-            height: 1px !important;
-            background: var(--border-color) !important;
-            z-index: 0 !important;
-        }
-
-        .order-progress-step {
-            position: relative !important;
-            z-index: 1 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            gap: 9px !important;
-            flex: 1 !important;
-        }
-
-        .order-progress-dot {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 27px !important;
-            height: 27px !important;
-            border-radius: 50% !important;
-            background: #ffffff !important;
-            border: 1.5px solid var(--border-color) !important;
-            color: var(--success-label-color) !important;
-            font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
-            font-size: 0.72rem !important;
-            line-height: 1 !important;
-        }
-
-        .order-progress-step.is-active .order-progress-dot {
-            background: var(--text-primary) !important;
-            border-color: var(--text-primary) !important;
-            color: #ffffff !important;
-        }
-
-        .order-progress-label {
-            font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
-            font-size: 0.7rem !important;
-            line-height: 1.3 !important;
-            color: var(--success-label-color) !important;
-            text-align: center !important;
-        }
-
-        .order-progress-step.is-active .order-progress-label {
-            color: var(--text-primary) !important;
-            font-weight: 600 !important;
         }
 
         /* Actions */
@@ -417,19 +302,6 @@
                 font-size: 0.95rem !important;
             }
 
-            .order-details {
-                margin-top: 28px !important;
-                padding: 18px 18px !important;
-            }
-
-            .order-progress {
-                margin-top: 28px !important;
-            }
-
-            .order-progress-label {
-                font-size: 0.62rem !important;
-            }
-
             .success-actions {
                 margin-top: 26px !important;
                 gap: 10px !important;
@@ -461,40 +333,6 @@
         <p class="success-message">
             Thank you for your order! Your payment has been processed and your custom frame is now in production.
         </p>
-
-        <div class="order-details" id="orderDetails">
-            <div class="order-info-item">
-                <span class="order-info-label">Order Number</span>
-                <span class="order-info-value" id="orderNumber">&mdash;</span>
-            </div>
-            <div class="order-info-item">
-                <span class="order-info-label">Item</span>
-                <span class="order-info-value" id="orderItem">&mdash;</span>
-            </div>
-            <div class="order-info-item">
-                <span class="order-info-label">Total Paid</span>
-                <span class="order-info-value" id="orderTotal">&mdash;</span>
-            </div>
-        </div>
-
-        <ol class="order-progress">
-            <li class="order-progress-step is-active">
-                <span class="order-progress-dot" aria-hidden="true">&#10003;</span>
-                <span class="order-progress-label">Payment</span>
-            </li>
-            <li class="order-progress-step">
-                <span class="order-progress-dot" aria-hidden="true">2</span>
-                <span class="order-progress-label">Production</span>
-            </li>
-            <li class="order-progress-step">
-                <span class="order-progress-dot" aria-hidden="true">3</span>
-                <span class="order-progress-label">Quality Check</span>
-            </li>
-            <li class="order-progress-step">
-                <span class="order-progress-dot" aria-hidden="true">4</span>
-                <span class="order-progress-label">Shipped</span>
-            </li>
-        </ol>
 
         <!-- Action Buttons -->
         <div class="success-actions">
@@ -565,57 +403,10 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Read whatever was in the cart before we clear it, so the order
-            // summary below reflects what was actually purchased instead of
-            // placeholder numbers.
-            let items = [];
-            try {
-                items = JSON.parse(localStorage.getItem('myAppVisualCart') || '[]');
-                if (!Array.isArray(items)) items = [];
-            } catch (e) {
-                items = [];
-            }
-
-            // The order is complete - clear the cart now that we've read it.
+            // The order is complete - clear the cart. (Order details are no
+            // longer shown on this page; they're sent in the confirmation
+            // email instead - see Checkout/payment-confirmation-email.html.)
             localStorage.removeItem('myAppVisualCart');
-
-            const orderNumber = '#GF-' + Date.now().toString().slice(-5);
-            const orderNumberEl = document.getElementById('orderNumber');
-            if (orderNumberEl) orderNumberEl.textContent = orderNumber;
-
-            const orderDetails = document.getElementById('orderDetails');
-            const orderItemEl = document.getElementById('orderItem');
-            const orderTotalEl = document.getElementById('orderTotal');
-
-            function getDisplayName(productName) {
-                let name = typeof productName === 'string' && productName.trim()
-                    ? productName.trim()
-                    : 'Print & Frame';
-                name = name.replace(/^#?\d{6}\s*-\s*/, '');
-                if (name.includes('Print with Frame')) {
-                    name = name.replace('Print with Frame', 'Print & Frame');
-                }
-                return name;
-            }
-
-            if (items.length > 0) {
-                const first = items[0];
-                const label = items.length === 1
-                    ? getDisplayName(first.productName) + (first.size ? ' — ' + first.size : '')
-                    : getDisplayName(first.productName) + ' + ' + (items.length - 1) + ' more';
-
-                if (orderItemEl) orderItemEl.textContent = label;
-
-                const subtotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
-                const shipping = subtotal > 100 ? 0 : 15;
-                if (orderTotalEl) orderTotalEl.textContent = '$' + (subtotal + shipping).toFixed(2);
-            } else if (orderDetails) {
-                // No cart snapshot to summarise (e.g. this page was opened
-                // directly) - hide the block rather than showing fabricated
-                // numbers.
-                orderDetails.hidden = true;
-            }
-
         });
     </script>
 </body>

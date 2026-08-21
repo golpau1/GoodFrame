@@ -1,0 +1,229 @@
+<!--
+  Good Frame — payment confirmation email template
+  ==================================================
+  Standalone HTML email. Not loaded by any page in this site — save/paste
+  this into your email sender of choice (Stripe webhook + Resend/Postmark/
+  SendGrid, an ESP's "custom HTML" template, etc.) and replace the tokens
+  below with real values before sending:
+
+    {{orderNumber}}     e.g. #GF-10482
+    {{itemName}}        e.g. Custom Oak Frame — 16x20
+    {{totalPaid}}       e.g. $189.00
+    {{trackOrderUrl}}   defaults to a support mailto below — swap for a
+                         real order-status link if/when one exists
+    {{homeUrl}}          defaults to https://goodframe.com.au/
+    {{year}}            current year, for the footer copyright line
+
+  Suggested subject line: "Your Good Frame order is confirmed"
+  Suggested preheader:    "Payment received — your custom frame is now
+                            in production."
+
+  Built with email-safe conventions on purpose (table layout, inlined
+  styles, MSO conditional fallback for the icon, generic serif/sans font
+  stacks instead of the site's custom webfonts) since this renders in
+  Outlook/Gmail/Apple Mail, not a browser — the on-page success.html
+  redesign doesn't carry over directly.
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Your Good Frame order is confirmed</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<style>
+table { border-collapse: collapse; }
+td, th, div, p, a, span { font-family: Arial, Helvetica, sans-serif; }
+</style>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #F7F8FA; }
+  a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+
+  @keyframes badgePopIn {
+    0% { transform: scale(0.4); opacity: 0; }
+    65% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  .badge-anim { animation: badgePopIn 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  @media screen and (max-width: 600px) {
+    .email-container { width: 100% !important; }
+    .card-padding { padding: 36px 24px 32px !important; }
+    .btn-cell { display: block !important; width: 100% !important; padding: 6px 0 !important; }
+    .btn-link { display: block !important; }
+    .progress-label { font-size: 9px !important; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; background:#F7F8FA;">
+
+  <!-- Preheader (hidden preview text shown next to the subject line in the inbox) -->
+  <div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">
+    Payment received — your custom frame is now in production.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FA;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+
+        <!-- Wordmark -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;" class="email-container">
+          <tr>
+            <td align="center" style="padding-bottom:28px; font-family: Georgia, 'Times New Roman', serif; font-size:20px; letter-spacing:0.5px; color:#17140F;">
+              GOOD FRAME
+            </td>
+          </tr>
+        </table>
+
+        <!-- Card -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background:#ffffff; border-radius:16px;" class="email-container">
+          <tr>
+            <td class="card-padding" style="padding:48px 44px 40px; border-radius:16px;" align="center">
+
+              <!-- Icon badge: navy checkmark on a pale blue-gray circle -->
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                <tr>
+                  <td width="72" height="72" align="center" valign="middle" class="badge-anim" style="background:#EDF2F7; border-radius:50%; font-family: Arial, Helvetica, sans-serif;">
+                    <!--[if mso]>
+                    <span style="font-size:28px; line-height:72px; color:#2D3748; font-weight:bold;">&#10003;</span>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+                      <path d="M5 13l4 4L19 7" stroke="#2D3748" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Headline -->
+              <div style="font-family: Georgia, 'Times New Roman', serif; font-size:28px; line-height:1.15; color:#2D3748; margin:26px 0 12px;">
+                Payment Successful!
+              </div>
+
+              <!-- Subtext -->
+              <div style="font-family: Georgia, 'Times New Roman', serif; font-size:16px; line-height:1.55; color:#718096; max-width:400px; margin:0 auto;">
+                Thank you for your order! Your payment has been processed and your custom frame is now in production.
+              </div>
+
+              <!-- Order summary -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:32px; background:#F4F6F8; border-radius:12px;">
+                <tr>
+                  <td style="padding:22px 24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:11px 0; border-bottom:1px solid #E2E8F0; font-family: Arial, Helvetica, sans-serif; font-size:11px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:#A0AEC0;">Order Number</td>
+                        <td align="right" style="padding:11px 0; border-bottom:1px solid #E2E8F0; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; color:#2D3748;">{{orderNumber}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:11px 0; border-bottom:1px solid #E2E8F0; font-family: Arial, Helvetica, sans-serif; font-size:11px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:#A0AEC0;">Item</td>
+                        <td align="right" style="padding:11px 0; border-bottom:1px solid #E2E8F0; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; color:#2D3748;">{{itemName}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:11px 0 0; font-family: Arial, Helvetica, sans-serif; font-size:11px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:#A0AEC0;">Total Paid</td>
+                        <td align="right" style="padding:11px 0 0; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; color:#2D3748;">{{totalPaid}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Progress tracker: Payment -> Production -> Quality Check -> Shipped -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:34px; max-width:420px;" align="center">
+                <tr>
+                  <td width="13%" align="center" valign="top">
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                      <tr><td width="27" height="27" align="center" valign="middle" style="background:#2D3748; border-radius:50%; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#ffffff;">&#10003;</td></tr>
+                    </table>
+                  </td>
+                  <td width="16%" style="font-size:0; line-height:0;"><div style="border-top:1px solid #E2E8F0; margin-top:13px;">&nbsp;</div></td>
+                  <td width="13%" align="center" valign="top">
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                      <tr><td width="27" height="27" align="center" valign="middle" style="background:#ffffff; border:1.5px solid #E2E8F0; border-radius:50%; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#A0AEC0;">2</td></tr>
+                    </table>
+                  </td>
+                  <td width="16%" style="font-size:0; line-height:0;"><div style="border-top:1px solid #E2E8F0; margin-top:13px;">&nbsp;</div></td>
+                  <td width="13%" align="center" valign="top">
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                      <tr><td width="27" height="27" align="center" valign="middle" style="background:#ffffff; border:1.5px solid #E2E8F0; border-radius:50%; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#A0AEC0;">3</td></tr>
+                    </table>
+                  </td>
+                  <td width="16%" style="font-size:0; line-height:0;"><div style="border-top:1px solid #E2E8F0; margin-top:13px;">&nbsp;</div></td>
+                  <td width="13%" align="center" valign="top">
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                      <tr><td width="27" height="27" align="center" valign="middle" style="background:#ffffff; border:1.5px solid #E2E8F0; border-radius:50%; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#A0AEC0;">4</td></tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" class="progress-label" style="padding-top:9px; font-family: Arial, Helvetica, sans-serif; font-size:10px; font-weight:bold; color:#2D3748;">Payment</td>
+                  <td></td>
+                  <td align="center" class="progress-label" style="padding-top:9px; font-family: Arial, Helvetica, sans-serif; font-size:10px; color:#A0AEC0;">Production</td>
+                  <td></td>
+                  <td align="center" class="progress-label" style="padding-top:9px; font-family: Arial, Helvetica, sans-serif; font-size:10px; color:#A0AEC0;">Quality<br>Check</td>
+                  <td></td>
+                  <td align="center" class="progress-label" style="padding-top:9px; font-family: Arial, Helvetica, sans-serif; font-size:10px; color:#A0AEC0;">Shipped</td>
+                </tr>
+              </table>
+
+              <!-- Buttons -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:36px;" align="center">
+                <tr>
+                  <td class="btn-cell" style="padding:0 7px;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{{trackOrderUrl}}" style="height:46px;v-text-anchor:middle;width:190px;" arcsize="50%" fillcolor="#070707" stroke="f">
+                    <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">Track Your Order</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="{{trackOrderUrl}}" class="btn-link" style="display:inline-block; background:#070707; color:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size:14px; font-weight:bold; text-decoration:none; padding:15px 30px; border-radius:999px; text-align:center;">Track Your Order</a>
+                    <!--<![endif]-->
+                  </td>
+                  <td class="btn-cell" style="padding:0 7px;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{{homeUrl}}" style="height:44px;v-text-anchor:middle;width:170px;" arcsize="50%" fillcolor="#ffffff" strokecolor="#E2E8F0" strokeweight="1px">
+                    <center style="color:#2D3748;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">Back to Home</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="{{homeUrl}}" class="btn-link" style="display:inline-block; background:#ffffff; color:#2D3748; font-family: Arial, Helvetica, sans-serif; font-size:14px; font-weight:bold; text-decoration:none; padding:14px 29px; border-radius:999px; border:1px solid #E2E8F0; text-align:center;">Back to Home</a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;" class="email-container">
+          <tr>
+            <td align="center" style="padding:28px 16px 8px; font-family: Arial, Helvetica, sans-serif; font-size:12px; line-height:1.7; color:#A0AEC0;">
+              Questions about your order? <a href="mailto:contact.goodframe@gmail.com" style="color:#718096;">contact.goodframe@gmail.com</a><br>
+              Good Frame &middot; Gold Coast, Australia<br>
+              &copy; {{year}} Good Frame. All rights reserved.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
