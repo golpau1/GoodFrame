@@ -246,8 +246,7 @@
         }
 
         .success-button,
-        .primary-button,
-        .secondary-button {
+        .primary-button {
             font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
             text-transform: none !important;
             font-variant-caps: normal !important;
@@ -277,30 +276,6 @@
         .success-button.primary-button:hover {
             background: #1a1a1a !important;
             transform: translateY(-1px) !important;
-        }
-
-        .success-button.secondary-button {
-            background: transparent !important;
-            color: var(--text-primary) !important;
-            border: 1px solid var(--border-color) !important;
-        }
-
-        .success-button.secondary-button:hover {
-            border-color: var(--text-primary) !important;
-            transform: translateY(-1px) !important;
-        }
-
-        .success-footnote {
-            margin-top: 22px !important;
-            font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
-            font-size: 0.82rem !important;
-            color: var(--success-label-color) !important;
-            text-align: center !important;
-        }
-
-        .success-footnote strong {
-            color: var(--text-secondary) !important;
-            font-weight: 500 !important;
         }
 
         .footer {
@@ -466,11 +441,6 @@
                 padding: 14px 16px !important;
                 font-size: 0.86rem !important;
             }
-
-            .success-footnote {
-                margin-top: 18px !important;
-                font-size: 0.78rem !important;
-            }
         }
     </style>
 </head>
@@ -528,11 +498,8 @@
 
         <!-- Action Buttons -->
         <div class="success-actions">
-            <a href="#" id="trackOrderButton" class="success-button primary-button">Track Your Order</a>
-            <a href="../index.html" class="success-button secondary-button">Back to Home</a>
+            <a href="../index.html" class="success-button primary-button">Back to Home</a>
         </div>
-
-        <p class="success-footnote">A confirmation email has been sent to <strong id="orderEmailNote">the address on your order</strong>.</p>
       </div>
     </main>
 
@@ -649,11 +616,6 @@
                 orderDetails.hidden = true;
             }
 
-            const trackButton = document.getElementById('trackOrderButton');
-            if (trackButton) {
-                trackButton.href = 'mailto:contact.goodframe@gmail.com?subject=' +
-                    encodeURIComponent('Order tracking — ' + orderNumber);
-            }
         });
     </script>
 </body>
