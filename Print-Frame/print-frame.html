@@ -616,6 +616,8 @@
             }
 
             function destroyCropperInstance() {
+                isCropperReadyForSizeSelection = false;
+
                 if (cropBoxLimitAnimationFrame) {
                     cancelAnimationFrame(cropBoxLimitAnimationFrame);
                     cropBoxLimitAnimationFrame = null;
@@ -744,6 +746,7 @@
                                 );
                                 constrainCropBoxScale(this.cropper, true);
                                 queueCropperResizeHandleUpdate();
+                                isCropperReadyForSizeSelection = true;
                                 updateSizeAvailability();
                             }
                             
@@ -848,6 +851,7 @@
             let uploadedImageDimensions = null;
             let frameOpeningAnimationFrame = null;
             let autoSelectLargestSizePending = false;
+            let isCropperReadyForSizeSelection = false;
             const MAX_CART_ITEMS = 10;
             const MINIMUM_PRINT_PPI = 160;
             const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Choose a smaller print size or upload a higher-resolution photo.";
@@ -928,7 +932,12 @@
             function getCroppedPixelDimensions() {
                 if (cropper) {
                     const cropData = cropper.getData(true);
-                    if (Number.isFinite(cropData.width) && Number.isFinite(cropData.height)) {
+                    if (
+                        Number.isFinite(cropData.width) &&
+                        Number.isFinite(cropData.height) &&
+                        Math.abs(cropData.width) > 0 &&
+                        Math.abs(cropData.height) > 0
+                    ) {
                         return {
                             width: Math.floor(Math.abs(cropData.width)),
                             height: Math.floor(Math.abs(cropData.height))
@@ -990,16 +999,26 @@
 
             function updateSizeAvailability() {
                 const sizeDropdown = document.getElementById("sizeDropdown");
-                const croppedDimensions = getCroppedPixelDimensions();
-                let hasDisabledSize = false;
+                const qualityMessage = document.getElementById("sizeQualityMessage");
+                const croppedDimensions = isCropperReadyForSizeSelection
+                    ? getCroppedPixelDimensions()
+                    : null;
+                let hasValidSize = false;
 
                 Array.from(sizeDropdown.options).forEach(option => {
                     if (!option.value) return;
 
                     const isValid = Boolean(croppedDimensions) && isSizeQualityValid(option.value);
                     option.disabled = !isValid;
-                    hasDisabledSize = hasDisabledSize || !isValid;
+                    hasValidSize = hasValidSize || isValid;
                 });
+
+                if (autoSelectLargestSizePending && !croppedDimensions) {
+                    qualityMessage.hidden = true;
+                    qualityMessage.classList.remove("is-success");
+                    updateAddToCartState();
+                    return;
+                }
 
                 if (sizeDropdown.value && !isSizeQualityValid(sizeDropdown.value)) {
                     sizeDropdown.value = "";
@@ -1007,7 +1026,7 @@
                     updatePrice();
                 }
 
-                if (autoSelectLargestSizePending && croppedDimensions) {
+                if (autoSelectLargestSizePending) {
                     const largestAvailableOption = Array.from(sizeDropdown.options)
                         .filter(option => option.value && !option.disabled)
                         .pop();
@@ -1015,12 +1034,12 @@
                     if (largestAvailableOption) {
                         sizeDropdown.value = largestAvailableOption.value;
                         checkoutData.Size = largestAvailableOption.value;
-                        autoSelectLargestSizePending = false;
                         updatePrice();
                     }
+
+                    autoSelectLargestSizePending = false;
                 }
 
-                const qualityMessage = document.getElementById("sizeQualityMessage");
                 const selectedSize = sizeDropdown.value;
                 if (selectedSize && isSizeQualityValid(selectedSize)) {
                     const effectivePpi = getEffectivePpi(selectedSize);
@@ -1030,7 +1049,7 @@
                 } else {
                     qualityMessage.textContent = LOW_QUALITY_MESSAGE;
                     qualityMessage.classList.remove("is-success");
-                    qualityMessage.hidden = !croppedDimensions || !hasDisabledSize;
+                    qualityMessage.hidden = !croppedDimensions || hasValidSize || autoSelectLargestSizePending;
                 }
                 updateAddToCartState();
             }
@@ -1151,6 +1170,7 @@
 
                 uploadedImageDimensions = null;
                 autoSelectLargestSizePending = false;
+                isCropperReadyForSizeSelection = false;
                 currentOrientation = "Landscape";
                 checkoutData = {
                     FrameColor: "Black",
@@ -1526,6 +1546,7 @@
                     destroyCropperInstance();
                     uploadedImageDimensions = null;
                     autoSelectLargestSizePending = true;
+                    isCropperReadyForSizeSelection = false;
                     document.getElementById("sizeDropdown").value = "";
                     const borderDropdown = document.getElementById("borderDropdown");
                     borderDropdown.value = "Full Image";
@@ -1745,6 +1766,7 @@
 
             document.getElementById("orientationDropdown").addEventListener("change", () => {
                 const orientation = document.getElementById("orientationDropdown").value;
+                isCropperReadyForSizeSelection = false;
                 resetPreviewStyles();
                 applyFrameOrientation(orientation);
 
@@ -1767,6 +1789,7 @@
                         }
                     }
                     updateOrientationButtonText();
+                    isCropperReadyForSizeSelection = true;
                     updateSizeAvailability();
                 });
             });
