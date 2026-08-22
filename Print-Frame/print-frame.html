@@ -612,6 +612,7 @@
 
             function destroyCropperInstance() {
                 isCropperReadyForSizeSelection = false;
+                cropperInitializationToken += 1;
 
                 if (cropBoxLimitAnimationFrame) {
                     cancelAnimationFrame(cropBoxLimitAnimationFrame);
@@ -638,7 +639,11 @@
                 }
             }
 
-            function getResponsiveCropperConfig(orientation) {
+            function getResponsiveCropperConfig(
+                orientation,
+                cropDataToRestore = null,
+                initializationToken = cropperInitializationToken
+            ) {
                 const aspectRatio = orientation === "Landscape" ? 297 / 210 : 210 / 297;
                 
                 return {
@@ -724,7 +729,11 @@
                     ready: function() {
                         
                         setTimeout(() => {
-                            if (this.cropper) {
+                            if (
+                                this.cropper &&
+                                this.cropper === cropper &&
+                                initializationToken === cropperInitializationToken
+                            ) {
                                 const imageData = this.cropper.getImageData();
                                 
                                 
@@ -736,9 +745,13 @@
                                 fitCropperCanvasToContainer(this.cropper);
                                 
                                 updateCropBoxMinOptions(this.cropper);
-                                this.cropper.setCropBoxData(
-                                    getCenteredCropBoxDataForScale(this.cropper, INITIAL_CROP_BOX_SCALE)
-                                );
+                                if (cropDataToRestore) {
+                                    this.cropper.setData({ ...cropDataToRestore });
+                                } else {
+                                    this.cropper.setCropBoxData(
+                                        getCenteredCropBoxDataForScale(this.cropper, INITIAL_CROP_BOX_SCALE)
+                                    );
+                                }
                                 constrainCropBoxScale(this.cropper, true);
                                 queueCropperResizeHandleUpdate();
                                 isCropperReadyForSizeSelection = true;
@@ -846,6 +859,11 @@
             let uploadedImageDimensions = null;
             let frameOpeningAnimationFrame = null;
             let isCropperReadyForSizeSelection = false;
+            let cropperInitializationToken = 0;
+            let savedCropData = null;
+            let savedCropOrientation = null;
+            let currentCroppedPreviewObjectUrl = null;
+            let croppedPreviewRenderToken = 0;
             const MAX_CART_ITEMS = 10;
             const MINIMUM_PRINT_PPI = 160;
             const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Choose a smaller print size or upload a higher-resolution photo.";
@@ -1089,6 +1107,87 @@
                 }
             }
 
+            function releaseCroppedPreviewObjectUrl() {
+                croppedPreviewRenderToken += 1;
+                if (currentCroppedPreviewObjectUrl) {
+                    URL.revokeObjectURL(currentCroppedPreviewObjectUrl);
+                    currentCroppedPreviewObjectUrl = null;
+                }
+            }
+
+            function loadImageElementSource(image, src, forceReload = false) {
+                if (forceReload) {
+                    image.removeAttribute("src");
+                }
+
+                return new Promise((resolve, reject) => {
+                    let settled = false;
+
+                    const cleanup = () => {
+                        image.removeEventListener("load", handleLoad);
+                        image.removeEventListener("error", handleError);
+                    };
+                    const finish = () => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        resolve(image);
+                    };
+                    const handleLoad = () => {
+                        if (typeof image.decode === "function") {
+                            image.decode().then(finish).catch(() => {
+                                if (image.complete && image.naturalWidth > 0) finish();
+                                else handleError();
+                            });
+                        } else {
+                            finish();
+                        }
+                    };
+                    const handleError = () => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        reject(new Error("The image could not be loaded."));
+                    };
+
+                    image.addEventListener("load", handleLoad);
+                    image.addEventListener("error", handleError);
+
+                    image.src = src;
+
+                    if (image.complete && image.naturalWidth > 0) {
+                        handleLoad();
+                    }
+                });
+            }
+
+            async function initializeCropperFromOriginal(orientation, cropDataToRestore = null) {
+                if (!currentUploadObjectUrl) {
+                    throw new Error("The original uploaded image is unavailable.");
+                }
+
+                destroyCropperInstance();
+                const initializationToken = cropperInitializationToken;
+                const originalSource = currentUploadObjectUrl;
+                const cropperImage = document.getElementById("cropperImage");
+
+                await loadImageElementSource(cropperImage, originalSource, true);
+
+                if (
+                    initializationToken !== cropperInitializationToken ||
+                    originalSource !== currentUploadObjectUrl
+                ) {
+                    return;
+                }
+
+                const cropperConfig = getResponsiveCropperConfig(
+                    orientation,
+                    cropDataToRestore,
+                    initializationToken
+                );
+                cropper = new Cropper(cropperImage, cropperConfig);
+            }
+
             const mobileFrameMedia = window.matchMedia("(max-width: 768px)");
             let mobileFrameScaleRaf = null;
 
@@ -1181,10 +1280,13 @@
             function resetUploadState() {
                 clearTimeout(previewUpdateTimer);
                 destroyCropperInstance();
+                releaseCroppedPreviewObjectUrl();
                 clearCurrentUploadObjectUrl();
 
                 uploadedImageDimensions = null;
                 isCropperReadyForSizeSelection = false;
+                savedCropData = null;
+                savedCropOrientation = null;
                 currentOrientation = "Landscape";
                 checkoutData = {
                     FrameColor: "Black",
@@ -1340,7 +1442,7 @@
                 queueMobileFrameScaleSync();
 
                 // Get current cropped image and apply it to the correct orientation display
-                const croppedImage = getCroppedImage();
+                const croppedImage = currentCroppedPreviewObjectUrl;
                 if (croppedImage) {
                     const uploadedImage = document.getElementById("uploadedImage");
                     const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
@@ -1568,20 +1670,21 @@
                     updateFrameOptions();
 
                     const cropperOverlay = document.getElementById("cropperOverlay");
-                    const cropperImage = document.getElementById("cropperImage");
                     cropperOverlay.style.display = "flex";
 
-                    const uploadedImage = document.getElementById("uploadedImage");
-                    const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
                     const uploadObjectUrl = setCurrentUploadObjectUrl(file.file);
+                    releaseCroppedPreviewObjectUrl();
+                    savedCropData = null;
+                    savedCropOrientation = null;
                     setPreviewSources(uploadObjectUrl);
-                    cropperImage.src = uploadObjectUrl;
 
                     document.getElementById("reopenCropperButton").style.display = 'block';
 
                     const img = new Image();
 
-                    img.onload = function() {
+                    img.onload = async function() {
+                        if (uploadObjectUrl !== currentUploadObjectUrl) return;
+
                         const orientation = this.width > this.height ? "Landscape" : "Portrait";
                         const orientationDropdown = document.getElementById("orientationDropdown");
                         orientationDropdown.querySelector('option[value="Portrait"]').disabled = false;
@@ -1589,41 +1692,93 @@
 
                         applyFrameOrientation(orientation);
 
-                        // ✅ SIMPLE CROPPER: Use basic configuration
-                        const cropperConfig = getResponsiveCropperConfig(orientation);
-                        cropper = new Cropper(cropperImage, cropperConfig);
-
                         uploadedImageDimensions = { width: this.naturalWidth, height: this.naturalHeight };
                         updateSizeAvailability();
+
+                        try {
+                            await initializeCropperFromOriginal(orientation);
+                        } catch (initializationError) {
+                            console.error("Could not initialise the crop editor:", initializationError);
+                        }
                     };
                     img.src = uploadObjectUrl;
                 },
                 onremovefile: resetUploadState
             });
 
-            function getCroppedImage(orientation = document.getElementById("orientationDropdown").value) {
+            function createCroppedPreviewBlob(orientation = document.getElementById("orientationDropdown").value) {
                 if (!cropper) {
-                    console.error("Cropper not initialized");
-                    return null;
+                    return Promise.reject(new Error("Cropper is not initialized."));
                 }
 
-                try {
-                    const isPortrait = orientation === "Portrait";
-                    const canvas = cropper.getCroppedCanvas({
-                        width: isPortrait ? 1488 : 2105,
-                        height: isPortrait ? 2105 : 1488,
-                        imageSmoothingEnabled: true,
-                        imageSmoothingQuality: "high"
-                    });
-                    if (!canvas) {
-                        console.error("Failed to get cropped canvas");
-                        return null;
-                    }
-                    return canvas.toDataURL("image/jpeg", 0.95);
-                } catch (error) {
-                    console.error("Error getting cropped image:", error);
-                    return null;
+                const isPortrait = orientation === "Portrait";
+                const previewLongEdge = 1600;
+                const previewShortEdge = Math.round(previewLongEdge * 210 / 297);
+                const canvas = cropper.getCroppedCanvas({
+                    width: isPortrait ? previewShortEdge : previewLongEdge,
+                    height: isPortrait ? previewLongEdge : previewShortEdge,
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: "high"
+                });
+
+                if (!canvas) {
+                    return Promise.reject(new Error("The cropped preview canvas could not be created."));
                 }
+
+                return new Promise((resolve, reject) => {
+                    const releaseCanvas = () => {
+                        canvas.width = 0;
+                        canvas.height = 0;
+                    };
+
+                    try {
+                        canvas.toBlob(blob => {
+                            releaseCanvas();
+
+                            if (blob) resolve(blob);
+                            else reject(new Error("The cropped preview could not be encoded."));
+                        }, "image/jpeg", 0.95);
+                    } catch (encodingError) {
+                        releaseCanvas();
+                        reject(encodingError);
+                    }
+                });
+            }
+
+            async function renderCroppedPreview(orientation) {
+                const renderToken = ++croppedPreviewRenderToken;
+                const previewBlob = await createCroppedPreviewBlob(orientation);
+
+                if (renderToken !== croppedPreviewRenderToken) return false;
+
+                const nextPreviewObjectUrl = URL.createObjectURL(previewBlob);
+                const previewImages = [
+                    document.getElementById("uploadedImage"),
+                    document.getElementById("uploadedImagePortrait")
+                ];
+
+                try {
+                    await Promise.all(
+                        previewImages.map(image => loadImageElementSource(image, nextPreviewObjectUrl))
+                    );
+                } catch (previewError) {
+                    URL.revokeObjectURL(nextPreviewObjectUrl);
+                    throw previewError;
+                }
+
+                if (renderToken !== croppedPreviewRenderToken) {
+                    URL.revokeObjectURL(nextPreviewObjectUrl);
+                    return false;
+                }
+
+                const previousPreviewObjectUrl = currentCroppedPreviewObjectUrl;
+                currentCroppedPreviewObjectUrl = nextPreviewObjectUrl;
+                if (previousPreviewObjectUrl) {
+                    URL.revokeObjectURL(previousPreviewObjectUrl);
+                }
+
+                updatePreviewVisibility(orientation);
+                return true;
             }
 
             function loadImageForThumbnail(src) {
@@ -1740,35 +1895,51 @@
             cropperResizeHandle.addEventListener("pointerup", stopCropBoxResize);
             cropperResizeHandle.addEventListener("pointercancel", stopCropBoxResize);
 
-            document.getElementById("saveCropButton").addEventListener("click", () => {
+            document.getElementById("saveCropButton").addEventListener("click", async () => {
                 clearTimeout(previewUpdateTimer);
-                const croppedImage = getCroppedImage();
-                if (croppedImage) {
-                    const orientation = document.getElementById("orientationDropdown").value;
-                    setPreviewSources(croppedImage);
-                    updatePreviewVisibility(orientation);
+                if (!cropper) {
+                    console.error("Failed to save crop because Cropper is not initialized.");
+                    return;
+                }
+
+                const saveCropButton = document.getElementById("saveCropButton");
+                const orientation = document.getElementById("orientationDropdown").value;
+                const cropData = cropper.getData(true);
+                saveCropButton.disabled = true;
+
+                try {
+                    const previewRendered = await renderCroppedPreview(orientation);
+                    if (!previewRendered) return;
+
+                    savedCropData = { ...cropData };
+                    savedCropOrientation = orientation;
                     updateSizeAvailability();
 
                     const cropperOverlay = document.getElementById("cropperOverlay");
                     cropperOverlay.style.display = "none";
                     document.getElementById("cropperResizeHandle").style.display = "none";
-                } else {
-                    console.error("Failed to save crop.");
+                } catch (cropError) {
+                    console.error("Failed to save crop:", cropError);
+                } finally {
+                    saveCropButton.disabled = false;
                 }
             });
 
-            document.getElementById("reopenCropperButton").addEventListener("click", () => {
+            document.getElementById("reopenCropperButton").addEventListener("click", async () => {
                 const cropperOverlay = document.getElementById("cropperOverlay");
                 cropperOverlay.style.display = "flex";
                 queueCropperResizeHandleUpdate();
 
                 const orientation = document.getElementById("orientationDropdown").value;
+                const cropDataToRestore = savedCropOrientation === orientation
+                    ? savedCropData
+                    : null;
 
-                destroyCropperInstance();
-
-                // ✅ SIMPLE CROPPER: Use basic configuration
-                const cropperConfig = getResponsiveCropperConfig(orientation);
-                cropper = new Cropper(document.getElementById("cropperImage"), cropperConfig);
+                try {
+                    await initializeCropperFromOriginal(orientation, cropDataToRestore);
+                } catch (initializationError) {
+                    console.error("Could not reopen the crop editor:", initializationError);
+                }
             });
 
             document.getElementById("orientationDropdown").addEventListener("change", () => {
@@ -1784,15 +1955,20 @@
                 }
 
                 clearTimeout(previewUpdateTimer);
-                requestAnimationFrame(() => {
+                requestAnimationFrame(async () => {
                     syncFrameOpening();
                     if (cropper) {
                         constrainCropBoxScale(cropper, true);
                         queueCropperResizeHandleUpdate();
-                        const croppedImage = getCroppedImage(orientation);
-                        if (croppedImage) {
-                            setPreviewSources(croppedImage);
-                            updatePreviewVisibility(orientation);
+                        const cropData = cropper.getData(true);
+                        try {
+                            const previewRendered = await renderCroppedPreview(orientation);
+                            if (previewRendered) {
+                                savedCropData = { ...cropData };
+                                savedCropOrientation = orientation;
+                            }
+                        } catch (cropError) {
+                            console.error("Could not update the cropped preview after changing orientation:", cropError);
                         }
                     }
                     updateOrientationButtonText();
@@ -1911,10 +2087,8 @@
                 const captureOrientation = document.getElementById("orientationDropdown").value;
                 const activeImageId = captureOrientation === "Portrait" ? "uploadedImagePortrait" : "uploadedImage";
                 const activePreviewImage = document.getElementById(activeImageId);
-                const croppedImageForCapture = cropper ? getCroppedImage() : null;
                 const thumbnailImagePlacement = getThumbnailImagePlacement(captureOrientation, selectedBorder);
-                const captureImageSource = croppedImageForCapture ||
-                    activePreviewImage?.src ||
+                const captureImageSource = activePreviewImage?.src ||
                     sessionStorage.getItem('uploadedImageUrl') ||
                     "";
 
