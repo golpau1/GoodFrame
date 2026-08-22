@@ -850,7 +850,6 @@
             let isAddingToCart = false;
             let uploadedImageDimensions = null;
             let frameOpeningAnimationFrame = null;
-            let autoSelectLargestSizePending = false;
             let isCropperReadyForSizeSelection = false;
             const MAX_CART_ITEMS = 10;
             const MINIMUM_PRINT_PPI = 160;
@@ -1000,44 +999,65 @@
             function updateSizeAvailability() {
                 const sizeDropdown = document.getElementById("sizeDropdown");
                 const qualityMessage = document.getElementById("sizeQualityMessage");
+                const placeholderOption = sizeDropdown.querySelector('option[value=""]');
                 const croppedDimensions = isCropperReadyForSizeSelection
                     ? getCroppedPixelDimensions()
                     : null;
-                let hasValidSize = false;
 
-                Array.from(sizeDropdown.options).forEach(option => {
-                    if (!option.value) return;
+                if (!croppedDimensions) {
+                    if (!uploadedImageDimensions) {
+                        Array.from(sizeDropdown.options).forEach(option => {
+                            if (option.value) option.disabled = true;
+                        });
+                        if (placeholderOption) {
+                            placeholderOption.disabled = false;
+                            placeholderOption.hidden = false;
+                            placeholderOption.style.display = "";
+                        }
+                        sizeDropdown.value = "";
+                        checkoutData.Size = "";
+                        updatePrice();
+                    }
 
-                    const isValid = Boolean(croppedDimensions) && isSizeQualityValid(option.value);
-                    option.disabled = !isValid;
-                    hasValidSize = hasValidSize || isValid;
-                });
-
-                if (autoSelectLargestSizePending && !croppedDimensions) {
                     qualityMessage.hidden = true;
                     qualityMessage.classList.remove("is-success");
                     updateAddToCartState();
                     return;
                 }
 
-                if (sizeDropdown.value && !isSizeQualityValid(sizeDropdown.value)) {
+                const validSizeOptions = [];
+
+                Array.from(sizeDropdown.options).forEach(option => {
+                    if (!option.value) return;
+
+                    const isValid = isSizeQualityValid(option.value);
+                    option.disabled = !isValid;
+                    if (isValid) validSizeOptions.push(option);
+                });
+
+                const hasValidSize = validSizeOptions.length > 0;
+                if (placeholderOption) {
+                    placeholderOption.disabled = hasValidSize;
+                    placeholderOption.hidden = hasValidSize;
+                    placeholderOption.style.display = hasValidSize ? "none" : "";
+                }
+
+                const selectedOptionIsValid = validSizeOptions.some(
+                    option => option.value === sizeDropdown.value
+                );
+
+                if (hasValidSize && !selectedOptionIsValid) {
+                    const largestAvailableOption = validSizeOptions[validSizeOptions.length - 1];
+                    sizeDropdown.value = largestAvailableOption.value;
+                    checkoutData.Size = largestAvailableOption.value;
+                    updatePrice();
+                } else if (hasValidSize) {
+                    checkoutData.Size = sizeDropdown.value;
+                    updatePrice();
+                } else if (!hasValidSize) {
                     sizeDropdown.value = "";
                     checkoutData.Size = "";
                     updatePrice();
-                }
-
-                if (autoSelectLargestSizePending) {
-                    const largestAvailableOption = Array.from(sizeDropdown.options)
-                        .filter(option => option.value && !option.disabled)
-                        .pop();
-
-                    if (largestAvailableOption) {
-                        sizeDropdown.value = largestAvailableOption.value;
-                        checkoutData.Size = largestAvailableOption.value;
-                        updatePrice();
-                    }
-
-                    autoSelectLargestSizePending = false;
                 }
 
                 const selectedSize = sizeDropdown.value;
@@ -1049,7 +1069,7 @@
                 } else {
                     qualityMessage.textContent = LOW_QUALITY_MESSAGE;
                     qualityMessage.classList.remove("is-success");
-                    qualityMessage.hidden = !croppedDimensions || hasValidSize || autoSelectLargestSizePending;
+                    qualityMessage.hidden = hasValidSize;
                 }
                 updateAddToCartState();
             }
@@ -1169,7 +1189,6 @@
                 clearCurrentUploadObjectUrl();
 
                 uploadedImageDimensions = null;
-                autoSelectLargestSizePending = false;
                 isCropperReadyForSizeSelection = false;
                 currentOrientation = "Landscape";
                 checkoutData = {
@@ -1204,6 +1223,12 @@
                 Array.from(sizeDropdown.options).forEach(option => {
                     if (option.value) option.disabled = true;
                 });
+                const placeholderOption = sizeDropdown.querySelector('option[value=""]');
+                if (placeholderOption) {
+                    placeholderOption.disabled = false;
+                    placeholderOption.hidden = false;
+                    placeholderOption.style.display = "";
+                }
 
                 document.getElementById("borderDropdown").value = "Full Image";
                 document.querySelectorAll(".color-button").forEach(button => {
@@ -1545,7 +1570,6 @@
                     document.getElementById('addToCartButton').disabled = true;
                     destroyCropperInstance();
                     uploadedImageDimensions = null;
-                    autoSelectLargestSizePending = true;
                     isCropperReadyForSizeSelection = false;
                     document.getElementById("sizeDropdown").value = "";
                     const borderDropdown = document.getElementById("borderDropdown");
