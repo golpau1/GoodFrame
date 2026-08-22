@@ -93,12 +93,12 @@
             <h3 id="quality-info-title">Photo quality requirements</h3>
             <p>Our quality checker reviews the resolution of your uploaded photo and shows which print sizes will produce a clear result.</p>
             <p>Larger prints need more image detail. Cropping or zooming into your photo reduces the available resolution, so some larger sizes may become unavailable.</p>
-            <h4>Minimum resolution at 160 PPI</h4>
+            <h4>Minimum resolution at 150 PPI</h4>
             <ul>
-                <li>Small — 210 × 297 mm: 1323 × 1871 px</li>
-                <li>Medium — 420 × 594 mm: 2646 × 3742 px</li>
-                <li>Large — 594 × 841 mm: 3742 × 5298 px</li>
-                <li>Extra-large — 841 × 1189 mm: 5298 × 7490 px</li>
+                <li>Small — 210 × 297 mm: 1240 × 1754 px</li>
+                <li>Medium — 420 × 594 mm: 2480 × 3508 px</li>
+                <li>Large — 594 × 841 mm: 3508 × 4967 px</li>
+                <li>Extra-large — 841 × 1189 mm: 4967 × 7022 px</li>
             </ul>
             <p>For the best results, upload the original full-resolution photo rather than a screenshot or an image downloaded from social media.</p>
         </div>
@@ -811,10 +811,10 @@
             };
 
             const resolutionMapping = {
-                "210x297mm": { width: 1323, height: 1871 },
-                "420x594mm": { width: 2646, height: 3742 },
-                "594x841mm": { width: 3742, height: 5298 },
-                "841x1189mm": { width: 5298, height: 7490 }
+                "210x297mm": { width: 1240, height: 1754 },
+                "420x594mm": { width: 2480, height: 3508 },
+                "594x841mm": { width: 3508, height: 4967 },
+                "841x1189mm": { width: 4967, height: 7022 }
             };
 
             const printSizeMillimetres = {
@@ -865,7 +865,7 @@
             let currentCroppedPreviewObjectUrl = null;
             let croppedPreviewRenderToken = 0;
             const MAX_CART_ITEMS = 10;
-            const MINIMUM_PRINT_PPI = 160;
+            const MINIMUM_PRINT_PPI = 150;
             const LOW_QUALITY_MESSAGE = "Image quality too low for this size. Choose a smaller print size or upload a higher-resolution photo.";
             const ACCEPTABLE_QUALITY_MESSAGE = "Your photo meets our recommended print quality for this size.";
             const FRAME_ASSET_SIZE = 870;
@@ -994,7 +994,7 @@
                     croppedDimensions &&
                     requiredDimensions &&
                     Number.isFinite(effectivePpi) &&
-                    effectivePpi >= MINIMUM_PRINT_PPI &&
+                    Math.round(effectivePpi) >= MINIMUM_PRINT_PPI &&
                     croppedDimensions.width >= requiredDimensions.width &&
                     croppedDimensions.height >= requiredDimensions.height
                 );
