@@ -675,45 +675,6 @@ header {
   display: none !important;
 }
 
-.add-cart-toast {
-  position: fixed;
-  left: 50%;
-  bottom: 18px;
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: max-content;
-  max-width: calc(100vw - 32px);
-  padding: 13px 15px;
-  border-radius: 8px;
-  background: #070707;
-  color: #ffffff;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
-  font-family: var(--font-family);
-  font-size: 14px;
-  line-height: 1.2;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 12px);
-  transition: opacity 0.22s ease, transform 0.22s ease;
-}
-
-.add-cart-toast.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, 0);
-}
-
-.add-cart-toast a {
-  color: #ffffff;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  white-space: nowrap;
-}
-
 .dropdown {
   appearance: none;
   -webkit-appearance: none;

@@ -575,43 +575,6 @@ etc. --- */
   display: none !important;
 }
 
-.add-cart-toast {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  max-width: calc(100vw - 32px);
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: #070707;
-  color: #ffffff;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
-  font-family: var(--font-family);
-  font-size: 15px;
-  line-height: 1.2;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(12px);
-  transition: opacity 0.22s ease, transform 0.22s ease;
-}
-
-.add-cart-toast.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.add-cart-toast a {
-  color: #ffffff;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  white-space: nowrap;
-}
-
 .dropdown {
   appearance: none;
   -webkit-appearance: none;

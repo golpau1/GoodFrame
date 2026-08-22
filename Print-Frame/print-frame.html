@@ -144,11 +144,6 @@
         </div>
     </div>
 
-    <div id="addToCartToast" class="add-cart-toast" role="status" aria-live="polite" aria-atomic="true">
-        <span>Added to cart</span>
-        <a href="../cart.html">View cart</a>
-    </div>
-
     <section class="product-info-section">
         <div class="product-info-container">
             <div class="info-grid">
@@ -1446,18 +1441,6 @@
                 });
             });
 
-            let addToCartToastTimer;
-            function showAddToCartToast() {
-                const toast = document.getElementById("addToCartToast");
-                if (!toast) return;
-
-                window.clearTimeout(addToCartToastTimer);
-                toast.classList.add("is-visible");
-                addToCartToastTimer = window.setTimeout(() => {
-                    toast.classList.remove("is-visible");
-                }, 2800);
-            }
-
             loadVisualCartFromLocalStorage();
             updateCartUI();
 
@@ -2091,7 +2074,6 @@
                             visualCartItems.push(baseVisualItem);
                             saveVisualCartToLocalStorage();
                             updateCartUI();
-                            showAddToCartToast();
 
                             try {
                                 window.parent.postMessage({
