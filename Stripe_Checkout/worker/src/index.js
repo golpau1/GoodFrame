@@ -16,6 +16,30 @@ const CANONICAL_SIZE_BY_DIMENSIONS = Object.freeze({
   '900x1200': '841x1189mm'
 });
 
+function validateStripeConfiguration(env) {
+  const stripeMode = String(env.STRIPE_MODE || '').trim().toLowerCase();
+  const secretKey = String(env.STRIPE_SECRET_KEY || '');
+
+  if (!['live', 'test'].includes(stripeMode) || !secretKey) {
+    return false;
+  }
+
+  return stripeMode === 'live'
+    ? secretKey.startsWith('sk_live_')
+    : secretKey.startsWith('sk_test_');
+}
+
+function getSiteBaseUrl(env) {
+  const siteBaseUrl = String(env.SITE_BASE_URL || '').replace(/\/$/, '');
+  const stripeMode = String(env.STRIPE_MODE || '').trim().toLowerCase();
+
+  if (!siteBaseUrl || (stripeMode === 'live' && siteBaseUrl !== 'https://goodframe.com.au')) {
+    return '';
+  }
+
+  return siteBaseUrl;
+}
+
 function getAllowedOrigin(request, env) {
   const origin = request.headers.get('Origin');
   const allowedOrigins = String(env.ALLOWED_ORIGINS || '')
@@ -216,8 +240,8 @@ function createStripePayload(lineItems, siteBaseUrl) {
 }
 
 async function createCheckoutSession(request, env) {
-  if (!env.STRIPE_SECRET_KEY) {
-    return jsonResponse(request, env, { error: 'Stripe secret is not configured' }, 500);
+  if (!validateStripeConfiguration(env)) {
+    return jsonResponse(request, env, { error: 'Checkout is not configured' }, 503);
   }
 
   if (!getAllowedOrigin(request, env)) {
@@ -238,7 +262,10 @@ async function createCheckoutSession(request, env) {
     return jsonResponse(request, env, { error: error.message }, 400);
   }
 
-  const siteBaseUrl = String(env.SITE_BASE_URL || 'https://golpau1.github.io/GoodFrame').replace(/\/$/, '');
+  const siteBaseUrl = getSiteBaseUrl(env);
+  if (!siteBaseUrl) {
+    return jsonResponse(request, env, { error: 'Checkout is not configured' }, 503);
+  }
   const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
     headers: {
@@ -250,8 +277,12 @@ async function createCheckoutSession(request, env) {
   const stripeResult = await stripeResponse.json();
 
   if (!stripeResponse.ok) {
-    const message = stripeResult?.error?.message || 'Stripe could not create the checkout session';
-    return jsonResponse(request, env, { error: message }, stripeResponse.status);
+    console.error('Stripe checkout request failed', {
+      status: stripeResponse.status,
+      type: stripeResult?.error?.type,
+      code: stripeResult?.error?.code
+    });
+    return jsonResponse(request, env, { error: 'Stripe could not create the checkout session' }, 502);
   }
 
   return jsonResponse(request, env, {
@@ -449,7 +480,7 @@ async function sendOrderConfirmationEmail(session, env) {
 }
 
 async function handleStripeWebhook(request, env) {
-  if (!env.STRIPE_WEBHOOK_SECRET) {
+  if (!validateStripeConfiguration(env) || !env.STRIPE_WEBHOOK_SECRET) {
     return new Response('Webhook secret is not configured', { status: 500 });
   }
 

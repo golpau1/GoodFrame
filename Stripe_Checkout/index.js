@@ -1,12 +1,21 @@
 require('dotenv').config()
 const express = require('express')
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const path = require('path')
 const fs = require('fs')
 
 const app = express()
-const defaultBaseUrl = process.env.NODE_ENV === 'production'
-    ? 'https://golpau1.github.io/GoodFrame'
+const isProduction = process.env.NODE_ENV === 'production'
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || ''
+
+if (!stripeSecretKey || (isProduction
+    ? !stripeSecretKey.startsWith('sk_live_')
+    : !stripeSecretKey.startsWith('sk_test_'))) {
+    throw new Error(`STRIPE_SECRET_KEY must be a ${isProduction ? 'live' : 'test'} key in this environment`)
+}
+
+const stripe = require('stripe')(stripeSecretKey)
+const defaultBaseUrl = isProduction
+    ? 'https://goodframe.com.au'
     : 'http://localhost:3000'
 const baseUrl = (process.env.BASE_URL || defaultBaseUrl).replace(/\/$/, '')
 const siteRoot = path.join(__dirname, '..')
@@ -29,13 +38,15 @@ const canonicalSizeByDimensions = Object.freeze({
     '800x1200': '841x1189mm',
     '900x1200': '841x1189mm'
 })
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || [
-    'http://localhost:3000',
-    'http://localhost:5500',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:5500',
-    'https://golpau1.github.io'
-].join(','))
+const defaultAllowedOrigins = isProduction
+    ? ['https://goodframe.com.au', 'https://www.goodframe.com.au']
+    : [
+        'http://localhost:3000',
+        'http://localhost:5500',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5500'
+    ]
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowedOrigins.join(','))
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean)
@@ -288,8 +299,12 @@ app.post('/create-checkout-session', async (req, res) => {
 
         res.json({ id: session.id, url: session.url })
     } catch (error) {
-        console.error('Stripe Error:', error);
-        res.status(500).json({ error: error.message || 'Failed to create session' });
+        console.error('Stripe checkout request failed', {
+            type: error?.type,
+            code: error?.code,
+            statusCode: error?.statusCode
+        });
+        res.status(502).json({ error: 'Stripe could not create the checkout session' });
     }
 })
 
