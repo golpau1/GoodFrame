@@ -6,7 +6,8 @@
   min-height: 0 !important;
   margin: 0 !important;
   overflow: hidden !important;
-  background: #070707 !important;
+  background: #000000 !important;
+  background-image: none !important;
   border: 0 !important;
   border-right: 0 !important;
   box-shadow: none !important;
@@ -160,7 +161,8 @@
     max-width: none !important;
     margin: 0 !important;
     padding: 40px 24px calc(96px + env(safe-area-inset-bottom, 0px)) !important;
-    background: #10100e !important;
+    background: #000000 !important;
+    background-image: none !important;
     border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
     box-sizing: border-box !important;
     text-align: left !important;
