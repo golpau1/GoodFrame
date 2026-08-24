@@ -56,11 +56,11 @@
 
 .about-desktop-editorial .editorial-image-small {
   position: absolute;
-  right: 0;
-  bottom: 28px;
+  right: 8px;
+  bottom: 36px;
   width: 32%;
   aspect-ratio: 0.84;
-  box-shadow: 0 0 0 10px #ffffff;
+  box-shadow: none;
 }
 
 .about-desktop-editorial .editorial-copy {
@@ -168,10 +168,10 @@
   }
 
   .about-desktop-editorial .editorial-image-small {
-    right: 2px;
-    bottom: 22px;
+    right: 8px;
+    bottom: 28px;
     width: 34%;
-    box-shadow: 0 0 0 7px #ffffff;
+    box-shadow: none;
   }
 
   .about-desktop-editorial .editorial-copy {
