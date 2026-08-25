@@ -186,6 +186,13 @@ function getItemDescription(item) {
     return String(description).replace(/[\r\n]+/g, ' ').slice(0, 200)
 }
 
+function getArtworkObjectKey(value) {
+    const key = typeof value === 'string' ? value : ''
+    return /^uploads\/\d{4}\/\d{2}\/\d{2}\/\d{6}\/(?:original\.(?:jpg|jpeg|png|gif)|thumbnail\.png)$/.test(key)
+        ? key
+        : ''
+}
+
 function buildStripeLineItems(items) {
     if (!Array.isArray(items) || items.length === 0 || items.length > 10) {
         throw new Error('Cart must contain between 1 and 10 items')
@@ -221,7 +228,13 @@ function buildStripeLineItems(items) {
         if (orderCode) {
             productData.metadata = {
                 order_code: orderCode,
-                frame_size: size
+                frame_size: size,
+                ...(getArtworkObjectKey(item.originalObjectKey) && {
+                    original_object_key: getArtworkObjectKey(item.originalObjectKey)
+                }),
+                ...(getArtworkObjectKey(item.thumbnailObjectKey) && {
+                    thumbnail_object_key: getArtworkObjectKey(item.thumbnailObjectKey)
+                })
             }
         }
 

@@ -1296,6 +1296,7 @@
                 };
 
                 sessionStorage.removeItem("uploadedImageUrl");
+                sessionStorage.removeItem("originalObjectKey");
                 sessionStorage.removeItem("uniqueCode");
 
                 ["uploadedImage", "uploadedImagePortrait"].forEach(id => {
@@ -1577,14 +1578,12 @@
                         const uniqueCode = generateUniqueCode();
                         sessionStorage.setItem('uniqueCode', uniqueCode);
                         
-                        // Create filename with unique code at the front (no timestamp since Cloudflare adds its own)
-                        const originalFileName = `${uniqueCode}_original_${file.name}`;
-                        
-                        
-                        formData.append('file', file, originalFileName);
+                        formData.append('file', file, file.name);
+                        formData.append('kind', 'original');
+                        formData.append('uploadId', uniqueCode);
 
                         const xhr = new XMLHttpRequest();
-                        xhr.open('POST', 'https://fragrant-bird-69d3.loganwallace049.workers.dev/', true);
+                        xhr.open('POST', 'https://good-frame-checkout.loganwallace049.workers.dev/artwork/upload', true);
                         xhr.setRequestHeader('Accept', 'application/json');
 
                         xhr.upload.onprogress = (e) => {
@@ -1597,19 +1596,17 @@
                             if (xhr.status >= 200 && xhr.status < 300) {
                                 try {
                                     const response = JSON.parse(xhr.responseText);
-                                    if (response.url) {
-                                        const uploadedFileName = decodeURIComponent(
-                                            new URL(response.url).pathname.split('/').pop() || ""
+                                    if (response.url && response.objectKey) {
+                                        const expectedKeyPattern = new RegExp(
+                                            `^uploads\\/\\d{4}\\/\\d{2}\\/\\d{2}\\/${uniqueCode}\\/original\\.(jpg|jpeg|png|gif)$`
                                         );
-                                        if (
-                                            !uploadedFileName.startsWith(`${uniqueCode}_`) ||
-                                            !uploadedFileName.includes('_original_')
-                                        ) {
+                                        if (!expectedKeyPattern.test(response.objectKey)) {
                                             throw new Error("Cloudflare returned an original image with a mismatched order code.");
                                         }
 
-                                        // Store both the URL and unique code for later use
+                                        // Keep the exact server-returned key; never reconstruct its dated path.
                                         sessionStorage.setItem('uploadedImageUrl', response.url);
+                                        sessionStorage.setItem('originalObjectKey', response.objectKey);
                                         sessionStorage.setItem('uniqueCode', uniqueCode);
                                         updateSizeAvailability();
                                         load(response.url);
@@ -2234,17 +2231,19 @@
                                 originalImageUrl: sessionStorage.getItem('uploadedImageUrl') || ""
                             };
 
-                            const thumbnailUrl = await uploadThumbnailToCloudflareConsistently(
+                            const thumbnailUpload = await uploadThumbnailToCloudflareConsistently(
                                 canvas,
                                 selectedSize,
                                 selectedBorder,
                                 uploadUniqueCode
                             );
-                            if (!thumbnailUrl) {
+                            if (!thumbnailUpload) {
                                 throw new Error("The framed thumbnail could not be uploaded to Cloudflare.");
                             }
 
-                            baseVisualItem.thumbnailUrl = thumbnailUrl;
+                            baseVisualItem.originalObjectKey = sessionStorage.getItem('originalObjectKey') || "";
+                            baseVisualItem.thumbnailObjectKey = thumbnailUpload.objectKey;
+                            baseVisualItem.thumbnailUrl = thumbnailUpload.url;
                             visualCartItems.push(baseVisualItem);
                             saveVisualCartToLocalStorage();
                             updateCartUI();
@@ -2319,17 +2318,13 @@
                     try {
                         const uploadResult = await uploadWithTimeout(blob, thumbnailFileName, uploadTimeout);
                         
-                        if (uploadResult.success && uploadResult.url) {
-                            const uploadedFileName = decodeURIComponent(
-                                new URL(uploadResult.url).pathname.split('/').pop() || ""
-                            );
-                            if (
-                                !uploadedFileName.startsWith(`${uniqueCode}_`) ||
-                                !uploadedFileName.includes('_thumbnail_')
-                            ) {
+                        if (uploadResult.success && uploadResult.url && uploadResult.objectKey) {
+                            const originalObjectKey = sessionStorage.getItem('originalObjectKey') || "";
+                            const expectedThumbnailKey = originalObjectKey.replace(/\/original\.(jpg|jpeg|png|gif)$/, '/thumbnail.png');
+                            if (uploadResult.objectKey !== expectedThumbnailKey) {
                                 throw new Error("Cloudflare returned a thumbnail with a mismatched order code.");
                             }
-                            return uploadResult.url;
+                            return { url: uploadResult.url, objectKey: uploadResult.objectKey };
                         } else {
                             throw new Error(`Upload failed: ${uploadResult.error || 'Unknown error'}`);
                         }
@@ -2410,6 +2405,9 @@
                     const formData = new FormData();
                     try {
                         formData.append('file', blob, filename);
+                        formData.append('kind', 'thumbnail');
+                        formData.append('uploadId', sessionStorage.getItem('uniqueCode') || '');
+                        formData.append('originalObjectKey', sessionStorage.getItem('originalObjectKey') || '');
                     } catch (error) {
                         clearTimeout(timeoutId);
                         reject(new Error(`FormData creation failed: ${error.message}`));
@@ -2417,7 +2415,7 @@
                     }
                     
                     // Perform upload with comprehensive error handling
-                    fetch('https://fragrant-bird-69d3.loganwallace049.workers.dev/', {
+                    fetch('https://good-frame-checkout.loganwallace049.workers.dev/artwork/upload', {
                         method: 'POST',
                         body: formData,
                         headers: {
@@ -2459,6 +2457,7 @@
                             resolve({
                                 success: true,
                                 url: possibleUrl,
+                                objectKey: data?.objectKey,
                                 data: data
                             });
                         } else {

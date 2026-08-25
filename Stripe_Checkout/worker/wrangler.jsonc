@@ -12,7 +12,13 @@
     // once that's done (see Stripe_Checkout/worker/src/index.js).
     "RESEND_FROM_EMAIL": "Good Frame <orders@goodframe.com.au>",
     "SUPPORT_EMAIL": "contact.goodframe@gmail.com"
-  }
+  },
+  "r2_buckets": [
+    {
+      "binding": "ARTWORK_BUCKET",
+      "bucket_name": "goodframes"
+    }
+  ]
   // Also required, set as secrets (not here - `wrangler secret put <name>`):
   //   STRIPE_SECRET_KEY      (already required for checkout; unchanged)
   //   STRIPE_WEBHOOK_SECRET  (from the Stripe Dashboard webhook endpoint)

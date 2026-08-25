@@ -370,6 +370,8 @@
 
                 const checkoutItems = cart.map(item => ({
                     uniqueCode: item.uniqueCode,
+                    originalObjectKey: item.originalObjectKey,
+                    thumbnailObjectKey: item.thumbnailObjectKey,
                     size: item.size,
                     orientation: item.orientation,
                     frameColor: item.frameColor,

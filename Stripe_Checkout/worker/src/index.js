@@ -1,3 +1,10 @@
+import {
+  createOriginalObjectKey,
+  createThumbnailObjectKey,
+  isValidArtworkObjectKey,
+  sanitizeUploadId
+} from './r2-keys.js';
+
 const PRICE_BY_SIZE = Object.freeze({
   '210x297mm': 9900,
   '420x594mm': 23500,
@@ -71,6 +78,94 @@ function jsonResponse(request, env, payload, status = 200) {
     status,
     headers: createCorsHeaders(request, env)
   });
+}
+
+function getWorkerBaseUrl(request) {
+  const url = new URL(request.url);
+  return `${url.protocol}//${url.host}`;
+}
+
+function getArtworkUrl(request, objectKey) {
+  return `${getWorkerBaseUrl(request)}/artwork/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+async function uploadArtwork(request, env) {
+  if (!env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error: 'Artwork storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
+  }
+
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return jsonResponse(request, env, { error: 'Upload must use multipart form data' }, 400);
+  }
+
+  const file = formData.get('file');
+  const kind = String(formData.get('kind') || '');
+  let uploadId;
+  try {
+    uploadId = sanitizeUploadId(formData.get('uploadId'));
+  } catch (error) {
+    return jsonResponse(request, env, { error: error.message }, 400);
+  }
+  if (!file || typeof file.arrayBuffer !== 'function') {
+    return jsonResponse(request, env, { error: 'An artwork file is required' }, 400);
+  }
+
+  let objectKey;
+  try {
+    if (kind === 'original') {
+      objectKey = createOriginalObjectKey(uploadId, file, new Date());
+      if (await env.ARTWORK_BUCKET.head(objectKey)) {
+        return jsonResponse(request, env, { error: 'Upload ID already exists' }, 409);
+      }
+    } else if (kind === 'thumbnail') {
+      if (file.type !== 'image/png') {
+        throw new Error('Thumbnail must be a PNG image');
+      }
+      objectKey = createThumbnailObjectKey(formData.get('originalObjectKey'), uploadId);
+      const originalKey = String(formData.get('originalObjectKey'));
+      if (!await env.ARTWORK_BUCKET.head(originalKey)) {
+        return jsonResponse(request, env, { error: 'Original artwork was not found' }, 404);
+      }
+    } else {
+      throw new Error('Upload kind is invalid');
+    }
+  } catch (error) {
+    return jsonResponse(request, env, { error: error.message }, 400);
+  }
+
+  await env.ARTWORK_BUCKET.put(objectKey, file.stream(), {
+    httpMetadata: { contentType: file.type }
+  });
+  return jsonResponse(request, env, {
+    objectKey,
+    url: getArtworkUrl(request, objectKey)
+  });
+}
+
+async function getArtwork(request, env, objectKey) {
+  if (!env.ARTWORK_BUCKET || !isValidArtworkObjectKey(objectKey)) {
+    return new Response('Not found', { status: 404 });
+  }
+  const object = await env.ARTWORK_BUCKET.get(objectKey);
+  if (!object) {
+    return new Response('Not found', { status: 404 });
+  }
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set('ETag', object.httpEtag);
+  headers.set('Cache-Control', 'private, max-age=3600');
+  const allowedOrigin = getAllowedOrigin(request, env);
+  if (allowedOrigin) {
+    headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    headers.set('Vary', 'Origin');
+  }
+  return new Response(object.body, { headers });
 }
 
 function cleanText(value, fallback) {
@@ -183,6 +278,8 @@ function buildLineItems(items) {
       unitAmount,
       quantity,
       orderCode,
+      originalObjectKey: isValidArtworkObjectKey(item.originalObjectKey) ? item.originalObjectKey : '',
+      thumbnailObjectKey: isValidArtworkObjectKey(item.thumbnailObjectKey) ? item.thumbnailObjectKey : '',
       size
     });
   });
@@ -231,6 +328,12 @@ function createStripePayload(lineItems, siteBaseUrl) {
     if (item.orderCode) {
       payload.set(`${prefix}[price_data][product_data][metadata][order_code]`, item.orderCode);
       payload.set(`${prefix}[price_data][product_data][metadata][frame_size]`, item.size);
+      if (item.originalObjectKey) {
+        payload.set(`${prefix}[price_data][product_data][metadata][original_object_key]`, item.originalObjectKey);
+      }
+      if (item.thumbnailObjectKey) {
+        payload.set(`${prefix}[price_data][product_data][metadata][thumbnail_object_key]`, item.thumbnailObjectKey);
+      }
     }
     payload.set(`${prefix}[price_data][unit_amount]`, String(item.unitAmount));
     payload.set(`${prefix}[quantity]`, String(item.quantity));
@@ -538,6 +641,19 @@ export default {
 
     if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
       return createCheckoutSession(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/artwork/upload') {
+      return uploadArtwork(request, env);
+    }
+
+    if (request.method === 'GET' && url.pathname.startsWith('/artwork/')) {
+      try {
+        const objectKey = url.pathname.slice('/artwork/'.length).split('/').map(decodeURIComponent).join('/');
+        return getArtwork(request, env, objectKey);
+      } catch {
+        return new Response('Not found', { status: 404 });
+      }
     }
 
     if (request.method === 'POST' && url.pathname === '/stripe-webhook') {

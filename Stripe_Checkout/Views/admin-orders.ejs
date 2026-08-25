@@ -68,7 +68,9 @@
                                     <div class="item-name">${item.finalProductName}</div>
                                     <div class="unique-code">🆔 CODE: #${item.uniqueCode}</div>
                                     <div class="file-info">
-                                        📁 Find files: <strong>${item.uniqueCode}_original_*</strong> and <strong>${item.uniqueCode}_thumbnail_*</strong>
+                                        📁 Find files: ${item.originalObjectKey && item.thumbnailObjectKey
+                                            ? `<strong>${item.originalObjectKey}</strong> and <strong>${item.thumbnailObjectKey}</strong>`
+                                            : `<strong>${item.uniqueCode}_original_*</strong> and <strong>${item.uniqueCode}_thumbnail_*</strong>`}
                                     </div>
                                     <div class="item-details">
                                         ${item.size} | ${item.orientation} | ${item.frameColor} Frame | ${item.border} | Qty: ${item.quantity} | $${item.amount.toFixed(2)}
