@@ -542,7 +542,7 @@ border-color: #000000;
   align-items: flex-start;
   gap: 80px;
   margin-bottom: 80px;
-  max-width: 900px;
+  max-width: 1100px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -589,7 +589,7 @@ border-color: #000000;
   filter: brightness(0) invert(1);
 }
 
-/* New desktop/tablet-only elements (see the min-width: 769px block below);
+/* New desktop/tablet-only elements (see the min-width: 1101px block below);
    hidden here so they don't appear in the unchanged phone layout. */
 .frame-guide-step-num,
 .frame-guide-eyebrow {
@@ -644,7 +644,7 @@ border-color: #000000;
 }
 
 /* Responsive adjustments for frame guide */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .frame-guide-section {
     padding: 60px 20px;
   }
@@ -688,7 +688,7 @@ border-color: #000000;
    MOBILE HEADER STYLES (768px and below)
    ============================================ */
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
     /* Remove header shadows on mobile */
     header {
         box-shadow: none !important;
@@ -1245,7 +1245,7 @@ border-color: #000000;
     }
 
     /* Mobile Optimization Styles */
-    @media (max-width: 768px) {
+    @media (max-width: 1100px) {
       /* Hide reverse hero section in mobile view */
       .hero-section.reverse {
         display: none !important;
@@ -2141,7 +2141,7 @@ border-color: #000000;
     }
 
     /* Desktop styles - Hide video and carousel in hero section */
-    @media (min-width: 769px) {
+    @media (min-width: 1101px) {
       .hero-section:not(.hero-section-duplicate) .hero-video {
         display: none !important;
       }
@@ -2470,7 +2470,7 @@ border-color: #000000;
         }
 
         /* Remove underline from footer titles on mobile */
-        @media (max-width: 768px) {
+        @media (max-width: 1100px) {
           .footer h3 {
             text-decoration: none !important;
           }
@@ -2634,7 +2634,7 @@ border-color: #000000;
         }
 
 /* Final mobile header alignment */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .secondary-header {
     position: relative !important;
     display: grid !important;
@@ -2689,7 +2689,7 @@ border-color: #000000;
 }
 
 /* Shared mobile header and pricing-style drawer */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   header {
     background: #ffffff !important;
     box-shadow: none !important;
@@ -3055,7 +3055,7 @@ footer.footer .footer-content,
   font-display: swap;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .desktop-home-hero {
     display: none !important;
   }
@@ -3066,7 +3066,7 @@ footer.footer .footer-content,
 }
 
 /* Premium mobile homepage layout and palette. */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   body.homepage {
     --home-mobile-gutter: clamp(20px, 5.5vw, 24px);
     --home-mobile-section-space: clamp(52px, 14vw, 64px);
@@ -3603,7 +3603,7 @@ footer.footer .footer-content,
   }
 }
 
-@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+@media (max-width: 1100px) and (prefers-reduced-motion: reduce) {
   body.homepage .gallery-row {
     overflow-x: auto !important;
     scroll-snap-type: x mandatory;

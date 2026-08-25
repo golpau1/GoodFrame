@@ -177,7 +177,7 @@ header {
 }
 
 /* Desktop - Remove all borders and restore clean layout */
-@media (min-width: 769px) {
+@media (min-width: 1101px) {
     /* Remove all borders from header elements */
     header,
     header *,
@@ -222,7 +222,7 @@ header {
 }
 
 /* Desktop tablet range (769px to 1200px) */
-@media (min-width: 769px) and (max-width: 1200px) {
+@media (min-width: 1101px) and (max-width: 1200px) {
     .header-title {
         justify-self: start !important;
         font-size: 2.1rem !important;
@@ -967,7 +967,7 @@ header {
 }
 
 /* Mobile responsive zoom control */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .cropper-top-controls {
     flex-direction: column;
     gap: 12px;
@@ -1281,7 +1281,7 @@ header {
 }
 
 /* Desktop/Laptop (769px - 1199px) */
-@media (min-width: 769px) and (max-width: 1199px) {
+@media (min-width: 1101px) and (max-width: 1199px) {
   #cropperOverlay #cropperContainer {
     width: 720px;
     height: 720px;
@@ -1294,7 +1294,7 @@ header {
 }
 
 /* Tablet Portrait & Small Laptop (481px - 768px) */
-@media (min-width: 481px) and (max-width: 768px) {
+@media (min-width: 481px) and (max-width: 1100px) {
   #cropperOverlay {
     padding: 10px;
   }
@@ -1335,7 +1335,7 @@ header {
 }
 
 /* Mobile Landscape (601px - 900px height) */
-@media (max-height: 900px) and (min-width: 769px) {
+@media (max-height: 900px) and (min-width: 1101px) {
   #cropperOverlay #cropperContainer {
     max-height: 80vh;
   }
@@ -1512,7 +1512,7 @@ header {
   margin: 0 !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .footer-content {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
@@ -1668,7 +1668,7 @@ header {
   margin: 0 !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .footer-content {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
@@ -1845,7 +1845,7 @@ header {
 }
 
 /* Tablet Landscape (768px - 1024px width, landscape) */
-@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+@media (min-width: 1101px) and (max-width: 1024px) and (orientation: landscape) {
   #cropperOverlay #cropperContainer {
     max-width: 85vw;
     flex-direction: row;
@@ -1887,7 +1887,7 @@ header {
 }
 
 /* Close Button for Mobile - REMOVED */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   /* Close button removed - no longer needed */
 }
 
@@ -2400,7 +2400,7 @@ header {
 }
 
 /* Responsive Design for Feature Section */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .feature-section {
     margin: 60px auto;
     padding: 0 20px;
@@ -2460,7 +2460,7 @@ header {
 }
 
 /* Laptop - 1024px breakpoint for portrait mode fix */
-@media (max-width: 1024px) and (min-width: 769px) {
+@media (max-width: 1024px) and (min-width: 1101px) {
   #uploadedImagePortrait {
     max-width: 55% !important;
     max-height: 60% !important;
@@ -2472,7 +2472,7 @@ header {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .container {
     flex-direction: column;
     gap: 32px;
@@ -2494,7 +2494,7 @@ header {
    MOBILE HEADER STYLES (768px and below)
    ============================================ */
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
     /* Remove header shadows on mobile */
     header {
         box-shadow: none !important;
@@ -3270,7 +3270,7 @@ header {
   color: var(--accent-color) !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   header {
     box-shadow: none !important;
     border-bottom: none !important;
@@ -3417,7 +3417,7 @@ header {
    copyright. The homepage never hits this because its <body> isn't a
    flex container. Locking flex-shrink to 0 restores the footer's
    natural full height without changing the footer component itself. */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .site-footer {
     flex-shrink: 0 !important;
   }
@@ -3703,12 +3703,12 @@ header {
         /* ✅ STANDARD DESKTOP: 1024px to 1439px */
         @media (min-width: 1024px) and (max-width: 1439px) {
             .cropper-container {
-                max-width: 900px;
+                max-width: 1100px;
                 max-height: 600px;
             }
             
             #cropperImage {
-                max-width: 900px;
+                max-width: 1100px;
                 max-height: 600px;
             }
             
@@ -3728,7 +3728,7 @@ header {
         }
 
         /* ✅ SMALL DESKTOP/LAPTOP: 769px to 1023px */
-        @media (min-width: 769px) and (max-width: 1023px) {
+        @media (min-width: 1101px) and (max-width: 1023px) {
             .cropper-container {
                 max-width: 85vw;
                 max-height: 65vh;
@@ -3846,7 +3846,7 @@ header {
         }
 
         /* Mobile styles */
-        @media (max-width: 768px) {
+        @media (max-width: 1100px) {
             .container {
                 padding-bottom: 100px;
             }
@@ -3871,7 +3871,7 @@ header {
             .mobile-nav.active { right: 0; }
             .mobile-nav-close { position: absolute; top: 20px; right: 20px; font-size: 2rem; color: #070707; cursor: pointer; font-weight: 300; line-height: 1; transition: color 0.3s ease; z-index: 10000; padding: 5px; user-select: none; }
             .mobile-nav a { display: block; color: #070707; text-decoration: none; font-size: 1.1rem; font-weight: 300; font-family: 'Cutive Mono', monospace; letter-spacing: 0; padding: 15px 0; border-bottom: 1px solid #f0f0f0; transition: color 0.3s ease; }
-            @media (max-width: 768px) { .secondary-header { padding: 0 15px !important; grid-template-columns: auto 1fr auto !important; gap: 15px !important; background: #ffffff !important; } .header-title { font-size: 52px !important; } .cart-nav { justify-self: start !important; } .nav { display: none !important; } .burger-menu { display: flex !important; order: 1 !important; justify-self: end !important; } .mobile-nav { display: block; } }
+            @media (max-width: 1100px) { .secondary-header { padding: 0 15px !important; grid-template-columns: auto 1fr auto !important; gap: 15px !important; background: #ffffff !important; } .header-title { font-size: 52px !important; } .cart-nav { justify-self: start !important; } .nav { display: none !important; } .burger-menu { display: flex !important; order: 1 !important; justify-self: end !important; } .mobile-nav { display: block; } }
             @media (max-width: 480px) { .secondary-header { padding: 0 10px !important; height: 60px !important; gap: 10px !important; } .header-title { font-size: 52px !important; } .burger-menu { width: 22px !important; height: 16px !important; } .mobile-nav { width: 250px; padding: 65px 25px 25px 25px; } }
 
 .footer {
@@ -3954,7 +3954,7 @@ header {
                 display: none !important;
             }
 
-            @media (max-width: 768px) {
+            @media (max-width: 1100px) {
                 .footer-content {
                     grid-template-columns: 1fr 1fr !important;
                     grid-gap: 20px !important;
@@ -4042,7 +4042,7 @@ header {
                 margin-bottom: 0 !important;
             }
 
-            @media (max-width: 768px) {
+            @media (max-width: 1100px) {
                 .secondary-header {
                     padding: 0 15px !important;
                     gap: 15px !important;
@@ -4283,7 +4283,7 @@ header {
 }
 
 /* Mobile uploader final pass */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   html,
   body {
     width: 100% !important;
@@ -4512,7 +4512,7 @@ header {
   }
 }
 
-@media (max-width: 768px) and (orientation: landscape) and (max-height: 520px) {
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 520px) {
   .container {
     max-width: 720px !important;
     flex-direction: row !important;
@@ -4539,7 +4539,7 @@ header {
 }
 
 /* Mobile preview priority: keep the frame large and clearly above the options */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .container {
     max-width: 680px !important;
     margin: 8px auto 0 !important;
@@ -4593,7 +4593,7 @@ header {
   }
 }
 
-@media (max-width: 768px) and (orientation: landscape) and (max-height: 520px) {
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 520px) {
   .container {
     max-width: 760px !important;
     gap: 16px !important;
@@ -4612,7 +4612,7 @@ header {
 }
 
 /* Mobile frame fit: identical preview geometry and safer image inset */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .frame-container,
   .frame-container.landscape-frame,
   .frame-container.portrait-frame,
@@ -4725,7 +4725,7 @@ header {
   }
 }
 
-@media (max-width: 768px) and (orientation: landscape) and (max-height: 520px) {
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 520px) {
   .frame-container,
   .frame-container.landscape-frame,
   .frame-container.portrait-frame {
@@ -4737,7 +4737,7 @@ header {
 }
 
 /* Mobile preview parity with desktop: one square stage, same frame/image ratios */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .frame-container,
   .frame-container.landscape-frame,
   .frame-container.portrait-frame,
@@ -4856,7 +4856,7 @@ header {
   }
 }
 
-@media (max-width: 768px) and (orientation: landscape) and (max-height: 520px) {
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 520px) {
   .frame-container,
   .frame-container.landscape-frame,
   .frame-container.portrait-frame {
@@ -4868,7 +4868,7 @@ header {
 }
 
 /* Final mobile frame mask: image is clipped to the actual frame opening */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .frame-container.black-frame.landscape-frame.full-image-frame,
   .frame-container.black-frame.landscape-frame:not(.border-frame) {
     --frame-image-mobile-left: 50.805%;
@@ -5000,7 +5000,7 @@ header {
 }
 
 /* Mobile final image sizing: match the desktop photo box exactly */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .frame-container.landscape-frame.full-image-frame,
   .frame-container.landscape-frame:not(.border-frame) {
     --frame-image-mobile-left: 50%;
@@ -5066,7 +5066,7 @@ header {
 }
 
 /* Mobile authoritative frame/photo sizing: one percentage system only */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .frame-container,
   .frame-container.landscape-frame,
   .frame-container.portrait-frame,
@@ -5205,7 +5205,7 @@ header {
   }
 }
 /* Shared mobile header and pricing-style drawer */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   header {
     background: #ffffff !important;
     box-shadow: none !important;
@@ -5555,7 +5555,7 @@ footer.footer .footer-content,
 
 /* Responsive frame options: keep each visible control clickable and contained. */
 .upload-container {
-  max-width: min(100%, 430px) !important;
+  max-width: min(100%, 640px) !important;
   overflow: visible !important;
 }
 
@@ -5610,14 +5610,14 @@ footer.footer .footer-content,
 }
 
 /* Cropper final layout pass */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   #cropperOverlay {
     padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
     align-items: center !important;
   }
 
   #cropperOverlay #cropperContainer {
-    width: min(430px, calc(100vw - 20px)) !important;
+    width: min(640px, calc(100vw - 20px)) !important;
     height: min(720px, calc(100dvh - 20px)) !important;
     padding: 12px !important;
     gap: 12px !important;
@@ -5927,7 +5927,7 @@ footer.footer .footer-content,
   cursor: pointer;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .quality-info-overlay {
     align-items: flex-end;
     padding: 0;

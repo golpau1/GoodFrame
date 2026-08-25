@@ -147,7 +147,7 @@
   color: #070707;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .about-desktop-editorial {
     width: min(100% - 40px, 620px) !important;
     padding: 40px 0 72px !important;

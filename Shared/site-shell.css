@@ -115,40 +115,13 @@
   outline-offset: 3px !important;
 }
 
-@media screen and (min-width: 901px) {
+@media screen and (min-width: 1101px) {
   .site-footer {
     padding: 30px 21px !important;
   }
 }
 
-@media screen and (min-width: 768px) and (max-width: 900px) {
-  .site-footer {
-    padding: 34px 20px 38px !important;
-  }
-
-  .site-footer-wide {
-    grid-template-columns: 1fr !important;
-    width: min(100%, 560px) !important;
-    max-width: 560px !important;
-    gap: 24px !important;
-  }
-
-  .site-footer-wide > .footer-col {
-    max-width: 340px !important;
-    margin: 0 auto !important;
-  }
-
-  .site-footer-wide .footer-title {
-    font-size: 16px !important;
-  }
-
-  .site-footer-wide a,
-  .site-footer-wide p {
-    font-size: 14.08px !important;
-  }
-}
-
-@media screen and (max-width: 767px) {
+@media screen and (max-width: 1100px) {
   html,
   body {
     margin-bottom: 0 !important;

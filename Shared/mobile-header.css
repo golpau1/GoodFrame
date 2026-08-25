@@ -1,5 +1,5 @@
 /* Canonical mobile and tablet header shared by every page. */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   html,
   body {
     box-sizing: border-box !important;
@@ -196,15 +196,6 @@
   }
 }
 
-/* Slightly smaller wordmark, tablet only (769-900px; ~12% narrower
-   than the 170px above). Phone (<=768px, including the 360px and
-   767px overrides below) is untouched. */
-@media (min-width: 769px) and (max-width: 900px) {
-  body > .secondary-header.site-navigation > .header-title.header-title--logo {
-    width: 150px !important;
-  }
-}
-
 @media (max-width: 360px) {
   body > .secondary-header.site-navigation {
     grid-template-columns: 64px minmax(0, 1fr) 64px !important;
@@ -220,8 +211,8 @@
   }
 }
 
-/* Rebuilt phone announcement bar: literal text lives in each page's HTML. */
-@media (max-width: 767px) {
+/* Shared mobile-style announcement and navigation through tablet widths. */
+@media (max-width: 1100px) {
   body > header.site-announcement {
     display: none !important;
   }
@@ -304,7 +295,7 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1101px) {
   body > .mobile-announcement-bar {
     display: none !important;
   }

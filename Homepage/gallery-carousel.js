@@ -4,7 +4,7 @@
 
   if (!viewport || !track) return;
 
-  const phoneQuery = window.matchMedia("(max-width: 767px)");
+  const phoneQuery = window.matchMedia("(max-width: 1100px)");
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const slides = Array.from(track.querySelectorAll(".gallery-image")).slice(0, 5);
   const autoplayDelay = 4500;
