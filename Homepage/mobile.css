@@ -3099,13 +3099,13 @@ footer.footer .footer-content,
   }
 
   body.homepage .mobile-home-hero h1 {
-    margin: 0 0 18px;
+    margin: 0 0 12px;
     color: #000000 !important;
     font-size: clamp(3.35rem, 15.5vw, 4.75rem) !important;
     font-weight: 400 !important;
     letter-spacing: -0.045em !important;
     line-height: 0.91 !important;
-    text-align: left !important;
+    text-align: center !important;
   }
 
   body.homepage .mobile-home-hero h1 span {
@@ -3124,7 +3124,7 @@ footer.footer .footer-content,
 
   body.homepage .mobile-home-hero .hero-supporting-line {
     margin: 0 auto;
-    color: #555550 !important;
+    color: #6a6a65 !important;
     font-family: var(--homepage-font-body) !important;
     font-size: 0.9375rem !important;
     line-height: 1.45 !important;
@@ -3852,8 +3852,8 @@ footer.footer .footer-content,
     position: relative !important;
     z-index: 2;
     max-width: 310px;
-    margin: 18px auto 0 !important;
-    color: rgba(255, 255, 255, 0.86) !important;
+    margin: 12px auto 0 !important;
+    color: rgba(255, 255, 255, 0.82) !important;
     font-size: 0.875rem !important;
     line-height: 1.45 !important;
     text-align: center !important;
@@ -3865,7 +3865,7 @@ footer.footer .footer-content,
     display: flex !important;
     justify-content: center !important;
     width: auto !important;
-    margin: clamp(40px, 11vw, 50px) 0 0 !important;
+    margin: clamp(28px, 8vw, 36px) 0 0 !important;
   }
 
   body.homepage .mobile-home-hero__primary {

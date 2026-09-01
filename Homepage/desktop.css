@@ -863,7 +863,7 @@ background: #070707;
   font-size: 3.4rem;
   font-weight: 400;
   color: var(--text-primary);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   text-align: center;
   letter-spacing: -0.01em;
   line-height: 1.1;
@@ -882,10 +882,10 @@ background: #070707;
 
 .hero-left .hero-supporting-line {
   max-width: 34rem;
-  margin: 0 0 24px;
-  color: #555550;
+  margin: 0 0 28px;
+  color: #6a6a65;
   font-family: var(--homepage-font-body) !important;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 400;
   letter-spacing: 0 !important;
   line-height: 1.45 !important;
