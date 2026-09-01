@@ -3122,6 +3122,15 @@ footer.footer .footer-content,
     line-height: 1.5 !important;
   }
 
+  body.homepage .mobile-home-hero .hero-supporting-line {
+    margin: 0 auto;
+    color: #555550 !important;
+    font-family: var(--homepage-font-body) !important;
+    font-size: 0.9375rem !important;
+    line-height: 1.45 !important;
+    text-align: center !important;
+  }
+
   body.homepage .mobile-home-hero__actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -3837,6 +3846,17 @@ footer.footer .footer-content,
   body.homepage .mobile-home-hero h1 span {
     display: block !important;
     white-space: nowrap;
+  }
+
+  body.homepage .mobile-home-hero .hero-supporting-line {
+    position: relative !important;
+    z-index: 2;
+    max-width: 310px;
+    margin: 18px auto 0 !important;
+    color: rgba(255, 255, 255, 0.86) !important;
+    font-size: 0.875rem !important;
+    line-height: 1.45 !important;
+    text-align: center !important;
   }
 
   body.homepage .mobile-home-hero__actions {

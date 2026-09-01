@@ -880,6 +880,19 @@ background: #070707;
   letter-spacing: 0;
 }
 
+.hero-left .hero-supporting-line {
+  max-width: 34rem;
+  margin: 0 0 24px;
+  color: #555550;
+  font-family: var(--homepage-font-body) !important;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0 !important;
+  line-height: 1.45 !important;
+  text-align: center;
+  word-spacing: 0 !important;
+}
+
 .hero-left h2 {
   font-family: 'NType82', 'Cutive Mono', monospace !important;
   font-size: 1.6rem;
