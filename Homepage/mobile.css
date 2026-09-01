@@ -3124,11 +3124,12 @@ footer.footer .footer-content,
 
   body.homepage .mobile-home-hero .hero-supporting-line {
     margin: 0 auto;
-    color: #6a6a65 !important;
+    color: #f7f4ed !important;
     font-family: var(--homepage-font-body) !important;
     font-size: 0.9375rem !important;
     line-height: 1.45 !important;
     text-align: center !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
   }
 
   body.homepage .mobile-home-hero__actions {
@@ -3853,10 +3854,11 @@ footer.footer .footer-content,
     z-index: 2;
     max-width: 310px;
     margin: 12px auto 0 !important;
-    color: rgba(255, 255, 255, 0.82) !important;
+    color: #f7f4ed !important;
     font-size: 0.875rem !important;
     line-height: 1.45 !important;
     text-align: center !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
   }
 
   body.homepage .mobile-home-hero__actions {

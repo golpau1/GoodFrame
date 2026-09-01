@@ -883,13 +883,14 @@ background: #070707;
 .hero-left .hero-supporting-line {
   max-width: 34rem;
   margin: 0 0 28px;
-  color: #6a6a65;
+  color: #f7f4ed;
   font-family: var(--homepage-font-body) !important;
   font-size: 0.9375rem;
   font-weight: 400;
   letter-spacing: 0 !important;
   line-height: 1.45 !important;
   text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
   word-spacing: 0 !important;
 }
 
