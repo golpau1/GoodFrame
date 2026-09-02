@@ -424,8 +424,6 @@ body > .secondary-header.site-navigation::after {
 /* Hero 1 display face. */
 @media (min-width: 1101px) {
   body.homepage .editorial-hero-pair .editorial-hero--image h1.girthquake-heading.hero-one-heading:not(#cropperCancelButton) {
-    font-family: 'NType Headline' !important;
-    font-weight: 400 !important;
     letter-spacing: 0 !important;
     text-transform: none !important;
   }
@@ -1931,6 +1929,10 @@ body.homepage .editorial-hero-pair {
 }
 
 #homepage-root#homepage-root .hero-heading-unified {
-  font-family: 'NType Headline' !important;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+  font-style: normal !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
   line-height: 1.08 !important;
+  text-transform: none !important;
 }
