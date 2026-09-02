@@ -1934,5 +1934,19 @@ body.homepage .editorial-hero-pair {
   font-weight: 500 !important;
   letter-spacing: 0 !important;
   line-height: 1.08 !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+  text-align: center !important;
   text-transform: none !important;
+}
+
+#homepage-root#homepage-root .hero-heading-unified .hero-copy-line {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+#homepage-root#homepage-root .hero-heading-unified .hero-copy-line + .hero-copy-line {
+  margin-top: 0.16em;
 }
