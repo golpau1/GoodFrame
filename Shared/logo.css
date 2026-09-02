@@ -1931,7 +1931,7 @@ body.homepage .editorial-hero-pair {
 }
 
 #homepage-root#homepage-root .hero-heading-unified {
-  font-family: 'NType82', sans-serif !important;
+  font-family: var(--gf-font-heading) !important;
   font-weight: 400 !important;
   font-style: normal !important;
   font-synthesis: none !important;

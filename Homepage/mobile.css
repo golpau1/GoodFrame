@@ -3101,7 +3101,7 @@ footer.footer .footer-content,
   body.homepage .mobile-home-hero h1 {
     margin: 0 0 12px;
     color: #000000 !important;
-    font-size: clamp(2rem, 5.5vw, 2.75rem) !important;
+    font-size: clamp(1.75rem, 4.9vw, 2.5rem) !important;
     font-weight: 400 !important;
     letter-spacing: -0.045em !important;
     line-height: 0.91 !important;
@@ -3836,7 +3836,7 @@ footer.footer .footer-content,
     width: 100% !important;
     margin: 0 !important;
     color: #ffffff !important;
-    font-size: clamp(1.25rem, calc(7.45vw - 3.6px), 2rem) !important;
+    font-size: clamp(1.1rem, calc(6.75vw - 3.25px), 1.8rem) !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
     line-height: 1.08 !important;
