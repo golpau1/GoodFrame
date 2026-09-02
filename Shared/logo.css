@@ -1930,16 +1930,16 @@ body.homepage .editorial-hero-pair {
 
 @font-face {
   font-family: 'Good Frame Hero SF Pro Display';
-  src: url('../Homepage/assets/fonts/New folder/San Francisco/pro/SF-Pro-Display-Medium.otf') format('opentype');
-  font-weight: 500;
+  src: url('../Homepage/assets/fonts/New folder/San Francisco/pro/SF-Pro-Display-Regular.otf') format('opentype');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 #homepage-root#homepage-root .hero-heading-unified {
-  font-family: 'NType82' !important;
+  font-family: 'Good Frame Hero SF Pro Display' !important;
   font-style: normal !important;
-  font-weight: 500 !important;
+  font-weight: 400 !important;
   letter-spacing: 0 !important;
   line-height: 1.08 !important;
   margin-right: auto !important;
