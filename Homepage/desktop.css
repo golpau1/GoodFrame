@@ -1050,7 +1050,7 @@ body {
   font-family: 'Cutive Mono', monospace !important;
 }
 
-body *,
+body *:not(.hero-copy-line),
 body *::before,
 body *::after {
   font-weight: 400 !important;
@@ -1271,7 +1271,7 @@ body {
           font-family: 'Cutive Mono', monospace !important;
         }
 
-body *,
+body *:not(.hero-copy-line),
 body *::before,
 body *::after {
           font-weight: 400 !important;
