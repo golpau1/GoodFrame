@@ -1928,8 +1928,16 @@ body.homepage .editorial-hero-pair {
   font-display: block;
 }
 
+@font-face {
+  font-family: 'Good Frame Hero SF Pro Display';
+  src: url('../Homepage/assets/fonts/New folder/San Francisco/pro/SF-Pro-Display-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 #homepage-root#homepage-root .hero-heading-unified {
-  font-family: sans-serif !important;
+  font-family: 'Good Frame Hero SF Pro Display' !important;
   font-style: normal !important;
   font-weight: 500 !important;
   letter-spacing: 0 !important;
