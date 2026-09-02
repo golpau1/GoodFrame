@@ -860,7 +860,7 @@ background: #070707;
 
 .hero-left h1 {
   font-family: 'NType82', 'Cutive Mono', monospace !important;
-  font-size: 3.4rem;
+  font-size: clamp(2rem, 2.8vw, 2.8rem);
   font-weight: 400;
   color: var(--text-primary);
   margin-bottom: 12px;
