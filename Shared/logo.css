@@ -1988,3 +1988,62 @@ body.homepage .editorial-hero-pair {
   white-space: nowrap !important;
   border: 0 !important;
 }
+
+/* Supporting shipping stamp: decorative, deliberately secondary to hero copy. */
+#homepage-root .hero-shipping-stamp {
+  display: block;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (min-width: 1101px) {
+  #homepage-root .hero-shipping-stamp--mobile {
+    display: none;
+  }
+
+  #homepage-root .editorial-hero--image > .hero-left {
+    position: relative;
+  }
+
+  #homepage-root .hero-shipping-stamp--desktop {
+    position: absolute;
+    z-index: 1;
+    right: clamp(20px, 2.2vw, 34px);
+    bottom: clamp(24px, 3.4vh, 40px);
+    width: clamp(96px, 8vw, 126px);
+    filter: drop-shadow(0 8px 14px rgba(7, 7, 7, 0.2));
+    transform: rotate(5deg);
+    transform-origin: center;
+  }
+}
+
+@media (max-width: 1100px) {
+  #homepage-root .hero-shipping-stamp--desktop {
+    display: none;
+  }
+
+  #homepage-root .mobile-home-hero__content {
+    position: relative !important;
+  }
+
+  #homepage-root .hero-shipping-stamp--mobile {
+    position: absolute;
+    z-index: 2;
+    right: 4px;
+    bottom: 8px;
+    width: clamp(82px, 13vw, 104px);
+    filter: drop-shadow(0 6px 12px rgba(7, 7, 7, 0.2));
+    transform: rotate(5deg);
+    transform-origin: center;
+  }
+}
+
+@media (max-width: 767px) {
+  #homepage-root .hero-shipping-stamp--mobile {
+    right: clamp(2px, 2vw, 10px);
+    bottom: clamp(12px, 3.5vw, 20px);
+    width: clamp(76px, 22vw, 94px);
+  }
+}
