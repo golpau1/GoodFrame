@@ -869,6 +869,11 @@ background: #070707;
   line-height: 1.1;
 }
 
+.hero-left .hero-heading-unified span {
+  display: block;
+  white-space: nowrap;
+}
+
 .hero-left p {
   font-family: 'Cutive Mono', monospace;
   font-size: 1.4rem;
