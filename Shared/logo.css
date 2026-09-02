@@ -1958,3 +1958,33 @@ body.homepage .editorial-hero-pair {
 #homepage-root#homepage-root .hero-heading-unified .hero-copy-line + .hero-copy-line {
   margin-top: 0.16em;
 }
+
+#homepage-root#homepage-root .hero-heading-unified .hero-title-image {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4242 / 731;
+  overflow: hidden;
+}
+
+#homepage-root#homepage-root .hero-heading-unified .hero-title-image img {
+  position: absolute;
+  top: -225.5814%;
+  left: -21.9236%;
+  display: block;
+  width: 141.4427%;
+  max-width: none;
+  height: auto;
+}
+
+#homepage-root#homepage-root .hero-heading-unified .hero-title-accessible {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
