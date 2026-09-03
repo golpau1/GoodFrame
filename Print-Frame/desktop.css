@@ -3530,6 +3530,37 @@ h3,
   cursor: pointer;
 }
 
+/* Print & Frame SEO introduction */
+.print-frame-seo {
+  width: min(920px, calc(100% - 40px));
+  margin: 72px auto 88px;
+  padding-top: 56px;
+  border-top: 1px solid rgba(7, 7, 7, 0.18);
+  color: #070707;
+}
+
+.print-frame-seo__content {
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.print-frame-seo h2 {
+  margin: 0 0 20px;
+  font-family: var(--font-family-subheading);
+  font-size: clamp(1.65rem, 2.2vw, 2.25rem);
+  font-weight: 300;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+
+.print-frame-seo p {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
 @media (max-width: 768px) {
   .quality-info-overlay {
     align-items: flex-end;
