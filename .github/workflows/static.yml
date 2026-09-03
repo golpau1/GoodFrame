@@ -33,11 +33,18 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Prepare clean public URLs
+        run: |
+          mkdir -p .pages-site
+          rsync -a --exclude '.git' --exclude '.pages-site' ./ .pages-site/
+          cp 'Print-Frame/print-frame.html' '.pages-site/print-and-frame-online.html'
+          cp 'Pricing/pricing.html' '.pages-site/printing-framing-prices.html'
+          cp 'About Us/AboutUs.html' '.pages-site/about.html'
+          cp 'FAQ/FAQ.html' '.pages-site/printing-framing-faq.html'
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: '.pages-site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
