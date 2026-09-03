@@ -3913,3 +3913,52 @@ footer.footer .footer-content,
     height: auto;
   }
 }
+
+/* Homepage SEO introduction */
+.homepage-seo-section {
+  box-sizing: border-box;
+  width: calc(100% - 40px);
+  margin: 48px auto 64px;
+  padding-top: 38px;
+  border-top: 1px solid rgba(7, 7, 7, 0.18);
+  background: #ffffff;
+  color: #070707;
+}
+
+.homepage-seo-section__content {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.homepage-seo-section h2 {
+  margin: 0 0 16px;
+  font-family: var(--homepage-font-subheading, var(--font-family-subheading));
+  font-size: clamp(1.45rem, 6vw, 1.85rem);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0 !important;
+}
+
+.homepage-seo-section p {
+  margin: 0;
+  font-family: var(--homepage-font-body, var(--font-family));
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.homepage-seo-section a {
+  display: inline-block;
+  margin-top: 22px;
+  border-bottom: 1px solid currentColor;
+  color: inherit;
+  font-family: var(--homepage-font-body, var(--font-family));
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+
+.homepage-seo-section a:hover,
+.homepage-seo-section a:focus-visible {
+  border-bottom-color: transparent;
+}
