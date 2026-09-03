@@ -253,7 +253,7 @@ header {
   gap: 34px;
 }
 
-.intro h2 {
+.intro h1 {
   margin-bottom: 22px;
   color: var(--accent-color);
   font-family: var(--font-family-display);
@@ -275,6 +275,46 @@ header {
 
 .intro p:last-child {
   margin-bottom: 0;
+}
+
+.pricing-options h2,
+.pricing-inclusions h2 {
+  margin: 0 0 18px;
+  color: var(--accent-color);
+  font-family: var(--font-family-subheading);
+  font-size: 1.2rem;
+  font-weight: 300;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.pricing-inclusions {
+  margin-top: 10px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border-color);
+}
+
+.pricing-inclusions p {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  letter-spacing: -0.05em;
+  line-height: 1.6;
+}
+
+.pricing-inclusions .pricing-cta {
+  margin-top: 22px;
+}
+
+.pricing-cta a {
+  border-bottom: 1px solid currentColor;
+  text-decoration: none;
+}
+
+.pricing-cta a:hover,
+.pricing-cta a:focus-visible {
+  border-bottom-color: transparent;
 }
 
 .price-list {
@@ -408,7 +448,7 @@ header {
     padding: 70px 24px 24px;
   }
 
-  .intro h2 {
+  .intro h1 {
     font-size: 2rem;
   }
 
