@@ -2015,7 +2015,7 @@ body.homepage .editorial-hero-pair {
     top: 22%;
     left: 0;
     width: clamp(120px, 8.75vw, 147.5px);
-    filter: drop-shadow(0 2px 2px rgba(7, 7, 7, 0.22));
+    filter: none;
     transform: translateX(-30%) rotate(4deg);
     transform-origin: center;
   }
