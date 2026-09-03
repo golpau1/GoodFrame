@@ -2034,21 +2034,23 @@ body.homepage .editorial-hero-pair {
   }
 
   #homepage-root .hero-shipping-stamp--mobile {
-    position: absolute;
+    position: relative;
     z-index: 2;
-    right: 4px;
-    bottom: 8px;
-    width: clamp(82px, 13vw, 104px);
-    filter: drop-shadow(0 6px 12px rgba(7, 7, 7, 0.2));
-    transform: rotate(5deg);
+    align-self: flex-end;
+    width: clamp(94px, 13vw, 112px);
+    margin: 0 10px 18px auto;
+    filter: drop-shadow(0 2px 2px rgba(7, 7, 7, 0.18));
+    transform: rotate(4deg);
     transform-origin: center;
   }
 }
 
 @media (max-width: 767px) {
   #homepage-root .hero-shipping-stamp--mobile {
-    right: clamp(2px, 2vw, 10px);
-    bottom: clamp(12px, 3.5vw, 20px);
-    width: clamp(76px, 22vw, 94px);
+    position: absolute;
+    right: clamp(16px, 5vw, 22px);
+    bottom: clamp(18px, 5vw, 24px);
+    width: clamp(88px, 24vw, 108px);
+    margin: 0;
   }
 }
