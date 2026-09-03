@@ -1961,7 +1961,10 @@ body.homepage .editorial-hero-pair {
 
 #homepage-root#homepage-root .hero-heading-unified .hero-title-image {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   aspect-ratio: 4242 / 731;
   overflow: hidden;
