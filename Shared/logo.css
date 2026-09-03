@@ -2002,8 +2002,7 @@ body.homepage .editorial-hero-pair {
 }
 
 @media (min-width: 1101px) {
-  #homepage-root .hero-shipping-stamp--mobile,
-  #homepage-root .hero-shipping-stamp--secondary-mobile {
+  #homepage-root .hero-shipping-stamp--mobile {
     display: none;
   }
 
@@ -2023,22 +2022,10 @@ body.homepage .editorial-hero-pair {
     transform: translateX(-30%) rotate(4deg);
     transform-origin: center;
   }
-
-  #homepage-root .hero-shipping-stamp--secondary {
-    position: absolute;
-    z-index: 2;
-    right: clamp(18px, 2.5vw, 44px);
-    bottom: -5px;
-    width: clamp(120px, 8vw, 148px);
-    filter: none;
-    transform: rotate(-3deg);
-    transform-origin: center;
-  }
 }
 
 @media (max-width: 1100px) {
-  #homepage-root .hero-shipping-stamp--desktop,
-  #homepage-root .hero-shipping-stamp--secondary {
+  #homepage-root .hero-shipping-stamp--desktop {
     display: none;
   }
 
@@ -2062,34 +2049,11 @@ body.homepage .editorial-hero-pair {
     transform: rotate(4deg) !important;
     transform-origin: center !important;
   }
-
-  #homepage-root .hero-shipping-stamp--secondary-mobile {
-    position: absolute !important;
-    z-index: 5 !important;
-    left: clamp(24px, 5vw, 48px) !important;
-    bottom: clamp(28px, 5vw, 48px) !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    width: clamp(96px, 15vw, 118px) !important;
-    max-width: none !important;
-    height: auto !important;
-    margin: 0 !important;
-    filter: drop-shadow(0 2px 2px rgba(7, 7, 7, 0.18)) !important;
-    transform: rotate(-3deg) !important;
-    transform-origin: center !important;
-  }
 }
 
 @media (max-width: 767px) {
   #homepage-root .hero-shipping-stamp--mobile {
     right: clamp(16px, 5vw, 22px) !important;
-    bottom: clamp(18px, 5vw, 24px) !important;
-    width: clamp(92px, 25vw, 110px) !important;
-  }
-
-  #homepage-root .hero-shipping-stamp--secondary-mobile {
-    left: clamp(16px, 5vw, 22px) !important;
     bottom: clamp(18px, 5vw, 24px) !important;
     width: clamp(92px, 25vw, 110px) !important;
   }
