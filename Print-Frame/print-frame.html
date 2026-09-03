@@ -27,11 +27,36 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebPage",
-        "name": "Print & Frame Online Australia | Good Frame",
-        "description": "Upload your artwork, choose your size and handcrafted frame, and we'll professionally print, frame and deliver your finished artwork Australia-wide.",
-        "url": "https://goodframe.com.au/print-and-frame-online",
-        "isPartOf": { "@type": "WebSite", "name": "Good Frame", "url": "https://goodframe.com.au/" }
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": "https://goodframe.com.au/print-and-frame-online#webpage",
+            "name": "Print & Frame Online Australia | Good Frame",
+            "description": "Upload your artwork, choose your size and handcrafted frame, and we'll professionally print, frame and deliver your finished artwork Australia-wide.",
+            "url": "https://goodframe.com.au/print-and-frame-online",
+            "isPartOf": {
+              "@id": "https://goodframe.com.au/#website"
+            },
+            "mainEntity": {
+              "@id": "https://goodframe.com.au/print-and-frame-online#service"
+            }
+          },
+          {
+            "@type": "Service",
+            "@id": "https://goodframe.com.au/print-and-frame-online#service",
+            "name": "Online Printing and Framing",
+            "serviceType": "Artwork printing and handcrafted framing",
+            "description": "Customers upload their artwork online, choose a size and frame, and Good Frame professionally prints the artwork, handcrafts and finishes the frame, and delivers the finished piece Australia-wide.",
+            "url": "https://goodframe.com.au/print-and-frame-online",
+            "provider": {
+              "@id": "https://goodframe.com.au/#organization"
+            },
+            "areaServed": {
+              "@type": "Country",
+              "name": "Australia"
+            }
+          }
+        ]
       }
     </script>
     <link rel="icon" href="data:,">

@@ -29,10 +29,43 @@
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Good Frame",
-      "url": "https://goodframe.com.au/",
-      "description": "Upload your artwork and have it professionally printed, handcrafted and framed in Australia. Gallery-quality printing and frames delivered Australia-wide."
+      "@graph": [
+        {
+          "@type": "LocalBusiness",
+          "@id": "https://goodframe.com.au/#organization",
+          "name": "Good Frame",
+          "url": "https://goodframe.com.au/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://goodframe.com.au/Assets/good-frame-logo.png"
+          },
+          "image": "https://goodframe.com.au/Homepage/assets/MG_0859.jpg",
+          "description": "Good Frame is an Australian online printing and framing studio offering gallery-quality printing, handcrafted frames and Australia-wide delivery.",
+          "email": "contact.goodframe@gmail.com",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Burleigh Heads",
+            "addressRegion": "Queensland",
+            "addressCountry": "AU"
+          },
+          "areaServed": {
+            "@type": "Country",
+            "name": "Australia"
+          },
+          "sameAs": [
+            "https://www.instagram.com/goodframeau/"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://goodframe.com.au/#website",
+          "url": "https://goodframe.com.au/",
+          "name": "Good Frame",
+          "publisher": {
+            "@id": "https://goodframe.com.au/#organization"
+          }
+        }
+      ]
     }
   </script>
   <link rel="icon" href="data:," />

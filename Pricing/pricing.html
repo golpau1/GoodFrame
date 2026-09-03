@@ -25,11 +25,72 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebPage",
-        "name": "Printing & Picture Framing Prices Australia | Good Frame",
-        "description": "View Good Frame's online printing and framing prices. Choose your artwork size and handcrafted frame with Australia-wide delivery included.",
-        "url": "https://goodframe.com.au/printing-framing-prices",
-        "isPartOf": { "@type": "WebSite", "name": "Good Frame", "url": "https://goodframe.com.au/" }
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": "https://goodframe.com.au/printing-framing-prices#webpage",
+            "name": "Printing & Picture Framing Prices Australia | Good Frame",
+            "description": "View Good Frame's online printing and framing prices. Choose your artwork size and handcrafted frame with Australia-wide delivery included.",
+            "url": "https://goodframe.com.au/printing-framing-prices",
+            "isPartOf": {
+              "@id": "https://goodframe.com.au/#website"
+            },
+            "mainEntity": {
+              "@id": "https://goodframe.com.au/print-and-frame-online#service"
+            }
+          },
+          {
+            "@type": "Service",
+            "@id": "https://goodframe.com.au/print-and-frame-online#service",
+            "name": "Online Printing and Framing",
+            "url": "https://goodframe.com.au/print-and-frame-online",
+            "provider": {
+              "@id": "https://goodframe.com.au/#organization"
+            },
+            "hasOfferCatalog": {
+              "@type": "OfferCatalog",
+              "name": "Print and Frame Sizes and Prices",
+              "itemListElement": [
+                {
+                  "@type": "Offer",
+                  "price": "99.00",
+                  "priceCurrency": "AUD",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Small 210 × 297 mm Print and Frame"
+                  }
+                },
+                {
+                  "@type": "Offer",
+                  "price": "235.00",
+                  "priceCurrency": "AUD",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Medium 420 × 594 mm Print and Frame"
+                  }
+                },
+                {
+                  "@type": "Offer",
+                  "price": "350.00",
+                  "priceCurrency": "AUD",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Large 594 × 841 mm Print and Frame"
+                  }
+                },
+                {
+                  "@type": "Offer",
+                  "price": "700.00",
+                  "priceCurrency": "AUD",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Extra-large 841 × 1189 mm Print and Frame"
+                  }
+                }
+              ]
+            }
+          }
+        ]
       }
     </script>
     <link rel="icon" href="data:,">
