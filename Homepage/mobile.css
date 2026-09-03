@@ -4,7 +4,6 @@
 ==================================================
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap');
 
 @font-face {
   font-family: 'Trolleybus Trial';
@@ -276,12 +275,12 @@ header {
 }
 
 .hero-right {
-  background: url('assets/another+week+another+frame+(Blog+Banner)+(1).jpg') center center/cover no-repeat;
+  background: url('assets/workshop-hero-800.jpg') center center/cover no-repeat;
   border-top-left-radius: 3px;
 }
 
 .hero-left.hero-image-alt {
-  background: url('assets/diogo-lemos-c8r5SVWKaGk-unsplash.jpg') center center/cover no-repeat;
+  background: url('assets/gallery-wall-800.jpg') center center/cover no-repeat;
   border-bottom-right-radius: 3px;
 }
 

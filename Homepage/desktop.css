@@ -4,7 +4,6 @@
 ==================================================
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap');
 
 @font-face {
   font-family: 'Trolleybus Trial';
@@ -16,8 +15,7 @@
 
 @font-face {
   font-family: 'NType82';
-  src: url('file:///C:/Users/logan/Desktop/Work/Good%20Frame%202/Assets/NType82-Regular.otf') format('opentype'),
-       url('../Assets/NType82-Regular.otf') format('opentype');
+  src: url('../Assets/NType82-Regular.otf') format('opentype');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
@@ -337,12 +335,12 @@ display: flex;
 }
 
 .hero-right {
-  background: url('assets/another+week+another+frame+(Blog+Banner)+(1).jpg') center center/cover no-repeat;
+  background: url('assets/workshop-hero-1600.jpg') center center/cover no-repeat;
   border-top-left-radius: 3px;
 }
 
 .hero-left.hero-image-alt {
-  background: url('assets/diogo-lemos-c8r5SVWKaGk-unsplash.jpg') center center/cover no-repeat;
+  background: url('assets/gallery-wall-1600.jpg') center center/cover no-repeat;
   border-bottom-right-radius: 3px;
 }
 

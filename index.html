@@ -71,9 +71,12 @@
   <link rel="icon" href="data:," />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="/Homepage/desktop.css?v=20260904-homepage-seo" media="screen and (min-width: 1101px)" />
-  <link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-homepage-seo" media="screen and (max-width: 1100px)" />
-  <link rel="stylesheet" href="/Shared/logo.css?v=20260903-ntype-headline-verified" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cutive+Mono&amp;display=swap" />
+  <link rel="preload" as="image" href="/Homepage/assets/workshop-hero-1600.jpg" media="(min-width: 1101px)" fetchpriority="high" />
+  <link rel="preload" as="image" href="/Homepage/assets/workshop-hero-800.jpg" media="(max-width: 1100px)" fetchpriority="high" />
+  <link rel="stylesheet" href="/Homepage/desktop.css?v=20260904-performance" media="screen and (min-width: 1101px)" />
+  <link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-performance" media="screen and (max-width: 1100px)" />
+  <link rel="stylesheet" href="/Shared/logo.css?v=20260904-performance" />
   <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement" />
   <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260820-mobile-left-footer" />
   <link rel="stylesheet" href="/Shared/site-shell.css?v=20260824-pure-black-footer" />
@@ -82,7 +85,7 @@
 
 <body class="homepage">
   <div data-site-header data-root=""></div>
-  <script src="/Shared/site-header.js?v=20260820-shared-shell"></script>
+  <script src="/Shared/site-header.js?v=20260904-performance"></script>
 
   <main id="homepage-root">
     <div style="display: none">
@@ -130,8 +133,14 @@
 
         <div class="mobile-home-hero__image">
           <img
-            src="Homepage/assets/another+week+another+frame+(Blog+Banner)+(1).jpg"
+            src="Homepage/assets/workshop-hero-800.jpg"
+            srcset="Homepage/assets/workshop-hero-800.jpg 800w, Homepage/assets/workshop-hero-1600.jpg 1600w"
+            sizes="100vw"
             alt="Two Good Frame craftspeople making timber frames in the workshop"
+            width="800"
+            height="450"
+            fetchpriority="high"
+            decoding="async"
           />
         </div>
       </div>
@@ -169,20 +178,31 @@
 
         <img
           class="hero-shipping-stamp hero-shipping-stamp--mobile"
-          src="/Homepage/assets/shipped-australia-wide-stamp.png"
+          src="/Homepage/assets/shipped-australia-wide-stamp-240.png"
+          srcset="/Homepage/assets/shipped-australia-wide-stamp-240.png 240w, /Homepage/assets/shipped-australia-wide-stamp-400.png 400w"
+          sizes="(max-width: 767px) 110px, 118px"
           alt=""
           aria-hidden="true"
           draggable="false"
+          width="240"
+          height="240"
+          decoding="async"
         />
       </section>
 
       <section class="hero-section reverse editorial-hero editorial-hero--feature">
         <img
           class="hero-shipping-stamp hero-shipping-stamp--desktop"
-          src="/Homepage/assets/shipped-australia-wide-stamp.png"
+          src="/Homepage/assets/shipped-australia-wide-stamp-240.png"
+          srcset="/Homepage/assets/shipped-australia-wide-stamp-240.png 240w, /Homepage/assets/shipped-australia-wide-stamp-400.png 400w"
+          sizes="148px"
           alt=""
           aria-hidden="true"
           draggable="false"
+          width="240"
+          height="240"
+          loading="lazy"
+          decoding="async"
         />
         <div class="hero-feature-visual">
           <div class="hero-left hero-image-alt"></div>
@@ -210,8 +230,14 @@
       <div class="mobile-section-image" id="mobile-gallery-wall-section">
         <img
           id="mobile-gallery-wall-image"
-          src="Homepage/assets/diogo-lemos-c8r5SVWKaGk-unsplash.jpg"
+          src="Homepage/assets/gallery-wall-800.jpg"
+          srcset="Homepage/assets/gallery-wall-800.jpg 800w, Homepage/assets/gallery-wall-1600.jpg 1600w"
+          sizes="100vw"
           alt="Gallery Quality Frames"
+          width="800"
+          height="1200"
+          loading="lazy"
+          decoding="async"
         />
       </div>
 
@@ -221,7 +247,7 @@
       <div class="frame-options-row">
         <div class="frame-option">
           <a href="/printing-framing-prices" class="frame-image">
-            <img src="Homepage/assets/204_corner.webp" alt="Frame Option" />
+            <img src="Homepage/assets/204_corner.webp" alt="Frame Option" width="674" height="674" loading="lazy" decoding="async" />
           </a>
 
           <div class="frame-option-content">
@@ -238,7 +264,7 @@
 
         <div class="frame-option">
           <a href="/printing-framing-prices" class="frame-image">
-            <img src="Homepage/assets/19131_corner.webp" alt="Frame Option" />
+            <img src="Homepage/assets/19131_corner.webp" alt="Frame Option" width="564" height="564" loading="lazy" decoding="async" />
           </a>
 
           <div class="frame-option-content">
@@ -255,7 +281,7 @@
 
         <div class="frame-option">
           <a href="/printing-framing-prices" class="frame-image">
-            <img src="Homepage/assets/272110_corner (1).webp" alt="Frame Option" />
+            <img src="Homepage/assets/272110_corner (1).webp" alt="Frame Option" width="674" height="674" loading="lazy" decoding="async" />
           </a>
 
           <div class="frame-option-content">
@@ -280,59 +306,67 @@
     <div class="gallery-row" style="background: #070707;">
       <div class="gallery-carousel">
         <div class="gallery-image">
-          <img src="Homepage/assets/MG_1460.jpg" alt="Gallery 1" />
+          <img src="Homepage/assets/MG_1460.jpg" alt="Gallery 1" width="2200" height="1467" loading="lazy" decoding="async" />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/472748408_18374872177118713_1504182073712915384_n.jpg"
             alt="Gallery 2"
+            width="1080" height="790" loading="lazy" decoding="async"
           />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/497621901_1420281269133385_7832216309718362195_n.jpg"
             alt="Gallery 3"
+            width="1080" height="1920" loading="lazy" decoding="async"
           />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/621636934_18083716394173130_6390656558973629712_n.jpg"
             alt="Gallery 4"
+            width="876" height="1162" loading="lazy" decoding="async"
           />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/El+Framo+Picture+Framing+-+Low+Res+(4+of+48)_edited_edited.jpg"
             alt="Gallery 5"
+            width="1500" height="1001" loading="lazy" decoding="async"
           />
         </div>
 
         <!-- Duplicate images for seamless loop -->
         <div class="gallery-image">
-          <img src="Homepage/assets/MG_1460.jpg" alt="Gallery 1" />
+          <img src="Homepage/assets/MG_1460.jpg" alt="Gallery 1" width="2200" height="1467" loading="lazy" decoding="async" />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/472748408_18374872177118713_1504182073712915384_n.jpg"
             alt="Gallery 2"
+            width="1080" height="790" loading="lazy" decoding="async"
           />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/497621901_1420281269133385_7832216309718362195_n.jpg"
             alt="Gallery 3"
+            width="1080" height="1920" loading="lazy" decoding="async"
           />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/621636934_18083716394173130_6390656558973629712_n.jpg"
             alt="Gallery 4"
+            width="876" height="1162" loading="lazy" decoding="async"
           />
         </div>
         <div class="gallery-image">
           <img
             src="Homepage/assets/El+Framo+Picture+Framing+-+Low+Res+(4+of+48)_edited_edited.jpg"
             alt="Gallery 5"
+            width="1500" height="1001" loading="lazy" decoding="async"
           />
         </div>
       </div>
@@ -348,7 +382,7 @@
       <div class="frame-guide-steps">
         <div class="frame-guide-step">
           <div class="frame-guide-step-icon">
-            <img src="Homepage/assets/Icons/upload-svgrepo-com.png" alt="Upload" />
+            <img src="Homepage/assets/Icons/upload-svgrepo-com.png" alt="Upload" width="1024" height="1024" loading="lazy" decoding="async" />
             <span class="frame-guide-step-num">01</span>
           </div>
 
@@ -360,7 +394,7 @@
 
         <div class="frame-guide-step">
           <div class="frame-guide-step-icon">
-            <img src="Homepage/assets/Icons/paint-svgrepo-com.png" alt="Customize" />
+            <img src="Homepage/assets/Icons/paint-svgrepo-com.png" alt="Customize" width="1024" height="1024" loading="lazy" decoding="async" />
             <span class="frame-guide-step-num">02</span>
           </div>
 
@@ -372,7 +406,7 @@
 
         <div class="frame-guide-step">
           <div class="frame-guide-step-icon">
-            <img src="Homepage/assets/Icons/package-svgrepo-com.png" alt="Receive" />
+            <img src="Homepage/assets/Icons/package-svgrepo-com.png" alt="Receive" width="1024" height="1024" loading="lazy" decoding="async" />
             <span class="frame-guide-step-num">03</span>
           </div>
 
