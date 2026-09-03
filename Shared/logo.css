@@ -1937,7 +1937,7 @@ body.homepage .editorial-hero-pair {
 }
 
 #homepage-root#homepage-root .hero-heading-unified {
-  font-family: 'NType82' !important;
+  font-family: 'NType Headline' !important;
   font-style: normal !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
@@ -1951,6 +1951,7 @@ body.homepage .editorial-hero-pair {
 #homepage-root#homepage-root .hero-heading-unified .hero-copy-line {
   display: block;
   width: 100%;
+  font-family: 'NType Headline' !important;
   white-space: nowrap;
   text-align: center;
 }
