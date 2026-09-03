@@ -2029,7 +2029,7 @@ body.homepage .editorial-hero-pair {
     display: none;
   }
 
-  #homepage-root .mobile-home-hero {
+  #homepage-root .editorial-hero--image {
     position: relative !important;
   }
 
