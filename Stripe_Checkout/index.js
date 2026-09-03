@@ -77,7 +77,7 @@ app.get('/Homepage/Homepage.html', (req, res) => {
     res.redirect('/index.html')
 })
 
-// Serve static files from the parent directory (Good Frame 2)
+// Serve static files from the parent directory
 app.use(express.static(siteRoot))
 
 // FIX: Increase the JSON body limit to accept larger payloads (e.g., with image data)
