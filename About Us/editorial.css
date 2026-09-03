@@ -1,8 +1,4 @@
 /* Balanced About page editorial layout. */
-.about-desktop-editorial[hidden] {
-  display: block !important;
-}
-
 .about-page {
   display: none !important;
 }
@@ -147,6 +143,39 @@
   color: #070707;
 }
 
+.about-desktop-editorial .editorial-card h2.editorial-label {
+  margin: 0;
+  font-family: 'NType82', sans-serif !important;
+  font-size: 0.75rem !important;
+  font-weight: 400 !important;
+  font-synthesis: none;
+  line-height: 1.2 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: rgba(7, 7, 7, 0.58);
+}
+
+.about-desktop-editorial .about-cta {
+  margin: clamp(54px, 6vw, 76px) 0 0;
+  font-family: 'NType82', sans-serif !important;
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: 0 !important;
+  text-align: center;
+  color: rgba(7, 7, 7, 0.76);
+}
+
+.about-desktop-editorial .about-cta a {
+  border-bottom: 1px solid currentColor;
+  color: #070707;
+  text-decoration: none;
+}
+
+.about-desktop-editorial .about-cta a:hover,
+.about-desktop-editorial .about-cta a:focus-visible {
+  border-bottom-color: transparent;
+}
+
 @media (max-width: 1100px) {
   .about-desktop-editorial {
     width: min(100% - 40px, 620px) !important;
@@ -202,5 +231,14 @@
 
   .about-desktop-editorial .editorial-card h2 {
     font-size: clamp(1.6rem, 8vw, 2rem) !important;
+  }
+
+  .about-desktop-editorial .editorial-card h2.editorial-label {
+    font-size: 0.75rem !important;
+  }
+
+  .about-desktop-editorial .about-cta {
+    margin-top: 48px;
+    text-align: left;
   }
 }
