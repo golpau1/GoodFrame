@@ -2011,8 +2011,8 @@ body.homepage .editorial-hero-pair {
     position: absolute;
     z-index: 2;
     top: clamp(72px, 15%, 116px);
-    left: clamp(28px, 4vw, 72px);
-    width: clamp(96px, 7vw, 118px);
+    left: clamp(12px, 2vw, 36px);
+    width: clamp(120px, 8.75vw, 147.5px);
     filter: drop-shadow(0 8px 14px rgba(7, 7, 7, 0.2));
     transform: rotate(5deg);
     transform-origin: center;
