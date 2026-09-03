@@ -4,7 +4,7 @@
   if (!mount || !mount.hasAttribute("data-site-header")) return;
 
   const root = mount.dataset.root || "";
-  const cartHref = mount.dataset.cartHref || `${root}cart.html`;
+  const cartHref = mount.dataset.cartHref || "/cart";
   const href = (path) => `${root}${path}`;
   const announcement = "Free Shipping Over $100 &ndash; Frame Now";
   const template = document.createElement("template");
@@ -17,7 +17,7 @@
     </header>
 
     <div class="secondary-header site-navigation">
-      <a href="${href("index.html")}" class="header-title header-title--logo" aria-label="Good Frame home">
+      <a href="/" class="header-title header-title--logo" aria-label="Good Frame home">
         <svg class="header-logo" viewBox="333 1534 5450 770" aria-hidden="true" focusable="false">
           <image href="${href("Assets/good-frame-logo.png")}" width="6000" height="4000"></image>
         </svg>
@@ -25,10 +25,10 @@
       </a>
 
       <nav class="nav" aria-label="Primary navigation">
-        <a href="${href("Print-Frame/print-frame.html")}">Print &amp; Frame</a>
-        <a href="${href("Pricing/pricing.html")}">Pricing</a>
-        <a href="${href("About Us/AboutUs.html")}">About Us</a>
-        <a href="${href("FAQ/FAQ.html")}">FAQ</a>
+        <a href="/print-and-frame-online">Print &amp; Frame</a>
+        <a href="/printing-framing-prices">Pricing</a>
+        <a href="/about">About Us</a>
+        <a href="/printing-framing-faq">FAQ</a>
       </nav>
 
       <div class="burger-menu" id="burgerMenu" role="button" tabindex="0" aria-label="Open navigation menu" aria-controls="mobileNav" aria-expanded="false">
@@ -51,11 +51,11 @@
 
     <div class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
       <div class="mobile-nav-close" id="mobileNavClose" role="button" tabindex="0" aria-label="Close navigation menu">&times;</div>
-      <a href="${href("index.html")}">Home</a>
-      <a href="${href("Print-Frame/print-frame.html")}">Print &amp; Frame</a>
-      <a href="${href("Pricing/pricing.html")}">Pricing</a>
-      <a href="${href("About Us/AboutUs.html")}">About Us</a>
-      <a href="${href("FAQ/FAQ.html")}">FAQ</a>
+      <a href="/">Home</a>
+      <a href="/print-and-frame-online">Print &amp; Frame</a>
+      <a href="/printing-framing-prices">Pricing</a>
+      <a href="/about">About Us</a>
+      <a href="/printing-framing-faq">FAQ</a>
     </div>
   `;
 

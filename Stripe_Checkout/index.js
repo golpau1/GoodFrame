@@ -21,6 +21,28 @@ const baseUrl = (process.env.BASE_URL || defaultBaseUrl).replace(/\/$/, '')
 const siteRoot = path.join(__dirname, '..')
 const homepagePath = path.join(siteRoot, 'index.html')
 const cartPath = path.join(siteRoot, 'cart.html')
+const publicPageRoutes = [
+    {
+        path: '/print-and-frame-online',
+        file: path.join(siteRoot, 'Print-Frame', 'print-frame.html'),
+        legacyPaths: ['/Print-Frame/print-frame.html']
+    },
+    {
+        path: '/printing-framing-prices',
+        file: path.join(siteRoot, 'Pricing', 'pricing.html'),
+        legacyPaths: ['/Pricing/pricing.html']
+    },
+    {
+        path: '/about',
+        file: path.join(siteRoot, 'About Us', 'AboutUs.html'),
+        legacyPaths: ['/About%20Us/AboutUs.html', '/About Us/AboutUs.html']
+    },
+    {
+        path: '/printing-framing-faq',
+        file: path.join(siteRoot, 'FAQ', 'FAQ.html'),
+        legacyPaths: ['/FAQ/FAQ.html']
+    }
+]
 const priceBySize = Object.freeze({
     '210x297mm': 9900,
     '420x594mm': 23500,
@@ -77,6 +99,24 @@ app.get('/Homepage/Homepage.html', (req, res) => {
     res.redirect('/index.html')
 })
 
+publicPageRoutes.forEach(page => {
+    app.get(page.path, (req, res) => {
+        res.sendFile(page.file)
+    })
+
+    app.get(page.legacyPaths, (req, res) => {
+        res.redirect(301, page.path)
+    })
+})
+
+app.get('/cart', (req, res) => {
+    res.sendFile(cartPath)
+})
+
+app.get('/cart.html', (req, res) => {
+    res.redirect(301, '/cart')
+})
+
 // Serve static files from the parent directory
 app.use(express.static(siteRoot))
 
@@ -85,10 +125,6 @@ app.use(express.json({ limit: '100mb' }))
 
 app.set('views', path.join(__dirname, 'Views'))
 app.set('view engine', 'ejs')
-
-app.get(['/cart', '/cart.html'], (req, res) => {
-    res.sendFile(cartPath)
-})
 
 // Serve the success page
 app.get('/success.html', (req, res) => {
@@ -291,7 +327,7 @@ app.post('/create-checkout-session', async (req, res) => {
                 allowed_countries: ['US', 'BR', 'AU']
             },
             success_url: `${baseUrl}/Checkout/success.html?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/cart.html`,
+            cancel_url: `${baseUrl}/cart`,
             billing_address_collection: 'required'
         }
 

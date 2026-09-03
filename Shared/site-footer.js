@@ -13,11 +13,11 @@
         <div class="site-footer-mobile-grid">
           <nav class="site-footer-mobile-nav" aria-label="Footer navigation">
             <span class="site-footer-eyebrow">Explore</span>
-            <a href="${href("Print-Frame/print-frame.html")}">Print &amp; Frame</a>
-            <a href="${href("Pricing/pricing.html")}">Pricing</a>
-            <a href="${href("About Us/AboutUs.html")}">About Us</a>
-            <a href="${href("FAQ/FAQ.html")}">FAQ</a>
-            <a href="${href("About Us/AboutUs.html")}">Contact Us</a>
+            <a href="/print-and-frame-online">Print &amp; Frame</a>
+            <a href="/printing-framing-prices">Pricing</a>
+            <a href="/about">About Us</a>
+            <a href="/printing-framing-faq">FAQ</a>
+            <a href="/about">Contact Us</a>
           </nav>
           <div class="site-footer-contact">
             <span class="site-footer-eyebrow">Connect</span>
@@ -46,11 +46,11 @@
         <div class="footer-col">
           <h3 class="footer-title footer-girthquake">Navigation</h3>
           <ul>
-            <li><a href="${href("Print-Frame/print-frame.html")}">Print &amp; Frame</a></li>
-            <li><a href="${href("Pricing/pricing.html")}">Pricing</a></li>
-            <li><a href="${href("About Us/AboutUs.html")}">Contact Us</a></li>
-            <li><a href="${href("FAQ/FAQ.html")}">FAQ</a></li>
-            <li><a href="${href("About Us/AboutUs.html")}">About Us</a></li>
+            <li><a href="/print-and-frame-online">Print &amp; Frame</a></li>
+            <li><a href="/printing-framing-prices">Pricing</a></li>
+            <li><a href="/about">Contact Us</a></li>
+            <li><a href="/printing-framing-faq">FAQ</a></li>
+            <li><a href="/about">About Us</a></li>
           </ul>
         </div>
         <div class="footer-col">
