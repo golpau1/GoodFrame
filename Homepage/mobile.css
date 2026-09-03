@@ -3098,7 +3098,7 @@ footer.footer .footer-content,
     margin: 0 auto;
   }
 
-  body.homepage .mobile-home-hero h1 {
+  body.homepage .mobile-home-hero__heading {
     margin: 0 0 12px;
     color: #000000 !important;
     font-size: clamp(1.75rem, 4.9vw, 2.5rem) !important;
@@ -3108,7 +3108,7 @@ footer.footer .footer-content,
     text-align: center !important;
   }
 
-  body.homepage .mobile-home-hero h1 span {
+  body.homepage .mobile-home-hero__heading span {
     display: block;
   }
 
@@ -3830,7 +3830,7 @@ footer.footer .footer-content,
     text-align: center !important;
   }
 
-  body.homepage .mobile-home-hero h1 {
+  body.homepage .mobile-home-hero__heading {
     position: relative !important;
     z-index: 2;
     width: 100% !important;
@@ -3844,7 +3844,7 @@ footer.footer .footer-content,
     text-wrap: balance;
   }
 
-  body.homepage .mobile-home-hero h1 span {
+  body.homepage .mobile-home-hero__heading span {
     display: block !important;
     white-space: nowrap;
   }
