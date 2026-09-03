@@ -2005,16 +2005,18 @@ body.homepage .editorial-hero-pair {
 
   #homepage-root .editorial-hero--feature {
     position: relative;
+    z-index: 2;
+    overflow: visible !important;
   }
 
   #homepage-root .hero-shipping-stamp--desktop {
     position: absolute;
     z-index: 2;
-    top: clamp(72px, 15%, 116px);
-    left: clamp(12px, 2vw, 36px);
+    top: 22%;
+    left: 0;
     width: clamp(120px, 8.75vw, 147.5px);
-    filter: drop-shadow(0 8px 14px rgba(7, 7, 7, 0.2));
-    transform: rotate(5deg);
+    filter: drop-shadow(0 2px 2px rgba(7, 7, 7, 0.22));
+    transform: translateX(-30%) rotate(4deg);
     transform-origin: center;
   }
 }
