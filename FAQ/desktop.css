@@ -1301,6 +1301,29 @@ h1 {
     color: #070707;
 }
 
+/* Semantic category headings and FAQ links */
+.faq-category-heading {
+  margin: 0 0 18px;
+  color: var(--accent-color);
+  font-family: var(--font-family-subheading);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.faq-item p a {
+  border-bottom: 1px solid currentColor;
+  color: inherit;
+  text-decoration: none;
+}
+
+.faq-item p a:hover,
+.faq-item p a:focus-visible {
+  border-bottom-color: transparent;
+}
+
 /* Mobile - Small Screen (600px and below) */
 
 
