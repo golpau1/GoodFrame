@@ -2022,10 +2022,22 @@ body.homepage .editorial-hero-pair {
     transform: translateX(-30%) rotate(4deg);
     transform-origin: center;
   }
+
+  #homepage-root .hero-shipping-stamp--secondary {
+    position: absolute;
+    z-index: 2;
+    right: clamp(18px, 2.5vw, 44px);
+    bottom: clamp(50px, 8%, 80px);
+    width: clamp(120px, 8vw, 148px);
+    filter: none;
+    transform: rotate(-3deg);
+    transform-origin: center;
+  }
 }
 
 @media (max-width: 1100px) {
-  #homepage-root .hero-shipping-stamp--desktop {
+  #homepage-root .hero-shipping-stamp--desktop,
+  #homepage-root .hero-shipping-stamp--secondary {
     display: none;
   }
 
