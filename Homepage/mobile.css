@@ -275,7 +275,7 @@ header {
 }
 
 .hero-right {
-  background: url('assets/workshop-hero-800.jpg') center center/cover no-repeat;
+  background: #181512;
   border-top-left-radius: 3px;
 }
 

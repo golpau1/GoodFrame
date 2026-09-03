@@ -81,7 +81,24 @@ body > .secondary-header.site-navigation::after {
   body.homepage .editorial-hero--image {
     display: block !important;
     isolation: isolate;
-    background: url('../Homepage/assets/workshop-hero-1600.jpg') center center / cover no-repeat !important;
+    background: #181512 !important;
+  }
+
+  body.homepage .editorial-hero--image > .hero-lcp-media,
+  body.homepage .editorial-hero--image .hero-lcp-image {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  body.homepage .editorial-hero--image > .hero-lcp-media {
+    z-index: -2;
+  }
+
+  body.homepage .editorial-hero--image .hero-lcp-image {
+    object-fit: cover;
   }
 
   body.homepage .editorial-hero--image::before {
@@ -276,7 +293,24 @@ body > .secondary-header.site-navigation::after {
   body.homepage .editorial-hero--image {
     min-height: clamp(560px, 155vw, 680px) !important;
     isolation: isolate;
-    background: url('../Homepage/assets/workshop-hero-800.jpg') center center / cover no-repeat !important;
+    background: #181512 !important;
+  }
+
+  body.homepage .editorial-hero--image > .hero-lcp-media,
+  body.homepage .editorial-hero--image .hero-lcp-image {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  body.homepage .editorial-hero--image > .hero-lcp-media {
+    z-index: -2;
+  }
+
+  body.homepage .editorial-hero--image .hero-lcp-image {
+    object-fit: cover;
   }
 
   body.homepage .editorial-hero--image::before {

@@ -71,12 +71,13 @@
   <link rel="icon" href="data:," />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cutive+Mono&amp;display=swap" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cutive+Mono&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cutive+Mono&amp;display=swap" /></noscript>
   <link rel="preload" as="image" href="/Homepage/assets/workshop-hero-1600.jpg" media="(min-width: 1101px)" fetchpriority="high" />
   <link rel="preload" as="image" href="/Homepage/assets/workshop-hero-800.jpg" media="(max-width: 1100px)" fetchpriority="high" />
-  <link rel="stylesheet" href="/Homepage/desktop.css?v=20260904-performance" media="screen and (min-width: 1101px)" />
-  <link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-performance" media="screen and (max-width: 1100px)" />
-  <link rel="stylesheet" href="/Shared/logo.css?v=20260904-performance" />
+  <link rel="stylesheet" href="/Homepage/desktop.css?v=20260904-lcp" media="screen and (min-width: 1101px)" />
+  <link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-lcp" media="screen and (max-width: 1100px)" />
+  <link rel="stylesheet" href="/Shared/logo.css?v=20260904-lcp" />
   <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement" />
   <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260820-mobile-left-footer" />
   <link rel="stylesheet" href="/Shared/site-shell.css?v=20260824-pure-black-footer" />
@@ -149,6 +150,10 @@
 
     <div class="editorial-hero-pair">
       <section class="hero-section desktop-home-hero editorial-hero editorial-hero--image">
+        <picture class="hero-lcp-media" aria-hidden="true">
+          <source media="(min-width: 1101px)" srcset="/Homepage/assets/workshop-hero-1600.jpg" />
+          <img class="hero-lcp-image" src="/Homepage/assets/workshop-hero-800.jpg" width="800" height="450" alt="" fetchpriority="high" />
+        </picture>
         <div class="hero-left">
 
           <div class="carousel">

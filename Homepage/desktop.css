@@ -335,7 +335,7 @@ display: flex;
 }
 
 .hero-right {
-  background: url('assets/workshop-hero-1600.jpg') center center/cover no-repeat;
+  background: #181512;
   border-top-left-radius: 3px;
 }
 
