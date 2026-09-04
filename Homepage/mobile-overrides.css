@@ -2,6 +2,45 @@
   display: none !important;
 }
 
+/* Keep the two-line editorial hero title inside narrow phone viewports. */
+@media screen and (max-width: 767px) {
+  body.homepage #homepage-root .editorial-hero-pair .editorial-hero--image h1.girthquake-heading.hero-one-heading {
+    position: relative !important;
+    left: 50% !important;
+    box-sizing: border-box !important;
+    width: calc(100vw - 48px) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 48px) !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+    overflow: visible !important;
+    font-size: clamp(27px, 8.5vw, 37px) !important;
+    transform: translateX(-50%) !important;
+  }
+
+  body.homepage #homepage-root .editorial-hero--image h1.hero-heading-unified .hero-title-image {
+    width: 100% !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    aspect-ratio: auto !important;
+    overflow: visible !important;
+  }
+
+  body.homepage #homepage-root .editorial-hero--image h1.hero-heading-unified .hero-copy-line {
+    position: static !important;
+    left: auto !important;
+    display: block !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    transform: none !important;
+    white-space: nowrap !important;
+  }
+}
+
 .footer-mobile-brand,
 .footer-mobile-nav,
 .footer-mobile-meta {
