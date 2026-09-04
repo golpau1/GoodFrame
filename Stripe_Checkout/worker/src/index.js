@@ -305,7 +305,7 @@ function createStripePayload(lineItems, siteBaseUrl) {
   const orderCodeMetadataValue = getOrderCodeMetadataValue(orderCodes);
   const payload = new URLSearchParams({
     mode: 'payment',
-    success_url: `${siteBaseUrl}/Checkout/success.html?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${siteBaseUrl}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteBaseUrl}/cart`,
     billing_address_collection: 'required',
     'shipping_address_collection[allowed_countries][0]': 'AU',

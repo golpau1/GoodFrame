@@ -41,6 +41,7 @@ jobs:
           cp 'Pricing/pricing.html' '.pages-site/printing-framing-prices.html'
           cp 'About Us/AboutUs.html' '.pages-site/about.html'
           cp 'FAQ/FAQ.html' '.pages-site/printing-framing-faq.html'
+          cp 'Checkout/success.html' '.pages-site/order-confirmation.html'
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -126,28 +126,16 @@ app.use(express.json({ limit: '100mb' }))
 app.set('views', path.join(__dirname, 'Views'))
 app.set('view engine', 'ejs')
 
-// Serve the success page
-app.get('/success.html', (req, res) => {
-
-    const filePath = path.resolve(__dirname, '..', 'Checkout', 'success.html');
-
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        console.error('Success file not found at:', filePath);
-        res.status(404).send('Success page not found');
-    }
-})
-
-// Alternative success route without .html
-app.get('/success', (req, res) => {
+// Serve the customer-facing order confirmation page.
+app.get('/order-confirmation', (req, res) => {
     const filePath = path.join(__dirname, '..', 'Checkout', 'success.html');
     res.sendFile(filePath);
 })
 
-// Add a route to catch any requests that might be going to the old path
-app.get('/Views/success.html', (req, res) => {
-    res.redirect('/success.html' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''));
+// Permanently redirect legacy success URLs while preserving the query string.
+app.get(['/Checkout/success.html', '/success.html', '/success', '/Views/success.html'], (req, res) => {
+    const query = req.originalUrl.includes('?') ? req.originalUrl.substring(req.originalUrl.indexOf('?')) : '';
+    res.redirect(301, `/order-confirmation${query}`);
 })
 
 function getRequestedSize(item) {
@@ -326,7 +314,7 @@ app.post('/create-checkout-session', async (req, res) => {
             shipping_address_collection: {
                 allowed_countries: ['US', 'BR', 'AU']
             },
-            success_url: `${baseUrl}/Checkout/success.html?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${baseUrl}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${baseUrl}/cart`,
             billing_address_collection: 'required'
         }
@@ -358,8 +346,8 @@ app.post('/create-checkout-session', async (req, res) => {
 })
 
 app.get('/complete', (req, res) => {
-    // Simply redirect to our success page with the session_id
-    res.redirect(`/success?session_id=${req.query.session_id}`);
+    // Preserve the Stripe session ID on the customer-facing confirmation URL.
+    res.redirect(`/order-confirmation?session_id=${req.query.session_id}`);
 })
 
 app.get('/cancel', (req, res) => {
