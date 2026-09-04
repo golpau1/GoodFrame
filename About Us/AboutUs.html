@@ -44,9 +44,19 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cutive+Mono&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cutive+Mono&amp;display=swap"></noscript>
     <link rel="preload" as="image" href="/Homepage/assets/MG_0859-800.jpg" imagesrcset="/Homepage/assets/MG_0859-800.jpg 800w, /Homepage/assets/MG_0859-1200.jpg 1200w" imagesizes="(max-width: 1100px) 90vw, 44vw" fetchpriority="high">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300&amp;family=Luckiest+Guy&amp;family=Montserrat:wght@600&amp;family=Poppins:wght@400;500;600;700&amp;family=Roboto+Mono:wght@300;400;500;600;700&amp;display=swap" media="screen and (max-width: 1100px)">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300&amp;family=Luckiest+Guy&amp;family=Montserrat:wght@600&amp;family=Poppins:wght@400;500;600;700&amp;family=Roboto+Mono:wght@300;400;500;600;700&amp;display=swap" media="screen and (max-width: 1100px)" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300&amp;family=Luckiest+Guy&amp;family=Montserrat:wght@600&amp;family=Poppins:wght@400;500;600;700&amp;family=Roboto+Mono:wght@300;400;500;600;700&amp;display=swap" media="screen and (max-width: 1100px)"></noscript>
+    <style id="about-critical-css">
+      @media (max-width: 1100px) {
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
+        .mobile-nav-overlay { display: none; }
+        .mobile-nav { display: block; position: fixed; top: 0; right: -300px; width: 300px; height: 100%; background: #fff; z-index: 9999; }
+      }
+    </style>
     <link rel="stylesheet" href="/About%20Us/desktop.css?v=20260904-performance" media="screen and (min-width: 1101px)">
-    <link rel="stylesheet" href="/About%20Us/mobile.css?v=20260904-performance" media="screen and (max-width: 1100px)">
+    <link rel="preload" as="style" href="/About%20Us/mobile.css?v=20260904-critical-css" media="screen and (max-width: 1100px)" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/About%20Us/mobile.css?v=20260904-critical-css" media="screen and (max-width: 1100px)"></noscript>
     <link rel="stylesheet" href="/Shared/logo.css?v=20260819-global-header">
     <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement">
     <link rel="stylesheet" href="/About%20Us/editorial.css?v=20260904-about-content">

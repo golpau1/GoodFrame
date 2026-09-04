@@ -75,8 +75,19 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cutive+Mono&amp;display=swap" /></noscript>
   <link rel="preload" as="image" href="/Homepage/assets/workshop-hero-1600.jpg" media="(min-width: 1101px)" fetchpriority="high" />
   <link rel="preload" as="image" href="/Homepage/assets/workshop-hero-800.jpg" media="(max-width: 1100px)" fetchpriority="high" />
+  <style id="homepage-critical-css">
+    @media (max-width: 1100px) {
+      .mobile-nav-overlay { display: none; }
+      .mobile-nav { display: block; position: fixed; top: 0; right: -300px; width: 300px; height: 100%; background: #fff; z-index: 9999; }
+      .hero-left::before, .hero-left::after { position: absolute; }
+    }
+    @media (max-width: 480px) {
+      .hero-section { padding: 30px 15px; }
+    }
+  </style>
   <link rel="stylesheet" href="/Homepage/desktop.css?v=20260904-lcp" media="screen and (min-width: 1101px)" />
-  <link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-lcp" media="screen and (max-width: 1100px)" />
+  <link rel="preload" as="style" href="/Homepage/mobile.css?v=20260904-critical-css" media="screen and (max-width: 1100px)" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-critical-css" media="screen and (max-width: 1100px)" /></noscript>
   <link rel="stylesheet" href="/Shared/logo.css?v=20260904-lcp" />
   <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement" />
   <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260820-mobile-left-footer" />
