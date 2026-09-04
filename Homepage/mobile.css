@@ -3833,7 +3833,10 @@ footer.footer .footer-content,
     position: relative !important;
     z-index: 2;
     width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
+    overflow: visible !important;
     color: #ffffff !important;
     font-size: clamp(1.1rem, calc(6.75vw - 3.25px), 1.8rem) !important;
     font-weight: 400 !important;
@@ -3846,6 +3849,21 @@ footer.footer .footer-content,
   body.homepage .mobile-home-hero__heading span {
     display: block !important;
     white-space: nowrap;
+  }
+
+  #homepage-root#homepage-root .mobile-home-hero__heading .hero-title-image {
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: auto !important;
+    overflow: visible !important;
+  }
+
+  #homepage-root#homepage-root .mobile-home-hero__heading .hero-copy-line {
+    position: relative !important;
+    left: 50% !important;
+    width: max-content !important;
+    max-width: none !important;
+    transform: translateX(-50%) !important;
   }
 
   body.homepage .mobile-home-hero .hero-supporting-line {

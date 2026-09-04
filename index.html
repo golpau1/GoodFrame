@@ -80,14 +80,89 @@
       .mobile-nav-overlay { display: none; }
       .mobile-nav { display: block; position: fixed; top: 0; right: -300px; width: 300px; height: 100%; background: #fff; z-index: 9999; }
       .hero-left::before, .hero-left::after { position: absolute; }
+      body.homepage .mobile-home-hero[hidden] {
+        position: relative;
+        display: grid !important;
+        place-items: center;
+        box-sizing: border-box;
+        width: 100%;
+        height: clamp(480px, 125vw, 570px);
+        margin: 0;
+        padding: 40px 24px;
+        overflow: hidden;
+        background: #181512;
+        color: #fff;
+      }
+      body.homepage .mobile-home-hero::before {
+        content: '';
+        position: absolute;
+        z-index: 1;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.42);
+        pointer-events: none;
+      }
+      body.homepage .mobile-home-hero__content {
+        position: static;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 430px;
+        height: 100%;
+        margin: 0 auto;
+        padding: 0;
+        text-align: center;
+      }
+      #homepage-root#homepage-root .mobile-home-hero__heading {
+        position: relative;
+        z-index: 2;
+        box-sizing: border-box;
+        width: 100%;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0;
+        overflow: visible !important;
+        color: #fff;
+        font-size: clamp(1.1rem, calc(6.75vw - 3.25px), 1.8rem);
+        font-weight: 400;
+        letter-spacing: 0;
+        line-height: 1.08;
+        text-align: center;
+      }
+      #homepage-root#homepage-root .mobile-home-hero__heading .hero-title-image {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: auto !important;
+        min-height: 0 !important;
+        aspect-ratio: auto !important;
+        overflow: visible !important;
+      }
+      #homepage-root#homepage-root .mobile-home-hero__heading .hero-copy-line {
+        position: relative !important;
+        left: 50% !important;
+        display: block !important;
+        width: max-content !important;
+        max-width: none !important;
+        transform: translateX(-50%) !important;
+        white-space: nowrap;
+        text-align: center;
+      }
+      #homepage-root#homepage-root .mobile-home-hero__heading .hero-copy-line + .hero-copy-line { margin-top: 0.16em; }
+      body.homepage .mobile-home-hero__actions { position: relative; z-index: 2; display: flex; justify-content: center; margin: clamp(28px, 8vw, 36px) 0 0; }
+      body.homepage .mobile-home-hero__image { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+      body.homepage .mobile-home-hero__image img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 51% 58%; }
     }
     @media (max-width: 480px) {
       .hero-section { padding: 30px 15px; }
     }
   </style>
   <link rel="stylesheet" href="/Homepage/desktop.css?v=20260904-lcp" media="screen and (min-width: 1101px)" />
-  <link rel="preload" as="style" href="/Homepage/mobile.css?v=20260904-critical-css" media="screen and (max-width: 1100px)" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-critical-css" media="screen and (max-width: 1100px)" /></noscript>
+  <link rel="preload" as="style" href="/Homepage/mobile.css?v=20260904-hero-clipping" media="screen and (max-width: 1100px)" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/Homepage/mobile.css?v=20260904-hero-clipping" media="screen and (max-width: 1100px)" /></noscript>
   <link rel="stylesheet" href="/Shared/logo.css?v=20260904-lcp" />
   <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement" />
   <link rel="stylesheet" href="/Homepage/mobile-overrides.css?v=20260820-mobile-left-footer" />
