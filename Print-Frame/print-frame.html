@@ -87,8 +87,8 @@
     <div class="container">
         <div class="frame-container frame-preview" id="frameContainer">
             <div class="frame-image-window frame-image-area" id="frameImageWindow">
-                <img alt="Uploaded artwork preview" id="uploadedImage" class="customer-image">
-                <img alt="Uploaded artwork preview" id="uploadedImagePortrait" class="customer-image">
+                <img alt="Uploaded artwork preview" id="uploadedImage" class="customer-image" style="display: none !important;">
+                <img alt="Uploaded artwork preview" id="uploadedImagePortrait" class="customer-image" style="display: none !important;">
             </div>
             <img src="https://static.wixstatic.com/media/4db74a_aca803f39a194834a0f785ee0ed9829e~mv2.png" alt="Black timber picture frame preview"
                 class="frame-overlay" id="frameOverlay" crossorigin="anonymous">
@@ -1279,6 +1279,12 @@
                 const uploadedImage = document.getElementById("uploadedImage");
                 const uploadedImagePortrait = document.getElementById("uploadedImagePortrait");
 
+                if (!uploadedImage.complete || uploadedImage.naturalWidth === 0) {
+                    uploadedImage.style.setProperty("display", "none", "important");
+                    uploadedImagePortrait.style.setProperty("display", "none", "important");
+                    return;
+                }
+
                 if (orientation === "Landscape") {
                     uploadedImage.style.setProperty("display", "block", "important");
                     uploadedImagePortrait.style.setProperty("display", "none", "important");
@@ -1333,8 +1339,18 @@
 
             function setPreviewSources(src) {
                 resetPreviewStyles();
-                document.getElementById("uploadedImage").src = src;
-                document.getElementById("uploadedImagePortrait").src = src;
+                const previewImages = [
+                    document.getElementById("uploadedImage"),
+                    document.getElementById("uploadedImagePortrait")
+                ];
+
+                previewImages.forEach(image => {
+                    image.style.setProperty("display", "none", "important");
+                    image.addEventListener("load", () => {
+                        updatePreviewVisibility(document.getElementById("orientationDropdown").value);
+                    }, { once: true });
+                    image.src = src;
+                });
             }
 
             function resetUploadState() {
