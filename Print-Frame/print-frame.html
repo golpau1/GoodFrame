@@ -68,7 +68,6 @@
     <link href="https://unpkg.com/filepond-plugin-image-preview@4.6.12/dist/filepond-plugin-image-preview.min.css"
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
     <link rel="stylesheet" href="/Print-Frame/desktop.css?v=20260904-performance" media="screen and (min-width: 1101px)">
     <link rel="stylesheet" href="/Print-Frame/mobile.css?v=20260904-performance" media="screen and (max-width: 1100px)">
     <link rel="stylesheet" href="/Shared/logo.css?v=20260819-global-header">
@@ -1357,7 +1356,6 @@
                 };
 
                 sessionStorage.removeItem("uploadedImageUrl");
-                sessionStorage.removeItem("originalObjectKey");
                 sessionStorage.removeItem("uniqueCode");
 
                 ["uploadedImage", "uploadedImagePortrait"].forEach(id => {
@@ -1571,8 +1569,15 @@
 
             function saveVisualCartToLocalStorage() {
                 try {
-                    localStorage.setItem('myAppVisualCart', JSON.stringify(getPersistableCartItems()));
-                    return true;
+                    const persistedItems = getPersistableCartItems();
+                    localStorage.setItem('myAppVisualCart', JSON.stringify(persistedItems));
+                    const savedItems = JSON.parse(localStorage.getItem('myAppVisualCart') || '[]');
+                    const newestItem = persistedItems[persistedItems.length - 1];
+                    return Boolean(
+                        newestItem &&
+                        Array.isArray(savedItems) &&
+                        savedItems.some(item => item.lineItemId === newestItem.lineItemId)
+                    );
                 } catch (error) {
                     console.error("Could not save the cart locally:", error);
                     return false;
@@ -1639,13 +1644,16 @@
                         const uniqueCode = generateUniqueCode();
                         sessionStorage.setItem('uniqueCode', uniqueCode);
                         
-                        formData.append('file', file, file.name);
-                        formData.append('kind', 'original');
-                        formData.append('uploadId', uniqueCode);
+                        // Create filename with unique code at the front (no timestamp since Cloudflare adds its own)
+                        const originalFileName = `${uniqueCode}_original_${file.name}`;
+
+
+                        formData.append('file', file, originalFileName);
 
                         const xhr = new XMLHttpRequest();
-                        xhr.open('POST', 'https://good-frame-checkout.loganwallace049.workers.dev/artwork/upload', true);
+                        xhr.open('POST', 'https://fragrant-bird-69d3.loganwallace049.workers.dev/', true);
                         xhr.setRequestHeader('Accept', 'application/json');
+                        xhr.timeout = 45000;
 
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
@@ -1657,17 +1665,19 @@
                             if (xhr.status >= 200 && xhr.status < 300) {
                                 try {
                                     const response = JSON.parse(xhr.responseText);
-                                    if (response.url && response.objectKey) {
-                                        const expectedKeyPattern = new RegExp(
-                                            `^uploads\\/\\d{4}\\/\\d{2}\\/\\d{2}\\/${uniqueCode}\\/original\\.(jpg|jpeg|png|gif)$`
+                                    if (response.url) {
+                                        const uploadedFileName = decodeURIComponent(
+                                            new URL(response.url).pathname.split('/').pop() || ""
                                         );
-                                        if (!expectedKeyPattern.test(response.objectKey)) {
+                                        if (
+                                            !uploadedFileName.startsWith(`${uniqueCode}_`) ||
+                                            !uploadedFileName.includes('_original_')
+                                        ) {
                                             throw new Error("Cloudflare returned an original image with a mismatched order code.");
                                         }
 
-                                        // Keep the exact server-returned key; never reconstruct its dated path.
+                                        // Store both the URL and unique code for later use
                                         sessionStorage.setItem('uploadedImageUrl', response.url);
-                                        sessionStorage.setItem('originalObjectKey', response.objectKey);
                                         sessionStorage.setItem('uniqueCode', uniqueCode);
                                         updateSizeAvailability();
                                         load(response.url);
@@ -1687,7 +1697,12 @@
 
                         xhr.onerror = () => {
                             console.error('Network error during upload');
-                            error('Network error during upload');
+                            error('The artwork upload failed. Please check your connection and retry.');
+                        };
+
+                        xhr.ontimeout = () => {
+                            console.error('Artwork upload timed out');
+                            error('The artwork upload took too long. Please retry.');
                         };
 
                         xhr.onabort = () => {
@@ -1839,12 +1854,22 @@
                 return true;
             }
 
-            function loadImageForThumbnail(src) {
+            function loadImageForThumbnail(src, timeout = 10000) {
                 return new Promise((resolve, reject) => {
                     const image = new Image();
+                    const timeoutId = setTimeout(() => {
+                        image.src = "";
+                        reject(new Error("Timed out while loading an image for the cart preview."));
+                    }, timeout);
 
-                    image.onload = () => resolve(image);
-                    image.onerror = () => reject(new Error("Could not load the cropped image for the thumbnail."));
+                    image.onload = () => {
+                        clearTimeout(timeoutId);
+                        resolve(image);
+                    };
+                    image.onerror = () => {
+                        clearTimeout(timeoutId);
+                        reject(new Error("Could not load an image for the cart preview."));
+                    };
                     if (/^https?:/i.test(src)) {
                         image.crossOrigin = "anonymous";
                     }
@@ -1917,6 +1942,9 @@
                 outputCanvas.width = canvas.width;
                 outputCanvas.height = canvas.height;
                 const context = outputCanvas.getContext('2d');
+                if (!context) {
+                    throw new Error("This browser could not create the cart preview.");
+                }
 
                 context.fillStyle = "#ffffff";
                 context.fillRect(0, 0, canvas.width, canvas.height);
@@ -1931,6 +1959,9 @@
                 previewCanvas.width = previewSize;
                 previewCanvas.height = previewSize;
                 const context = previewCanvas.getContext('2d');
+                if (!context) {
+                    throw new Error("This browser could not create the cart preview.");
+                }
 
                 context.fillStyle = "#ffffff";
                 context.fillRect(0, 0, previewSize, previewSize);
@@ -2109,6 +2140,31 @@
                 }
             });
 
+            const CART_OPERATION_TIMEOUT = 45000;
+
+            function withTimeout(promise, timeout, message, onTimeout) {
+                let timeoutId;
+                const timeoutPromise = new Promise((resolve, reject) => {
+                    timeoutId = setTimeout(() => {
+                        if (onTimeout) onTimeout();
+                        reject(new Error(message));
+                    }, timeout);
+                });
+
+                return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+            }
+
+            function getCartConfigurationKey(uniqueCode, size, orientation, frameColor, border) {
+                return [uniqueCode, size, orientation, frameColor, border].join("|");
+            }
+
+            function createThumbnailCanvas() {
+                const canvas = document.createElement("canvas");
+                canvas.width = 1000;
+                canvas.height = 1000;
+                return canvas;
+            }
+
             document.getElementById("addToCartButton").addEventListener("click", async () => {
                 if (isAddingToCart) {
                     return;
@@ -2139,10 +2195,27 @@
                     alert("Please wait for the original image upload to finish.");
                     return;
                 }
-                setAddToCartBusy(true);
-
-                const frameContainer = document.getElementById('frameContainer');
                 const captureOrientation = document.getElementById("orientationDropdown").value;
+                const captureFrameColor = checkoutData.FrameColor;
+                const capturePrice = priceMapping[selectedSize];
+                const captureOriginalImageUrl = sessionStorage.getItem('uploadedImageUrl') || "";
+                const configurationKey = getCartConfigurationKey(
+                    uploadUniqueCode,
+                    selectedSize,
+                    captureOrientation,
+                    captureFrameColor,
+                    selectedBorder
+                );
+                if (visualCartItems.some(item =>
+                    item.configurationKey === configurationKey ||
+                    getCartConfigurationKey(item.uniqueCode, item.size, item.orientation, item.frameColor, item.border) === configurationKey
+                )) {
+                    updateCartUI();
+                    alert("This configured frame is already in your cart.");
+                    return;
+                }
+
+                setAddToCartBusy(true);
                 const activeImageId = captureOrientation === "Portrait" ? "uploadedImagePortrait" : "uploadedImage";
                 const activePreviewImage = document.getElementById(activeImageId);
                 const thumbnailImagePlacement = getThumbnailImagePlacement(captureOrientation, selectedBorder);
@@ -2152,117 +2225,14 @@
 
                 if (!captureImageSource) {
                     console.error("Cart thumbnail generation failed: the cropped image placement is unavailable.");
+                    alert("We could not prepare your artwork. Your choices are still here, so please try again.");
                     setAddToCartBusy(false);
                     return;
                 }
-
-                const imageElements = Array.from(frameContainer.getElementsByTagName('img'))
-                    .filter(img => img.style.display !== 'none' && img.src);
-
-                const imageLoadPromises = imageElements.map(img => new Promise(resolve => {
-                    if (img.complete) {
-                        resolve();
-                    } else {
-                        img.onload = resolve;
-                        img.onerror = () => {
-                            console.error(`Could not load image: ${img.src}`);
-                            resolve();
-                        };
-                    }
-                }));
-
-                Promise.all(imageLoadPromises).then(async () => {
-                    const clonedContainer = frameContainer.cloneNode(true);
-                    clonedContainer.style.position = 'absolute';
-                    clonedContainer.style.left = '-9999px';
-                    clonedContainer.style.top = '0px';
-                    clonedContainer.style.zIndex = '0';
-                    clonedContainer.style.pointerEvents = 'none';
-                    
-                    // ✅ FORCE MOBILE TO RENDER LIKE DESKTOP FOR THUMBNAIL
-                    clonedContainer.style.width = '1000px';
-                    clonedContainer.style.height = '1000px';
-                    clonedContainer.style.minWidth = '1000px';
-                    clonedContainer.style.minHeight = '1000px';
-                    clonedContainer.style.maxWidth = '1000px';
-                    clonedContainer.style.maxHeight = '1000px';
-                    clonedContainer.style.transform = 'none';
-                    clonedContainer.style.scale = '1';
-                    clonedContainer.style.fontSize = '16px';
-                    clonedContainer.style.zoom = '1';
-                    clonedContainer.style.webkitTextSizeAdjust = '100%';
-                    clonedContainer.style.textSizeAdjust = '100%';
-                    
-                    // ✅ OVERRIDE ALL CHILD ELEMENTS FOR DESKTOP-LIKE RENDERING
-                    const allElements = clonedContainer.querySelectorAll('*');
-                    allElements.forEach(el => {
-                        // DON'T touch transform for images - they need their centering transform
-                        const isUploadedImage = el.id === 'uploadedImage' || el.id === 'uploadedImagePortrait';
-                        const isFrameOverlay = el.id === 'frameOverlay';
-                        const hasAddBorderClass = el.classList.contains('add-border');
-                        const isPortraitUploadedImage = captureOrientation === "Portrait" && isUploadedImage;
-                        const isWhiteFrameBorderMode = checkoutData.FrameColor === 'White' && selectedBorder === 'Add Border' && isUploadedImage && !isPortraitUploadedImage;
-                        const isWhiteFrameFullMode = checkoutData.FrameColor === 'White' && selectedBorder === 'Full Image' && isUploadedImage && !isPortraitUploadedImage;
-                        
-                        if (!isUploadedImage && !isFrameOverlay && !hasAddBorderClass && !isWhiteFrameBorderMode && !isWhiteFrameFullMode) {
-                            el.style.transform = 'none';
-                        }
-                        
-                        // Preserve the existing white-frame landscape positioning.
-                        if (isWhiteFrameBorderMode) {
-                            el.style.top = '51%';
-                            el.style.left = '52.5%';
-                            el.style.transform = 'translate(-50%, -50%)';
-                        }
-                        
-                        // For white frame in landscape full image mode, move right by 5px.
-                        if (isWhiteFrameFullMode) {
-                            el.style.left = '50.5%';
-                            el.style.transform = 'translate(-50%, -50%)';
-                        }
-
-                        if (isPortraitUploadedImage) {
-                            el.style.top = '50%';
-                            el.style.left = '50%';
-                            el.style.transform = 'translate(-50%, -50%)';
-                        }
-                        
-                        el.style.scale = '1';
-                        el.style.zoom = '1';
-                        el.style.webkitTextSizeAdjust = '100%';
-                        el.style.textSizeAdjust = '100%';
-                        
-                        // Remove viewport-dependent units
-                        const computedStyle = window.getComputedStyle(el);
-                        if (computedStyle.width && computedStyle.width.includes('vw')) {
-                            el.style.width = 'auto';
-                        }
-                        if (computedStyle.height && computedStyle.height.includes('vh')) {
-                            el.style.height = 'auto';
-                        }
-                    });
-                    
-                    document.body.appendChild(clonedContainer);
-
-                    // ✅ FORCE LAYOUT RECALCULATION
-                    clonedContainer.offsetHeight;
-                    clonedContainer.scrollTop;
-                    clonedContainer.clientHeight;
-
-                    setTimeout(() => {
-                        html2canvas(clonedContainer, {
-                            useCORS: true,
-                            allowTaint: true,
-                            backgroundColor: null,
-                            scale: 2,
-                            width: 1000,
-                            height: 1000,
-                            scrollX: 0,
-                            scrollY: 0,
-                            windowWidth: 1000,
-                            windowHeight: 1000,
-                            ignoreElements: (element) => element.id === 'cropperOverlay'
-                        }).then(async canvas => {
+                try {
+                    const operationController = new AbortController();
+                    const operation = (async () => {
+                            let canvas = createThumbnailCanvas();
                             const frameOverlayUrl = document.getElementById("frameOverlay")?.src || "";
                             if (!frameOverlayUrl) {
                                 throw new Error("The selected frame overlay is unavailable.");
@@ -2282,31 +2252,38 @@
                                 productName: "Print & Frame",
                                 internalTitle: `#${uploadUniqueCode} - Print & Frame`,
                                 uniqueCode: uploadUniqueCode,
+                                configurationKey,
                                 size: selectedSize,
-                                orientation: document.getElementById("orientationDropdown").value,
-                                frameColor: checkoutData.FrameColor,
+                                orientation: captureOrientation,
+                                frameColor: captureFrameColor,
                                 border: selectedBorder,
-                                price: priceMapping[selectedSize],
+                                price: capturePrice,
                                 image: compactCartPreview,
                                 frameOverlayUrl: frameOverlayUrl,
-                                originalImageUrl: sessionStorage.getItem('uploadedImageUrl') || ""
+                                originalImageUrl: captureOriginalImageUrl
                             };
 
-                            const thumbnailUpload = await uploadThumbnailToCloudflareConsistently(
+                            const thumbnailUrl = await uploadThumbnailToCloudflareConsistently(
                                 canvas,
                                 selectedSize,
                                 selectedBorder,
-                                uploadUniqueCode
+                                uploadUniqueCode,
+                                captureFrameColor,
+                                operationController.signal
                             );
-                            if (!thumbnailUpload) {
+                            if (!thumbnailUrl) {
                                 throw new Error("The framed thumbnail could not be uploaded to Cloudflare.");
                             }
+                            if (operationController.signal.aborted) {
+                                throw new Error("Adding this item took too long. Please try again.");
+                            }
 
-                            baseVisualItem.originalObjectKey = sessionStorage.getItem('originalObjectKey') || "";
-                            baseVisualItem.thumbnailObjectKey = thumbnailUpload.objectKey;
-                            baseVisualItem.thumbnailUrl = thumbnailUpload.url;
+                            baseVisualItem.thumbnailUrl = thumbnailUrl;
                             visualCartItems.push(baseVisualItem);
-                            saveVisualCartToLocalStorage();
+                            if (!saveVisualCartToLocalStorage()) {
+                                visualCartItems.pop();
+                                throw new Error("The cart could not be saved in this browser.");
+                            }
                             updateCartUI();
 
                             try {
@@ -2314,7 +2291,7 @@
                                     type: "addToCart",
                                     data: {
                                         Size: selectedSize,
-                                        FrameColor: checkoutData.FrameColor,
+                                        FrameColor: captureFrameColor,
                                         Border: selectedBorder,
                                         Orientation: captureOrientation,
                                     }
@@ -2330,23 +2307,24 @@
                                     behavior: 'smooth'
                                 });
                             }
+                    })();
 
-                        }).catch(err => {
-                            console.error("Cart thumbnail generation failed:", err);
-                            alert("We could not upload the framed preview. Please try adding it to the cart again.");
-                        }).finally(() => {
-                            document.body.removeChild(clonedContainer);
-                            setAddToCartBusy(false);
-                        });
-                    }, 100);
-                }).catch(error => {
-                    console.error("Cart image preparation failed:", error);
+                    await withTimeout(
+                        operation,
+                        CART_OPERATION_TIMEOUT,
+                        "Adding this item took too long. Please check your connection and try again.",
+                        () => operationController.abort()
+                    );
+                } catch (error) {
+                    console.error("Add to cart failed:", error);
+                    alert(`${error.message || "We could not add this item to the cart."} Your artwork and choices have been kept so you can try again.`);
+                } finally {
                     setAddToCartBusy(false);
-                });
+                }
             });
 
             // ✅ NEW: Consistent Cloudflare Upload Function
-            async function uploadThumbnailToCloudflareConsistently(canvas, selectedSize, selectedBorder, uniqueCode) {
+            async function uploadThumbnailToCloudflareConsistently(canvas, selectedSize, selectedBorder, uniqueCode, frameColor, signal) {
                 
                 // Use the passed unique code instead of sessionStorage
                 
@@ -2368,29 +2346,35 @@
                 }
                 
                 // ✅ STEP 3: Prepare upload with consistent naming
-                const thumbnailFileName = generateConsistentFileName(uniqueCode, selectedSize, selectedBorder);
+                const thumbnailFileName = generateConsistentFileName(uniqueCode, selectedSize, selectedBorder, frameColor);
                 
                 // ✅ STEP 4: Upload with retry mechanism and timeout
                 const maxRetries = 3;
                 const uploadTimeout = 30000; // 30 seconds
                 
                 for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    if (signal?.aborted) throw new Error("The cart operation was cancelled.");
                     
                     try {
-                        const uploadResult = await uploadWithTimeout(blob, thumbnailFileName, uploadTimeout);
+                        const uploadResult = await uploadWithTimeout(blob, thumbnailFileName, uploadTimeout, signal);
                         
-                        if (uploadResult.success && uploadResult.url && uploadResult.objectKey) {
-                            const originalObjectKey = sessionStorage.getItem('originalObjectKey') || "";
-                            const expectedThumbnailKey = originalObjectKey.replace(/\/original\.(jpg|jpeg|png|gif)$/, '/thumbnail.png');
-                            if (uploadResult.objectKey !== expectedThumbnailKey) {
+                        if (uploadResult.success && uploadResult.url) {
+                            const uploadedFileName = decodeURIComponent(
+                                new URL(uploadResult.url).pathname.split('/').pop() || ""
+                            );
+                            if (
+                                !uploadedFileName.startsWith(`${uniqueCode}_`) ||
+                                !uploadedFileName.includes('_thumbnail_')
+                            ) {
                                 throw new Error("Cloudflare returned a thumbnail with a mismatched order code.");
                             }
-                            return { url: uploadResult.url, objectKey: uploadResult.objectKey };
+                            return uploadResult.url;
                         } else {
                             throw new Error(`Upload failed: ${uploadResult.error || 'Unknown error'}`);
                         }
                         
                     } catch (error) {
+                        if (signal?.aborted) throw error;
                         console.error(`❌ CLOUDFLARE CONSISTENT: Attempt ${attempt} failed:`, error.message);
                         
                         if (attempt === maxRetries) {
@@ -2444,10 +2428,10 @@
             }
 
             // ✅ NEW: Generate consistent filename
-            function generateConsistentFileName(uniqueCode, selectedSize, selectedBorder) {
+            function generateConsistentFileName(uniqueCode, selectedSize, selectedBorder, frameColor) {
                 // Ensure consistent naming by cleaning inputs
                 const cleanSize = selectedSize.replace(/[^a-zA-Z0-9]/g, '');
-                const cleanFrameColor = checkoutData.FrameColor.replace(/[^a-zA-Z0-9]/g, '');
+                const cleanFrameColor = frameColor.replace(/[^a-zA-Z0-9]/g, '');
                 const cleanBorder = selectedBorder.replace(/[^a-zA-Z0-9]/g, '');
                 
                 const filename = `${uniqueCode}_thumbnail_${cleanSize}_${cleanFrameColor}_${cleanBorder}.png`;
@@ -2455,33 +2439,39 @@
             }
 
             // ✅ NEW: Upload with timeout and proper error handling
-            async function uploadWithTimeout(blob, filename, timeout = 30000) {
+            async function uploadWithTimeout(blob, filename, timeout = 30000, parentSignal) {
                 
                 return new Promise((resolve, reject) => {
+                    const controller = new AbortController();
+                    const abortFromParent = () => controller.abort();
+                    if (parentSignal) parentSignal.addEventListener("abort", abortFromParent, { once: true });
                     const timeoutId = setTimeout(() => {
+                        controller.abort();
                         reject(new Error(`Upload timeout after ${timeout}ms`));
                     }, timeout);
+                    const cleanup = () => {
+                        clearTimeout(timeoutId);
+                        if (parentSignal) parentSignal.removeEventListener("abort", abortFromParent);
+                    };
                     
                     // Create FormData with proper error handling
                     const formData = new FormData();
                     try {
                         formData.append('file', blob, filename);
-                        formData.append('kind', 'thumbnail');
-                        formData.append('uploadId', sessionStorage.getItem('uniqueCode') || '');
-                        formData.append('originalObjectKey', sessionStorage.getItem('originalObjectKey') || '');
                     } catch (error) {
-                        clearTimeout(timeoutId);
+                        cleanup();
                         reject(new Error(`FormData creation failed: ${error.message}`));
                         return;
                     }
                     
                     // Perform upload with comprehensive error handling
-                    fetch('https://good-frame-checkout.loganwallace049.workers.dev/artwork/upload', {
+                    fetch('https://fragrant-bird-69d3.loganwallace049.workers.dev/', {
                         method: 'POST',
                         body: formData,
                         headers: {
                             'Accept': 'application/json'
-                        }
+                        },
+                        signal: controller.signal
                     })
                     .then(response => {
                         
@@ -2504,7 +2494,7 @@
                         }
                     })
                     .then(data => {
-                        clearTimeout(timeoutId);
+                        cleanup();
                         
                         // Extract URL from various possible response formats
                         const possibleUrl = data?.url || 
@@ -2518,7 +2508,6 @@
                             resolve({
                                 success: true,
                                 url: possibleUrl,
-                                objectKey: data?.objectKey,
                                 data: data
                             });
                         } else {
@@ -2532,7 +2521,7 @@
                         }
                     })
                     .catch(error => {
-                        clearTimeout(timeoutId);
+                        cleanup();
                         console.error('❌ UPLOAD: Fetch error:', error.message);
                         reject(error);
                     });
