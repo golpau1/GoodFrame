@@ -99,3 +99,41 @@ test('checkout sends complete artwork keys to Stripe metadata', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('checkout supports a Tiny Frame with up to eight stored pictures at the server price', async () => {
+  const originalFetch = globalThis.fetch;
+  let stripeBody;
+  globalThis.fetch = async (_url, options) => {
+    stripeBody = new URLSearchParams(options.body);
+    return Response.json({ id: 'cs_test_tiny', url: 'https://checkout.stripe.test/tiny' });
+  };
+  try {
+    const artworkObjectKeys = Array.from(
+      { length: 8 },
+      (_, index) => `uploads/2026/10/01/${504610 + index}/original.jpg`
+    );
+    const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
+      method: 'POST',
+      headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: [{
+        productType: 'tiny-frame',
+        uniqueCode: '804208',
+        size: '80x80mm',
+        frameColor: 'Oak',
+        orderType: 'Frame + 8 Pictures',
+        quantity: 1,
+        artworkObjectKeys
+      }] })
+    }), env());
+    assert.equal(response.status, 200);
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'Tiny Frame - 80x80mm');
+    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '12000');
+    assert.equal(
+      stripeBody.get('line_items[0][price_data][product_data][metadata][artwork_object_keys]'),
+      artworkObjectKeys.join(',')
+    );
+    assert.equal(stripeBody.has('line_items[1][price_data][product_data][name]'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

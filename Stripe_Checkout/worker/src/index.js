@@ -6,12 +6,14 @@ import {
 } from './r2-keys.js';
 
 const PRICE_BY_SIZE = Object.freeze({
+  '80x80mm': 12000,
   '210x297mm': 9900,
   '420x594mm': 23500,
   '594x841mm': 35000,
   '841x1189mm': 70000
 });
 const CANONICAL_SIZE_BY_DIMENSIONS = Object.freeze({
+  '80x80': '80x80mm',
   '210x297': '210x297mm',
   '200x300': '210x297mm',
   '420x594': '420x594mm',
@@ -265,21 +267,26 @@ function buildLineItems(items) {
       ? Math.min(Math.max(requestedQuantity, 1), 10)
       : 1;
     const orderCode = getOrderCode(item);
+    const artworkObjectKeys = Array.isArray(item.artworkObjectKeys)
+      ? item.artworkObjectKeys.filter(isValidArtworkObjectKey).slice(0, 8)
+      : [];
     const description = [
       cleanText(item.orientation, ''),
       item.frameColor ? `${cleanText(item.frameColor, '')} Frame` : '',
-      cleanText(item.border, '')
+      cleanText(item.border, ''),
+      cleanText(item.orderType, '')
     ].filter(Boolean).join(' | ') || 'Custom framed print';
 
     subtotal += unitAmount * quantity;
     lineItems.push({
-      name: `Print & Frame - ${size}`,
+      name: size === '80x80mm' ? 'Tiny Frame - 80x80mm' : `Print & Frame - ${size}`,
       description,
       unitAmount,
       quantity,
       orderCode,
       originalObjectKey: isValidArtworkObjectKey(item.originalObjectKey) ? item.originalObjectKey : '',
       thumbnailObjectKey: isValidArtworkObjectKey(item.thumbnailObjectKey) ? item.thumbnailObjectKey : '',
+      artworkObjectKeys,
       size
     });
   });
@@ -333,6 +340,12 @@ function createStripePayload(lineItems, siteBaseUrl) {
       }
       if (item.thumbnailObjectKey) {
         payload.set(`${prefix}[price_data][product_data][metadata][thumbnail_object_key]`, item.thumbnailObjectKey);
+      }
+      if (item.artworkObjectKeys.length) {
+        payload.set(
+          `${prefix}[price_data][product_data][metadata][artwork_object_keys]`,
+          item.artworkObjectKeys.join(',').slice(0, 500)
+        );
       }
     }
     payload.set(`${prefix}[price_data][unit_amount]`, String(item.unitAmount));

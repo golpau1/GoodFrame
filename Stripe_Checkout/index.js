@@ -21,35 +21,26 @@ const baseUrl = (process.env.BASE_URL || defaultBaseUrl).replace(/\/$/, '')
 const siteRoot = path.join(__dirname, '..')
 const homepagePath = path.join(siteRoot, 'index.html')
 const cartPath = path.join(siteRoot, 'cart.html')
-const publicPageRoutes = [
-    {
-        path: '/print-and-frame-online',
-        file: path.join(siteRoot, 'Print-Frame', 'print-frame.html'),
-        legacyPaths: ['/Print-Frame/print-frame.html']
-    },
-    {
-        path: '/printing-framing-prices',
-        file: path.join(siteRoot, 'Pricing', 'pricing.html'),
-        legacyPaths: ['/Pricing/pricing.html']
-    },
-    {
-        path: '/about',
-        file: path.join(siteRoot, 'About Us', 'AboutUs.html'),
-        legacyPaths: ['/About%20Us/AboutUs.html', '/About Us/AboutUs.html']
-    },
-    {
-        path: '/printing-framing-faq',
-        file: path.join(siteRoot, 'FAQ', 'FAQ.html'),
-        legacyPaths: ['/FAQ/FAQ.html']
-    }
+const legacyFrontendRoutes = [
+    '/print-and-frame-online',
+    '/Print-Frame/print-frame.html',
+    '/printing-framing-prices',
+    '/Pricing/pricing.html',
+    '/about',
+    '/About%20Us/AboutUs.html',
+    '/About Us/AboutUs.html',
+    '/printing-framing-faq',
+    '/FAQ/FAQ.html'
 ]
 const priceBySize = Object.freeze({
+    '80x80mm': 12000,
     '210x297mm': 9900,
     '420x594mm': 23500,
     '594x841mm': 35000,
     '841x1189mm': 70000
 })
 const canonicalSizeByDimensions = Object.freeze({
+    '80x80': '80x80mm',
     '210x297': '210x297mm',
     '200x300': '210x297mm',
     '420x594': '420x594mm',
@@ -99,14 +90,8 @@ app.get('/Homepage/Homepage.html', (req, res) => {
     res.redirect('/index.html')
 })
 
-publicPageRoutes.forEach(page => {
-    app.get(page.path, (req, res) => {
-        res.sendFile(page.file)
-    })
-
-    app.get(page.legacyPaths, (req, res) => {
-        res.redirect(301, page.path)
-    })
+app.get(legacyFrontendRoutes, (req, res) => {
+    res.redirect(301, '/')
 })
 
 app.get('/cart', (req, res) => {
@@ -202,7 +187,8 @@ function getItemDescription(item) {
     const directDescription = [
         item?.orientation,
         item?.frameColor ? `${item.frameColor} Frame` : '',
-        item?.border
+        item?.border,
+        item?.orderType
     ].filter(Boolean).join(' | ')
     const legacyDescription = item?.price_data?.product_data?.description
     const description = directDescription || legacyDescription || 'Custom framed print'
@@ -245,7 +231,7 @@ function buildStripeLineItems(items) {
         subtotal += unitAmount * quantity
 
         const productData = {
-            name: `Print & Frame - ${size}`,
+            name: size === '80x80mm' ? 'Tiny Frame - 80x80mm' : `Print & Frame - ${size}`,
             description: getItemDescription(item)
         }
 
@@ -258,6 +244,14 @@ function buildStripeLineItems(items) {
                 }),
                 ...(getArtworkObjectKey(item.thumbnailObjectKey) && {
                     thumbnail_object_key: getArtworkObjectKey(item.thumbnailObjectKey)
+                }),
+                ...(Array.isArray(item.artworkObjectKeys) && {
+                    artwork_object_keys: item.artworkObjectKeys
+                        .map(getArtworkObjectKey)
+                        .filter(Boolean)
+                        .slice(0, 8)
+                        .join(',')
+                        .slice(0, 500)
                 })
             }
         }
