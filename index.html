@@ -223,7 +223,22 @@
     .cart-action { width:100%; margin-top:10px; padding:14px 16px !important; border:1px solid var(--brown) !important; font:inherit; font-family:var(--font-display); font-size:10px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; }
     .cart-action--primary { background:var(--brown); color:var(--cream); }
     .cart-action:hover { opacity:.72; }
-    @media (max-width:720px) { #cart-dialog { width:calc(100% - 24px); height:calc(100vh - 24px); height:calc(100dvh - 24px); } .cart-dialog-shell { padding:24px; } .cart-layout { grid-template-columns:1fr; grid-template-rows:auto auto; gap:28px; overflow-y:auto; overscroll-behavior:contain; padding-top:28px; } .cart-items { overflow:visible; padding-right:0; } .cart-summary { padding:18px; } .cart-item { grid-template-columns:1fr auto 18px; gap:12px; } .cart-item-price { grid-column:auto; grid-row:auto; } }
+    @media (max-width:720px) {
+      #cart-dialog { width:calc(100% - 32px); max-width:420px; height:auto; min-height:0; block-size:fit-content; max-height:calc(100vh - 32px); max-height:min(85dvh,calc(100dvh - 32px)); margin:auto; overflow:hidden; }
+      .cart-dialog-shell { display:block; height:auto; max-height:calc(100vh - 34px); max-height:calc(85dvh - 2px); padding:15px 18px 16px; overflow-y:auto; overscroll-behavior:contain; }
+      .cart-dialog-header { padding-bottom:9px; }
+      .cart-close { display:grid; place-items:center; width:36px; height:36px; margin:-7px -7px -7px 0; }
+      .cart-layout { display:block; min-height:0; padding-top:0; overflow:visible; }
+      .cart-items { max-height:30dvh; overflow-y:auto; overscroll-behavior:contain; padding:0; }
+      .cart-item { grid-template-columns:minmax(0,1fr) auto 18px; gap:9px; padding:13px 0; }
+      .cart-item-price { grid-column:auto; grid-row:auto; }
+      .cart-summary { margin:0; padding:12px 0 0; border:0; }
+      .cart-summary-row { padding:0 0 8px; }
+      .cart-summary-row:nth-child(2) { padding-bottom:12px; }
+      .cart-summary-rule { margin:0 0 13px; }
+      .cart-total { margin-bottom:11px; }
+      .cart-action { margin-top:7px; padding:10px 14px !important; }
+    }
     @media (max-width:1100px) {
       body { background:var(--page-gradient); }
       .homepage { position:relative; display:block; width:100%; max-width:none; height:100svh; min-height:620px; margin:0; padding:0; overflow:hidden; border-radius:0; background:transparent; box-shadow:none; }
@@ -364,6 +379,13 @@
     .showcase-track.is-reel-ready { will-change:transform; animation:showcase-reel 92s linear infinite; }
     @media (max-width:1100px) { .showcase-track.is-reel-ready { animation-duration:74s; } }
     @keyframes showcase-reel { from { transform:translate3d(0,0,0); } to { transform:translate3d(var(--showcase-cycle-offset),0,0); } }
+    @media (max-width:720px) {
+      .showcase-collage { overflow-x:auto; overflow-y:hidden; scroll-behavior:smooth; scroll-padding-inline:16px; scroll-snap-type:x mandatory; }
+      .showcase-track { padding:0 16px; }
+      .showcase-track.is-reel-ready { animation:none; transform:none; will-change:auto; }
+      .showcase-photo { flex-basis:82vw; width:82vw; scroll-snap-align:start; scroll-snap-stop:always; }
+      .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px 6px; padding:0 2px; }
+    }
     @keyframes brand-statement-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
     @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a { transition:none; } .brand-statement-track, .showcase-track.is-reel-ready { animation:none; } .showcase-track.is-reel-ready { transform:none; will-change:auto; } }
   </style>
@@ -732,8 +754,7 @@
       });
       const before = cloneSet();
       const after = cloneSet();
-      track.prepend(...before);
-      track.append(...after);
+      const manualMobile = window.matchMedia("(max-width: 720px)");
 
       let cycleWidth = 0;
       let frame = 0;
@@ -744,7 +765,7 @@
 
       const normalizeLoopPosition = () => {
         frame = 0;
-        if (!cycleWidth) return;
+        if (manualMobile.matches || !cycleWidth) return;
         const lowerBoundary = cycleWidth * .25;
         const upperBoundary = cycleWidth * Math.max(1.25, 2 - viewport.clientWidth / cycleWidth - .04);
         while (viewport.scrollLeft < lowerBoundary) {
@@ -760,6 +781,7 @@
         if (!frame) frame = requestAnimationFrame(normalizeLoopPosition);
       };
       const measure = (initial = false) => {
+        if (manualMobile.matches || !before[0].isConnected) return;
         const previousCycle = cycleWidth;
         const previousPosition = previousCycle ? (viewport.scrollLeft - previousCycle) / previousCycle : 0;
         cycleWidth = originals[0].offsetLeft - before[0].offsetLeft;
@@ -768,6 +790,20 @@
         track.style.setProperty("--showcase-cycle-offset", `${-cycleWidth}px`);
         track.classList.add("is-reel-ready");
         scheduleUpdate();
+      };
+      const syncCarouselMode = (reset = false) => {
+        if (manualMobile.matches) {
+          before.forEach((photo) => photo.remove());
+          after.forEach((photo) => photo.remove());
+          track.classList.remove("is-reel-ready");
+          track.style.removeProperty("--showcase-cycle-offset");
+          cycleWidth = 0;
+          if (reset) viewport.scrollLeft = 0;
+          return;
+        }
+        if (!before[0].isConnected) track.prepend(...before);
+        if (!after[0].isConnected) track.append(...after);
+        requestAnimationFrame(() => measure(reset));
       };
 
       viewport.addEventListener("scroll", scheduleUpdate, { passive:true });
@@ -808,8 +844,11 @@
         showcaseLightbox.showModal();
       });
       originals.forEach((photo) => photo.addEventListener("focus", () => photo.scrollIntoView({ behavior:"smooth", block:"nearest", inline:"center" })));
-      if ("ResizeObserver" in window) new ResizeObserver(() => measure()).observe(viewport);
-      requestAnimationFrame(() => measure(true));
+      if ("ResizeObserver" in window) new ResizeObserver(() => {
+        if (!manualMobile.matches) measure();
+      }).observe(viewport);
+      manualMobile.addEventListener("change", () => syncCarouselMode(true));
+      requestAnimationFrame(() => syncCarouselMode(true));
     });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
