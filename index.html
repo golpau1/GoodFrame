@@ -38,7 +38,6 @@
     .mobile-decorative-strip { display:none; }
     .showcase-gallery { display:none; }
     .showcase-track { display:contents; }
-    .showcase-index, .showcase-thumbnails { display:none; }
     .showcase-item-label { display:none; }
     .brand-statement-strip { display:none; }
     .brand-statement-marquee { display:none; }
@@ -318,26 +317,15 @@
     @media (min-width:1101px) {
       .brand-statement-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:center; width:100%; min-height:96px; padding:24px 7%; background:#000; color:#f5f3ea; }
       .brand-statement { margin:0; padding:0 20px; font-family:var(--header-font); font-size:clamp(11px,.9vw,14px); font-weight:400; letter-spacing:.035em; line-height:1.35; text-align:center; }
-      .showcase-gallery { display:block; width:min(1080px,calc(100% - 96px)); margin:clamp(40px,5vw,72px) auto clamp(44px,5vw,76px); padding:clamp(12px,2vw,24px) clamp(24px,3vw,42px); border-radius:0; background:transparent; box-shadow:none; }
-      .showcase-heading { display:flex; justify-content:space-between; align-items:end; gap:30px; margin-bottom:20px; }
-      .showcase-kicker { margin:0 0 10px; color:rgba(58,36,21,.6); font-size:11px; letter-spacing:.16em; text-transform:uppercase; }
-      .showcase-title { margin:0; font-family:var(--header-font); font-size:clamp(26px,3vw,42px); font-weight:500; letter-spacing:.05em; line-height:1; }
-      .showcase-intro { max-width:30ch; margin:0; color:rgba(58,36,21,.72); font-size:14px; line-height:1.55; text-align:right; }
-      .showcase-collage { position:relative; height:clamp(480px,33vw,590px); margin:0; }
-      .showcase-photo { position:absolute; display:block; margin:0; padding:0; border:0; background:transparent; cursor:zoom-in; transition:transform 220ms ease, box-shadow 220ms ease; }
-      .showcase-photo:hover { z-index:5; transform:translateY(-7px) rotate(0deg) scale(1.025); box-shadow:0 18px 30px rgba(58,36,21,.16); }
-      .showcase-photo::before { position:absolute; top:-7px; left:50%; z-index:2; width:52px; height:14px; content:""; background:rgba(222,205,174,.62); transform:translateX(-50%) rotate(-3deg); }
-      .showcase-photo img { display:block; width:100%; height:100%; object-fit:cover; border:5px solid #fbf8f0; box-shadow:0 6px 14px rgba(58,36,21,.08); }
-      .showcase-photo--one { top:5%; left:5%; width:25%; height:34%; transform:rotate(-5deg); }
-      .showcase-photo--two { top:20%; left:29%; width:22%; height:30%; transform:rotate(4deg); }
-      .showcase-photo--three { top:2%; right:8%; width:23%; height:37%; transform:rotate(6deg); }
-      .showcase-photo--four { top:55%; left:13%; width:22%; height:32%; transform:rotate(5deg); }
-      .showcase-photo--five { top:46%; left:42%; width:26%; height:36%; transform:rotate(-4deg); }
-      .showcase-photo--six { top:53%; right:10%; width:21%; height:29%; transform:rotate(5deg); }
-      .showcase-photo--two::before, .showcase-photo--five::before, .showcase-photo--six::before { display:none; }
-      .showcase-note { position:absolute; z-index:4; margin:0; color:var(--brown); font-size:15px; letter-spacing:.04em; line-height:1.15; }
-      .showcase-note--one { top:49%; left:27%; transform:rotate(-8deg); }
-      .showcase-note--two { right:31%; bottom:7%; transform:rotate(5deg); }
+      .showcase-gallery { display:block; width:min(1080px,calc(100% - 96px)); margin:clamp(40px,5vw,72px) auto clamp(44px,5vw,76px); padding:clamp(12px,2vw,24px) 0; overflow:hidden; border-radius:0; background:transparent; box-shadow:none; }
+      .showcase-collage { position:relative; width:100%; height:auto; margin:0; padding:18px 0; overflow-x:auto; overflow-y:hidden; cursor:grab; scroll-snap-type:x mandatory; scroll-padding-inline:calc(50% - clamp(130px,14vw,180px)); scrollbar-width:none; touch-action:pan-x pan-y; }
+      .showcase-collage::-webkit-scrollbar { display:none; }
+      .showcase-collage.is-dragging { cursor:grabbing; scroll-snap-type:none; user-select:none; }
+      .showcase-collage.is-dragging .showcase-photo { cursor:grabbing; }
+      .showcase-track { position:relative; display:flex; align-items:center; gap:14px; width:max-content; height:auto; margin:0; padding:0 max(0px,calc(min(540px,calc(50vw - 48px)) - clamp(130px,14vw,180px))); }
+      .showcase-photo { position:relative; inset:auto; display:flex; flex:0 0 clamp(260px,28vw,360px); width:clamp(260px,28vw,360px); height:auto; aspect-ratio:3 / 4; margin:0; padding:0; overflow:hidden; border:0; background:transparent; cursor:grab; scroll-snap-align:center; }
+      .showcase-photo img { display:block; width:100%; height:100%; object-fit:cover; border:5px solid #fbf8f0; box-shadow:0 6px 14px rgba(58,36,21,.08); user-select:none; -webkit-user-drag:none; }
+      .showcase-note { display:none; }
       #showcase-lightbox { width:min(900px,calc(100% - 64px)); max-width:none; padding:16px; border:0; background:#f7f2e8; box-shadow:0 18px 55px rgba(0,0,0,.2); }
       #showcase-lightbox::backdrop { background:rgba(40,24,15,.45); }
       .showcase-lightbox-shell { position:relative; }
@@ -365,15 +353,8 @@
       .showcase-gallery::after { position:absolute; z-index:-1; content:""; inset:0; pointer-events:none; opacity:.17; mix-blend-mode:soft-light; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.52'/%3E%3C/svg%3E"); background-size:160px 160px; }
       .showcase-gallery > * { position:relative; z-index:1; }
       .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
-      .showcase-sticky { position:relative; top:auto; display:flex; flex-direction:column; justify-content:flex-start; width:100%; height:auto; min-height:0; padding:58px 0 0; overflow:visible; }
-      .showcase-heading { position:relative; display:flex; flex-direction:column; align-items:center; gap:16px; flex:none; margin:0 20px 70px; text-align:center; }
-      .showcase-heading > div { display:contents; }
-      .showcase-kicker { display:none; }
-      .showcase-heading .showcase-title { display:block; order:1; margin:0; color:#f5f3ea; font-family:var(--header-font); font-size:0; font-weight:400; letter-spacing:.05em; line-height:1; text-align:center; text-transform:uppercase; }
-      .showcase-heading .showcase-title::after { content:"GALLERY"; display:block; font:400 clamp(24px,7.4vw,32px)/1 var(--header-font); letter-spacing:.05em; }
-      .showcase-heading .showcase-intro { display:none; }
-      .showcase-heading .showcase-index { display:block; order:2; margin:0; color:rgba(245,243,234,.78); font-size:8px; letter-spacing:.05em; line-height:1; text-align:center; }
-      .showcase-collage { position:relative; display:block; flex:none; width:100%; height:auto; margin:0; padding:0 0 14px; overflow-x:auto; overflow-y:hidden; border:0; border-radius:0; scroll-snap-type:x mandatory; scroll-padding-inline:13%; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+      .showcase-sticky { position:relative; top:auto; display:flex; flex-direction:column; justify-content:flex-start; width:100%; height:auto; min-height:0; padding:34px 0 0; overflow:visible; }
+      .showcase-collage { position:relative; display:block; flex:none; width:100%; height:auto; margin:0; padding:0 0 14px; overflow-x:auto; overflow-y:hidden; border:0; border-radius:0; scroll-snap-type:x mandatory; scroll-padding-inline:13%; -webkit-overflow-scrolling:touch; scrollbar-width:none; touch-action:pan-x pan-y; }
       .showcase-collage::-webkit-scrollbar { display:none; }
       .showcase-track { position:relative; display:flex; align-items:center; gap:14px; width:max-content; height:auto; margin:0; padding:0 13%; transform:none; transition:none; }
       .showcase-photo { position:relative; inset:auto; display:flex; flex:0 0 70vw; flex-direction:column; width:70vw; min-width:0; height:auto; aspect-ratio:3 / 4; margin:0; padding:0; border:2px solid #000; border-radius:0; overflow:hidden; background:transparent; opacity:.66; transform:scale(.8); transform-origin:center center; transition:transform 220ms ease, opacity 220ms ease; order:initial; scroll-snap-align:center; }
@@ -382,7 +363,6 @@
       .showcase-photo img { display:block; width:100%; height:100%; aspect-ratio:3 / 4; object-fit:cover; border-radius:0; }
       .showcase-photo:focus-visible { outline:2px solid var(--brown); outline-offset:3px; }
       .showcase-note { display:none; }
-      .showcase-thumbnails { display:none; }
       .showcase-item-label { display:none; }
       .showcase-mobile-caption { display:flex; align-items:baseline; gap:12px; width:calc(100% - 40px); margin:2px auto 0; color:#f5f3ea; }
       .showcase-mobile-caption strong { font-family:var(--header-font); font-size:11px; font-weight:400; letter-spacing:.04em; }
@@ -416,7 +396,7 @@
     <header class="header">
       <nav class="header-left-nav" aria-label="Primary navigation">
         <a class="header-faq-link" href="#faq-dialog" aria-label="Open FAQ" aria-haspopup="dialog">FAQ</a>
-        <a href="#showcase-title">Gallery</a>
+        <a href="#showcase-gallery">Gallery</a>
         <a href="#colour-palette">Begin Framing</a>
       </nav>
       <div class="header-brand">Good Frame</div>
@@ -478,14 +458,9 @@
     </div>
   </section>
 
-  <section class="showcase-gallery" aria-labelledby="showcase-title">
+  <section class="showcase-gallery" id="showcase-gallery" aria-label="Gallery">
     <div class="showcase-sticky">
-      <div class="showcase-heading">
-        <div><p class="showcase-kicker">Good Frame / Behind the scenes</p><h2 class="showcase-title" id="showcase-title">Made to hold onto.</h2></div>
-        <span class="showcase-index" aria-live="polite">01 / 06</span>
-        <p class="showcase-intro">A closer look at the timber, photographs and small moments behind every frame.</p>
-      </div>
-      <div class="showcase-collage">
+      <div class="showcase-collage" role="region" aria-label="Infinite image gallery">
        <div class="showcase-track">
       <button class="showcase-photo showcase-photo--one" type="button" data-showcase-image="tiny-assets/coffee/hero-frame.jpg" aria-label="Open workshop frame photograph"><img src="tiny-assets/coffee/hero-frame.jpg" alt="Timber frame styled on a warm tabletop"><span class="showcase-item-label">#01</span></button>
       <button class="showcase-photo showcase-photo--two" type="button" data-showcase-image="tiny-assets/coffee/supporting-photos.jpg" aria-label="Open photograph of frame and photographs"><img src="tiny-assets/coffee/supporting-photos.jpg" alt="Open timber photo box with photographs"><span class="showcase-item-label">#02</span></button>
@@ -493,17 +468,7 @@
       <button class="showcase-photo showcase-photo--four" type="button" data-showcase-image="tiny-assets/coffee/framed-life-happens.jpg" aria-label="Open framed product photograph"><img src="tiny-assets/coffee/framed-life-happens.jpg" alt="Framed print styled with Good Frame materials"><span class="showcase-item-label">#04</span></button>
       <button class="showcase-photo showcase-photo--five" type="button" data-showcase-image="tiny-assets/coffee/ralphs-display.jpg" aria-label="Open styled display photograph"><img src="tiny-assets/coffee/ralphs-display.jpg" alt="Styled frame display in a warm interior"><span class="showcase-item-label">#05</span></button>
       <button class="showcase-photo showcase-photo--six" type="button" data-showcase-image="tiny-assets/coffee/coffee-beans-scoop.jpg" aria-label="Open material detail photograph"><img src="tiny-assets/coffee/coffee-beans-scoop.jpg" alt="Warm close-up detail photograph"><span class="showcase-item-label">#06</span></button>
-      <p class="showcase-note showcase-note--one">made slowly ✶</p>
-      <p class="showcase-note showcase-note--two">for the good stuff</p>
        </div>
-      </div>
-      <div class="showcase-thumbnails" aria-label="Choose a showcase image">
-        <button class="showcase-thumbnail is-active" type="button" data-showcase-image="tiny-assets/coffee/hero-frame.jpg" aria-label="Show image 1" aria-pressed="true"><img src="tiny-assets/coffee/hero-frame.jpg" alt="Timber frame styled on a warm tabletop"></button>
-        <button class="showcase-thumbnail" type="button" data-showcase-image="tiny-assets/coffee/supporting-photos.jpg" aria-label="Show image 2" aria-pressed="false"><img src="tiny-assets/coffee/supporting-photos.jpg" alt="Open timber photo box with photographs"></button>
-        <button class="showcase-thumbnail" type="button" data-showcase-image="tiny-assets/coffee/supporting-frame.jpg" aria-label="Show image 3" aria-pressed="false"><img src="tiny-assets/coffee/supporting-frame.jpg" alt="Open timber frame with photographs sliding out"></button>
-        <button class="showcase-thumbnail" type="button" data-showcase-image="tiny-assets/coffee/framed-life-happens.jpg" aria-label="Show image 4" aria-pressed="false"><img src="tiny-assets/coffee/framed-life-happens.jpg" alt="Framed print styled with Good Frame materials"></button>
-        <button class="showcase-thumbnail" type="button" data-showcase-image="tiny-assets/coffee/ralphs-display.jpg" aria-label="Show image 5" aria-pressed="false"><img src="tiny-assets/coffee/ralphs-display.jpg" alt="Styled frame display in a warm interior"></button>
-        <button class="showcase-thumbnail" type="button" data-showcase-image="tiny-assets/coffee/coffee-beans-scoop.jpg" aria-label="Show image 6" aria-pressed="false"><img src="tiny-assets/coffee/coffee-beans-scoop.jpg" alt="Warm close-up detail photograph"></button>
       </div>
     </div>
   </section>
@@ -591,12 +556,6 @@
     });
     const showcaseLightbox = document.getElementById("showcase-lightbox");
     const showcaseLightboxImage = showcaseLightbox.querySelector(".showcase-lightbox-image");
-    document.querySelectorAll(".showcase-photo[data-showcase-image]").forEach((button) => button.addEventListener("click", () => {
-      if (window.matchMedia("(max-width: 1100px)").matches) return;
-      showcaseLightboxImage.src = button.dataset.showcaseImage;
-      showcaseLightboxImage.alt = button.querySelector("img").alt;
-      showcaseLightbox.showModal();
-    }));
     showcaseLightbox.addEventListener("click", (event) => {
       if (event.target === showcaseLightbox) showcaseLightbox.close();
     });
@@ -774,56 +733,108 @@
         remeasure();
       });
     })();
-    const mobileGalleryObserver = window.matchMedia("(max-width: 1100px)").matches && "IntersectionObserver" in window
-      ? new IntersectionObserver(([entry]) => entry.target.classList.toggle("is-gallery-visible", entry.isIntersecting), { threshold:0.15 })
-      : null;
-    if (mobileGalleryObserver) document.querySelectorAll(".showcase-gallery").forEach((gallery) => mobileGalleryObserver.observe(gallery));
-    const showcaseFeaturedImage = document.querySelector(".showcase-photo--one img");
-    const showcaseIndex = document.querySelector(".showcase-index");
-    document.querySelectorAll(".showcase-thumbnail").forEach((thumbnail, index) => thumbnail.addEventListener("click", () => {
-      showcaseFeaturedImage.src = thumbnail.dataset.showcaseImage;
-      showcaseFeaturedImage.alt = thumbnail.querySelector("img").alt;
-      showcaseFeaturedImage.closest(".showcase-photo").dataset.showcaseImage = thumbnail.dataset.showcaseImage;
-      document.querySelectorAll(".showcase-thumbnail").forEach((item) => {
-        const selected = item === thumbnail;
-        item.classList.toggle("is-active", selected);
-        item.setAttribute("aria-pressed", String(selected));
-      });
-      showcaseIndex.textContent = `0${index + 1} / 06`;
-    }));
-    if (window.matchMedia("(max-width: 1100px)").matches) {
-      document.querySelectorAll(".showcase-gallery").forEach((gallery) => {
-        const viewport = gallery.querySelector(".showcase-collage");
-        const photos = [...gallery.querySelectorAll(".showcase-photo")];
-        const count = gallery.querySelector(".showcase-index");
-        if (!viewport || !photos.length) return;
+    document.querySelectorAll(".showcase-gallery").forEach((gallery) => {
+      const viewport = gallery.querySelector(".showcase-collage");
+      const track = gallery.querySelector(".showcase-track");
+      const originals = track ? [...track.querySelectorAll(".showcase-photo")] : [];
+      if (!viewport || !track || !originals.length) return;
 
-        let frame = 0;
-        const updateActivePhoto = () => {
-          frame = 0;
-          const center = viewport.scrollLeft + viewport.clientWidth / 2;
-          let closest = 0;
-          let closestDistance = Infinity;
-          photos.forEach((photo, index) => {
-            const photoCenter = photo.offsetLeft + photo.offsetWidth / 2;
-            const distance = Math.abs(photoCenter - center);
-            if (distance < closestDistance) {
-              closest = index;
-              closestDistance = distance;
-            }
-          });
-          photos.forEach((photo, index) => photo.classList.toggle("is-active", index === closest));
-          if (count) count.textContent = `${String(closest + 1).padStart(2, "0")} / ${String(photos.length).padStart(2, "0")}`;
-        };
-        const scheduleActivePhoto = () => {
-          if (!frame) frame = requestAnimationFrame(updateActivePhoto);
-        };
-        viewport.addEventListener("scroll", scheduleActivePhoto, { passive: true });
-        window.addEventListener("resize", scheduleActivePhoto, { passive: true });
-        photos.forEach((photo) => photo.addEventListener("focus", () => photo.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })));
-        updateActivePhoto();
+      const cloneSet = () => originals.map((photo) => {
+        const clone = photo.cloneNode(true);
+        clone.classList.remove("is-active");
+        clone.setAttribute("aria-hidden", "true");
+        clone.tabIndex = -1;
+        return clone;
       });
-    }
+      const before = cloneSet();
+      const after = cloneSet();
+      track.prepend(...before);
+      track.append(...after);
+
+      let cycleWidth = 0;
+      let frame = 0;
+      let dragging = false;
+      let dragged = false;
+      let dragStartX = 0;
+      let dragStartScroll = 0;
+
+      const updateActivePhoto = () => {
+        frame = 0;
+        if (!cycleWidth) return;
+        while (viewport.scrollLeft < cycleWidth * .5) {
+          viewport.scrollLeft += cycleWidth;
+          if (dragging) dragStartScroll += cycleWidth;
+        }
+        while (viewport.scrollLeft >= cycleWidth * 1.5) {
+          viewport.scrollLeft -= cycleWidth;
+          if (dragging) dragStartScroll -= cycleWidth;
+        }
+        const center = viewport.scrollLeft + viewport.clientWidth / 2;
+        let closestPhoto = null;
+        let closestDistance = Infinity;
+        track.querySelectorAll(".showcase-photo").forEach((photo) => {
+          const distance = Math.abs(photo.offsetLeft + photo.offsetWidth / 2 - center);
+          if (distance < closestDistance) {
+            closestPhoto = photo;
+            closestDistance = distance;
+          }
+          photo.classList.remove("is-active");
+        });
+        closestPhoto?.classList.add("is-active");
+      };
+      const scheduleUpdate = () => {
+        if (!frame) frame = requestAnimationFrame(updateActivePhoto);
+      };
+      const measure = (initial = false) => {
+        const previousCycle = cycleWidth;
+        const previousPosition = previousCycle ? (viewport.scrollLeft - previousCycle) / previousCycle : 0;
+        cycleWidth = originals[0].offsetLeft - before[0].offsetLeft;
+        if (!cycleWidth) return;
+        viewport.scrollLeft = cycleWidth + (initial ? 0 : previousPosition * cycleWidth);
+        scheduleUpdate();
+      };
+
+      viewport.addEventListener("scroll", scheduleUpdate, { passive:true });
+      viewport.addEventListener("pointerdown", (event) => {
+        if (event.pointerType !== "mouse" || event.button !== 0) return;
+        dragging = true;
+        dragged = false;
+        dragStartX = event.clientX;
+        dragStartScroll = viewport.scrollLeft;
+        viewport.setPointerCapture(event.pointerId);
+      });
+      viewport.addEventListener("pointermove", (event) => {
+        if (!dragging) return;
+        const distance = event.clientX - dragStartX;
+        if (Math.abs(distance) > 4) {
+          dragged = true;
+          viewport.classList.add("is-dragging");
+        }
+        viewport.scrollLeft = dragStartScroll - distance;
+      });
+      const stopDragging = (event) => {
+        if (!dragging) return;
+        dragging = false;
+        viewport.classList.remove("is-dragging");
+        if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+      };
+      viewport.addEventListener("pointerup", stopDragging);
+      viewport.addEventListener("pointercancel", stopDragging);
+      viewport.addEventListener("dragstart", (event) => event.preventDefault());
+      track.addEventListener("click", (event) => {
+        const photo = event.target.closest(".showcase-photo[data-showcase-image]");
+        if (!photo || dragged || window.matchMedia("(max-width: 1100px)").matches) {
+          dragged = false;
+          return;
+        }
+        showcaseLightboxImage.src = photo.dataset.showcaseImage;
+        showcaseLightboxImage.alt = photo.querySelector("img").alt;
+        showcaseLightbox.showModal();
+      });
+      originals.forEach((photo) => photo.addEventListener("focus", () => photo.scrollIntoView({ behavior:"smooth", block:"nearest", inline:"center" })));
+      if ("ResizeObserver" in window) new ResizeObserver(() => measure()).observe(viewport);
+      requestAnimationFrame(() => measure(true));
+    });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
     const selections = { colour: "Oak", order: "Frame Only" };
