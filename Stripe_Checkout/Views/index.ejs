@@ -302,7 +302,7 @@
                 });
 
                 const subtotal = visualCartItems.reduce((sum, item) => sum + (item.price || 0), 0);
-                const shipping = subtotal > 100 ? 0 : 15;
+                const shipping = 10;
                 const total = subtotal + shipping;
 
                 cartSummaryContainer.innerHTML = `
@@ -312,7 +312,7 @@
                         </div>
                         <div class="cart-total">
                             <span>Shipping</span>
-                            <span>${shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                            <span>$${shipping.toFixed(2)}</span>
                         </div>
                         <div class="cart-total grand-total">
                             <span>Total</span>

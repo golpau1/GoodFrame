@@ -33,12 +33,17 @@ const legacyFrontendRoutes = [
     '/FAQ/FAQ.html'
 ]
 const priceBySize = Object.freeze({
-    '80x80mm': 12000,
+    '80x80mm': 7000,
     '210x297mm': 9900,
     '420x594mm': 23500,
     '594x841mm': 35000,
     '841x1189mm': 70000
 })
+const tinyFramePriceByOrderType = Object.freeze({
+    'frame-only': 7000,
+    'frame-plus-pictures': 9000
+})
+const shippingAmount = 1000
 const canonicalSizeByDimensions = Object.freeze({
     '80x80': '80x80mm',
     '210x297': '210x297mm',
@@ -196,6 +201,24 @@ function getItemDescription(item) {
     return String(description).replace(/[\r\n]+/g, ' ').slice(0, 200)
 }
 
+function normalizeTinyFrameOrderType(value) {
+    const normalized = String(value || '').trim().toLowerCase()
+    if (normalized === 'frame-only' || normalized === 'frame only') {
+        return 'frame-only'
+    }
+    if (['frame-plus-pictures', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
+        return 'frame-plus-pictures'
+    }
+    return ''
+}
+
+function getUnitAmount(item, size) {
+    if (size !== '80x80mm') {
+        return priceBySize[size]
+    }
+    return tinyFramePriceByOrderType[normalizeTinyFrameOrderType(item?.orderType)]
+}
+
 function getArtworkObjectKey(value) {
     const key = typeof value === 'string' ? value : ''
     return /^uploads\/\d{4}\/\d{2}\/\d{2}\/\d{6}\/(?:original\.(?:jpg|jpeg|png|gif)|thumbnail\.png)$/.test(key)
@@ -209,8 +232,6 @@ function buildStripeLineItems(items) {
     }
 
     const lineItems = []
-    let subtotal = 0
-
     items.forEach(item => {
         const productName = item?.price_data?.product_data?.name
         if (productName === 'Shipping') {
@@ -227,8 +248,12 @@ function buildStripeLineItems(items) {
             ? Math.min(Math.max(requestedQuantity, 1), 10)
             : 1
         const orderCode = getOrderCode(item)
-        const unitAmount = priceBySize[size]
-        subtotal += unitAmount * quantity
+        const unitAmount = getUnitAmount(item, size)
+        if (!unitAmount) {
+            throw new Error(size === '80x80mm'
+                ? 'One or more Tiny Frames has an invalid order type'
+                : 'One or more cart items has an invalid frame size')
+        }
 
         const productData = {
             name: size === '80x80mm' ? 'Tiny Frame - 80x80mm' : `Print & Frame - ${size}`,
@@ -272,18 +297,16 @@ function buildStripeLineItems(items) {
         throw new Error('Cart does not contain any purchasable items')
     }
 
-    if (subtotal <= 10000) {
-        lineItems.push({
-            price_data: {
-                currency: 'aud',
-                product_data: {
-                    name: 'Shipping'
-                },
-                unit_amount: 1500
+    lineItems.push({
+        price_data: {
+            currency: 'aud',
+            product_data: {
+                name: 'Shipping'
             },
-            quantity: 1
-        })
-    }
+            unit_amount: shippingAmount
+        },
+        quantity: 1
+    })
 
     return lineItems
 }
