@@ -113,7 +113,7 @@
     .upload-section { display:grid; gap:18px; padding:28px 0 22px; border-top:0; }
     .upload-section[hidden] { display:none; }
     .upload-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0; font-size:var(--checkout-meta-size); font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
-    .upload-progress { color:var(--muted); font-weight:400; white-space:nowrap; }
+    .upload-progress { margin-left:auto; color:var(--muted); font-weight:400; white-space:nowrap; }
     .reset-images-button { padding:0; border:0; background:none; color:var(--muted); font:inherit; font-size:9px; letter-spacing:.1em; cursor:pointer; text-transform:uppercase; }
     .reset-images-button[hidden] { display:none; }
     .reset-images-button:hover { color:var(--brown); text-decoration:underline; text-underline-offset:4px; }
@@ -285,13 +285,11 @@
       .choice { min-height:44px; font-size:11px; }
       .upload-section { width:100%; margin-right:auto; margin-left:auto; gap:14px; padding:20px 0 12px; }
       .upload-heading { min-height:24px; padding:0 10px; }
-      .reset-images-button { order:1; }
-      .upload-progress { order:2; margin-left:auto; }
       .upload-grid { width:100%; height:auto; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
       .image-slot { width:100%; min-width:0; aspect-ratio:54 / 86; }
       .purchase-row { margin-top:8px; padding:4px 0 clamp(52px,14vw,76px); }
       .purchase-button { min-height:44px; }
-      .image-remove-button { top:3px; right:3px; width:15px; height:15px; padding:0 0 1px; font-size:11px; opacity:.86; transform:none; }
+      .image-remove-button { top:0; right:0; width:15px; height:15px; padding:0 0 1px; font-size:11px; opacity:.86; transform:translate(50%,-50%); }
       .site-footer { padding:40px 24px 24px; }
       .footer-grid { grid-template-columns:1fr; gap:32px; }
       .footer-kicker { margin-bottom:15px; font-size:9px; }
@@ -500,7 +498,7 @@
           <div class="option-choices"><button class="choice order-choice is-selected" type="button" data-order-type="frame-only" data-choice="Frame Only" data-price="70" aria-pressed="true">Frame Only</button><button class="choice order-choice" type="button" data-order-type="frame-plus-pictures" data-choice="Frame + 8 Pictures" data-price="90" aria-pressed="false">Frame + 8 Pictures</button></div>
         </div>
         <div class="upload-section" id="upload-section" hidden aria-hidden="true">
-          <p class="upload-heading"><span class="upload-progress" id="upload-progress">0 / 8 Added</span><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button></p>
+          <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 8 Added</span></p>
           <div class="upload-grid" aria-label="Upload up to eight pictures">
             <div class="image-slot" data-slot="0"><button class="slot-picker" type="button" aria-label="Add image 01">+</button><input class="upload-input" type="file" accept="image/*"></div>
             <div class="image-slot" data-slot="1"><button class="slot-picker" type="button" aria-label="Add image 02">+</button><input class="upload-input" type="file" accept="image/*"></div>
