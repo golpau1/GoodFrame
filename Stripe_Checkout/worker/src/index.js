@@ -12,9 +12,19 @@ const PRICE_BY_SIZE = Object.freeze({
   '594x841mm': 35000,
   '841x1189mm': 70000
 });
-const TINY_FRAME_PRICE_BY_ORDER_TYPE = Object.freeze({
-  'frame-only': 7000,
-  'frame-plus-pictures': 9000
+const TINY_FRAME_PRODUCTS = Object.freeze({
+  tiny_frame_only: Object.freeze({
+    orderType: 'frame-only',
+    name: 'Tiny Frame - Frame Only',
+    unitAmount: 7000,
+    requiresPictures: false
+  }),
+  tiny_frame_8_pictures: Object.freeze({
+    orderType: 'frame-plus-pictures',
+    name: 'Tiny Frame + 8 Pictures',
+    unitAmount: 9000,
+    requiresPictures: true
+  })
 });
 const SHIPPING_AMOUNT = 1000;
 const CANONICAL_SIZE_BY_DIMENSIONS = Object.freeze({
@@ -155,6 +165,53 @@ async function uploadArtwork(request, env) {
   });
 }
 
+async function createArtworkManifest(request, env) {
+  if (!env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error: 'Artwork storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(request, env, { error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const uploadReference = normalizeUploadReference(body.uploadReference);
+  const artworkObjectKeys = Array.isArray(body.artworkObjectKeys) ? body.artworkObjectKeys : [];
+  if (
+    !uploadReference ||
+    artworkObjectKeys.length !== 8 ||
+    !artworkObjectKeys.every(isValidArtworkObjectKey) ||
+    new Set(artworkObjectKeys).size !== 8
+  ) {
+    return jsonResponse(request, env, { error: 'A picture order requires one valid reference and eight unique uploads' }, 400);
+  }
+
+  for (const objectKey of artworkObjectKeys) {
+    if (!await env.ARTWORK_BUCKET.head(objectKey)) {
+      return jsonResponse(request, env, { error: 'One or more uploaded pictures could not be found' }, 400);
+    }
+  }
+
+  const manifestKey = getUploadManifestKey(uploadReference);
+  if (await env.ARTWORK_BUCKET.head(manifestKey)) {
+    return jsonResponse(request, env, { error: 'Upload reference already exists' }, 409);
+  }
+  await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
+    uploadReference,
+    artworkObjectKeys,
+    createdAt: new Date().toISOString()
+  }), {
+    httpMetadata: { contentType: 'application/json' }
+  });
+
+  return jsonResponse(request, env, { uploadReference });
+}
+
 async function getArtwork(request, env, objectKey) {
   if (!env.ARTWORK_BUCKET || !isValidArtworkObjectKey(objectKey)) {
     return new Response('Not found', { status: 404 });
@@ -191,11 +248,38 @@ function normalizeTinyFrameOrderType(value) {
   return '';
 }
 
-function getUnitAmount(item, size) {
+function normalizeTinyFrameProductType(item) {
+  const explicitProductType = cleanText(item?.productType, '').toLowerCase();
+  if (TINY_FRAME_PRODUCTS[explicitProductType]) {
+    return explicitProductType;
+  }
+  const orderType = normalizeTinyFrameOrderType(item?.orderType);
+  if (orderType === 'frame-only') return 'tiny_frame_only';
+  if (orderType === 'frame-plus-pictures') return 'tiny_frame_8_pictures';
+  return '';
+}
+
+function normalizeFrameColour(value) {
+  const colour = cleanText(value, '').toLowerCase();
+  if (colour === 'oak') return 'Oak';
+  if (colour === 'walnut') return 'Walnut';
+  return '';
+}
+
+function normalizeUploadReference(value) {
+  const reference = cleanText(value, '').toLowerCase();
+  return /^tf_[a-f0-9]{32}$/.test(reference) ? reference : '';
+}
+
+function getUploadManifestKey(uploadReference) {
+  return `tiny-frame-uploads/${uploadReference}.json`;
+}
+
+function getUnitAmount(item, size, productType) {
   if (size !== '80x80mm') {
     return PRICE_BY_SIZE[size];
   }
-  return TINY_FRAME_PRICE_BY_ORDER_TYPE[normalizeTinyFrameOrderType(item?.orderType)];
+  return TINY_FRAME_PRODUCTS[productType]?.unitAmount;
 }
 
 function getLegacyProductName(item) {
@@ -278,11 +362,13 @@ function buildLineItems(items) {
     }
 
     const size = getRequestedSize(item);
-    const unitAmount = getUnitAmount(item, size);
+    const productType = size === '80x80mm' ? normalizeTinyFrameProductType(item) : '';
+    const tinyFrameProduct = TINY_FRAME_PRODUCTS[productType];
+    const unitAmount = getUnitAmount(item, size, productType);
 
     if (!unitAmount) {
       throw new Error(size === '80x80mm'
-        ? 'One or more Tiny Frames has an invalid order type'
+        ? 'One or more Tiny Frames has an invalid product type'
         : 'One or more cart items has an invalid frame size');
     }
 
@@ -291,22 +377,33 @@ function buildLineItems(items) {
       ? Math.min(Math.max(requestedQuantity, 1), 10)
       : 1;
     const orderCode = getOrderCode(item);
+    const frameColour = normalizeFrameColour(item.frameColour || item.frameColor);
+    const uploadReference = normalizeUploadReference(item.uploadReference || item.uploadId);
     const artworkObjectKeys = Array.isArray(item.artworkObjectKeys)
       ? item.artworkObjectKeys.filter(isValidArtworkObjectKey).slice(0, 8)
       : [];
+    if (tinyFrameProduct && !frameColour) {
+      throw new Error('One or more Tiny Frames has an invalid frame colour');
+    }
+    if (tinyFrameProduct?.requiresPictures && !uploadReference) {
+      throw new Error('Frame + 8 Pictures requires a completed picture upload reference');
+    }
     const description = [
       cleanText(item.orientation, ''),
-      item.frameColor ? `${cleanText(item.frameColor, '')} Frame` : '',
+      frameColour ? `${frameColour} Frame` : '',
       cleanText(item.border, ''),
-      cleanText(item.orderType, '')
+      tinyFrameProduct?.orderType || cleanText(item.orderType, '')
     ].filter(Boolean).join(' | ') || 'Custom framed print';
 
     lineItems.push({
-      name: size === '80x80mm' ? 'Tiny Frame - 80x80mm' : `Print & Frame - ${size}`,
+      name: tinyFrameProduct?.name || `Print & Frame - ${size}`,
       description,
       unitAmount,
       quantity,
       orderCode,
+      productType,
+      frameColour,
+      uploadReference,
       originalObjectKey: isValidArtworkObjectKey(item.originalObjectKey) ? item.originalObjectKey : '',
       thumbnailObjectKey: isValidArtworkObjectKey(item.thumbnailObjectKey) ? item.thumbnailObjectKey : '',
       artworkObjectKeys,
@@ -331,10 +428,13 @@ function buildLineItems(items) {
 function createStripePayload(lineItems, siteBaseUrl) {
   const orderCodes = getOrderCodes(lineItems);
   const orderCodeMetadataValue = getOrderCodeMetadataValue(orderCodes);
+  const productTypes = lineItems.map(item => item.productType).filter(Boolean);
+  const frameColours = lineItems.map(item => item.frameColour).filter(Boolean);
+  const uploadReferences = lineItems.map(item => item.uploadReference).filter(Boolean);
   const payload = new URLSearchParams({
     mode: 'payment',
-    success_url: `${siteBaseUrl}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${siteBaseUrl}/cart`,
+    success_url: `${siteBaseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteBaseUrl}/?checkout=cancelled#cart`,
     billing_address_collection: 'required',
     'shipping_address_collection[allowed_countries][0]': 'AU',
     'shipping_address_collection[allowed_countries][1]': 'US',
@@ -347,12 +447,31 @@ function createStripePayload(lineItems, siteBaseUrl) {
     payload.set('payment_intent_data[description]', 'Good Frame Order');
     payload.set('payment_intent_data[metadata][order_codes]', orderCodeMetadataValue);
   }
+  if (productTypes.length > 0) {
+    payload.set('metadata[product_types]', productTypes.join(',').slice(0, 500));
+    payload.set('payment_intent_data[metadata][product_types]', productTypes.join(',').slice(0, 500));
+  }
+  if (frameColours.length > 0) {
+    payload.set('metadata[frame_colours]', frameColours.join(',').slice(0, 500));
+  }
+  if (uploadReferences.length > 0) {
+    payload.set('metadata[upload_references]', uploadReferences.join(',').slice(0, 500));
+    payload.set('payment_intent_data[metadata][upload_references]', uploadReferences.join(',').slice(0, 500));
+  }
 
   lineItems.forEach((item, index) => {
     const prefix = `line_items[${index}]`;
     payload.set(`${prefix}[price_data][currency]`, 'aud');
     payload.set(`${prefix}[price_data][product_data][name]`, item.name);
     payload.set(`${prefix}[price_data][product_data][description]`, item.description);
+    if (item.productType) {
+      payload.set(`${prefix}[price_data][product_data][metadata][product_type]`, item.productType);
+      payload.set(`${prefix}[price_data][product_data][metadata][frame_colour]`, item.frameColour);
+      payload.set(`${prefix}[price_data][product_data][metadata][quantity]`, String(item.quantity));
+      if (item.uploadReference) {
+        payload.set(`${prefix}[price_data][product_data][metadata][upload_reference]`, item.uploadReference);
+      }
+    }
     if (item.orderCode) {
       payload.set(`${prefix}[price_data][product_data][metadata][order_code]`, item.orderCode);
       payload.set(`${prefix}[price_data][product_data][metadata][frame_size]`, item.size);
@@ -376,6 +495,19 @@ function createStripePayload(lineItems, siteBaseUrl) {
   return payload;
 }
 
+async function verifyUploadManifests(lineItems, env) {
+  const pictureItems = lineItems.filter(item => item.productType === 'tiny_frame_8_pictures');
+  if (!pictureItems.length) return;
+  if (!env.ARTWORK_BUCKET) {
+    throw new Error('Artwork storage is not configured');
+  }
+  for (const item of pictureItems) {
+    if (!await env.ARTWORK_BUCKET.head(getUploadManifestKey(item.uploadReference))) {
+      throw new Error('One or more picture uploads could not be verified');
+    }
+  }
+}
+
 async function createCheckoutSession(request, env) {
   if (!validateStripeConfiguration(env)) {
     return jsonResponse(request, env, { error: 'Checkout is not configured' }, 503);
@@ -395,6 +527,7 @@ async function createCheckoutSession(request, env) {
   let lineItems;
   try {
     lineItems = buildLineItems(body.items);
+    await verifyUploadManifests(lineItems, env);
   } catch (error) {
     return jsonResponse(request, env, { error: error.message }, 400);
   }
@@ -425,6 +558,40 @@ async function createCheckoutSession(request, env) {
   return jsonResponse(request, env, {
     id: stripeResult.id,
     url: stripeResult.url
+  });
+}
+
+async function getCheckoutSessionStatus(request, env) {
+  if (!validateStripeConfiguration(env)) {
+    return jsonResponse(request, env, { error: 'Checkout is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
+  }
+  const sessionId = new URL(request.url).searchParams.get('session_id') || '';
+  if (!/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(sessionId)) {
+    return jsonResponse(request, env, { error: 'Checkout session is invalid' }, 400);
+  }
+
+  const stripeResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` }
+  });
+  const stripeResult = await stripeResponse.json().catch(() => ({}));
+  if (!stripeResponse.ok) {
+    console.error('Stripe checkout status request failed', {
+      status: stripeResponse.status,
+      type: stripeResult?.error?.type,
+      code: stripeResult?.error?.code
+    });
+    return jsonResponse(request, env, { error: 'Checkout confirmation could not be verified' }, 502);
+  }
+
+  return jsonResponse(request, env, {
+    status: stripeResult.status,
+    paymentStatus: stripeResult.payment_status,
+    orderReference: stripeResult.client_reference_id
+      ? `#GF-${stripeResult.client_reference_id}`
+      : `#GF-${sessionId.slice(-8).toUpperCase()}`
   });
 }
 
@@ -616,6 +783,24 @@ async function sendOrderConfirmationEmail(session, env) {
   }
 }
 
+async function claimWebhookEvent(eventId, env) {
+  if (!env.ARTWORK_BUCKET || !/^evt_[A-Za-z0-9]+$/.test(String(eventId || ''))) {
+    throw new Error('Webhook idempotency storage is not configured');
+  }
+  const eventKey = `stripe-webhook-events/${eventId}.json`;
+  if (await env.ARTWORK_BUCKET.head(eventKey)) {
+    return false;
+  }
+  const result = await env.ARTWORK_BUCKET.put(eventKey, JSON.stringify({
+    eventId,
+    claimedAt: new Date().toISOString()
+  }), {
+    httpMetadata: { contentType: 'application/json' },
+    onlyIf: { etagDoesNotMatch: '*' }
+  });
+  return result !== null;
+}
+
 async function handleStripeWebhook(request, env) {
   if (!validateStripeConfiguration(env) || !env.STRIPE_WEBHOOK_SECRET) {
     return new Response('Webhook secret is not configured', { status: 500 });
@@ -640,6 +825,19 @@ async function handleStripeWebhook(request, env) {
   }
 
   if (event.type === 'checkout.session.completed') {
+    let claimed;
+    try {
+      claimed = await claimWebhookEvent(event.id, env);
+    } catch (error) {
+      console.error('Webhook idempotency claim failed:', error);
+      return new Response('Webhook idempotency storage is unavailable', { status: 503 });
+    }
+    if (!claimed) {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     try {
       await sendOrderConfirmationEmail(event.data.object, env);
     } catch (error) {
@@ -657,6 +855,14 @@ async function handleStripeWebhook(request, env) {
     headers: { 'Content-Type': 'application/json' }
   });
 }
+
+export {
+  buildLineItems,
+  claimWebhookEvent,
+  createStripePayload,
+  normalizeTinyFrameProductType,
+  normalizeUploadReference
+};
 
 export default {
   async fetch(request, env) {
@@ -677,8 +883,16 @@ export default {
       return createCheckoutSession(request, env);
     }
 
+    if (request.method === 'GET' && url.pathname === '/checkout-session-status') {
+      return getCheckoutSessionStatus(request, env);
+    }
+
     if (request.method === 'POST' && url.pathname === '/artwork/upload') {
       return uploadArtwork(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/artwork/manifest') {
+      return createArtworkManifest(request, env);
     }
 
     if (request.method === 'GET' && url.pathname.startsWith('/artwork/')) {

@@ -108,30 +108,29 @@ test('checkout charges $90 for a Tiny Frame with eight pictures plus $10 shippin
     return Response.json({ id: 'cs_test_tiny', url: 'https://checkout.stripe.test/tiny' });
   };
   try {
-    const artworkObjectKeys = Array.from(
-      { length: 8 },
-      (_, index) => `uploads/2026/10/01/${504610 + index}/original.jpg`
-    );
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_abcdef0123456789abcdef0123456789';
+    bucket.objects.set(`tiny-frame-uploads/${uploadReference}.json`, { body:new ArrayBuffer(0), type:'application/json' });
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',
       headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: [{
-        productType: 'tiny-frame',
+        productType: 'tiny_frame_8_pictures',
         uniqueCode: '804208',
         size: '80x80mm',
-        frameColor: 'Oak',
-        orderType: 'Frame + 8 Pictures',
+        frameColour: 'Oak',
         quantity: 1,
-        artworkObjectKeys
+        uploadReference
       }] })
-    }), env());
+    }), env(bucket));
     assert.equal(response.status, 200);
-    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'Tiny Frame - 80x80mm');
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'Tiny Frame + 8 Pictures');
     assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '9000');
     assert.equal(
-      stripeBody.get('line_items[0][price_data][product_data][metadata][artwork_object_keys]'),
-      artworkObjectKeys.join(',')
+      stripeBody.get('line_items[0][price_data][product_data][metadata][upload_reference]'),
+      uploadReference
     );
+    assert.equal(stripeBody.has('line_items[0][price_data][product_data][metadata][artwork_object_keys]'), false);
     assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'Shipping');
     assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '1000');
     assert.equal(
@@ -187,14 +186,17 @@ test('checkout adds the $10 shipping line only once for multiple Tiny Frames', a
     return Response.json({ id: 'cs_test_multiple', url: 'https://checkout.stripe.test/multiple' });
   };
   try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_1234567890abcdef1234567890abcdef';
+    bucket.objects.set(`tiny-frame-uploads/${uploadReference}.json`, { body:new ArrayBuffer(0), type:'application/json' });
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',
       headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: [
-        { uniqueCode: '804210', size: '80x80mm', orderType: 'Frame Only', quantity: 1 },
-        { uniqueCode: '804211', size: '80x80mm', orderType: 'Frame + 8 Pictures', quantity: 1 }
+        { productType:'tiny_frame_only', uniqueCode: '804210', size: '80x80mm', frameColour:'Oak', quantity: 1 },
+        { productType:'tiny_frame_8_pictures', uniqueCode: '804211', size: '80x80mm', frameColour:'Walnut', quantity: 1, uploadReference }
       ] })
-    }), env());
+    }), env(bucket));
     assert.equal(response.status, 200);
     assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '7000');
     assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '9000');
