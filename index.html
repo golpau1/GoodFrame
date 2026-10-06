@@ -1326,14 +1326,8 @@
         details.className = "cart-item-details";
         const title = document.createElement("h3");
         title.className = "cart-item-title";
-        title.textContent = "Tiny Frame";
-        const option = document.createElement("p");
-        option.className = "cart-item-option";
-        option.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}`;
-        const quantity = document.createElement("p");
-        quantity.className = "cart-item-quantity";
-        quantity.textContent = "Quantity · 1";
-        details.append(title, option, quantity);
+        title.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}`;
+        details.append(title);
         const aside = document.createElement("div");
         aside.className = "cart-item-aside";
         const price = document.createElement("span");
