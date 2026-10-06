@@ -611,6 +611,7 @@
   <script src="https://unpkg.com/filepond@4.32.12/dist/filepond.js"></script>
   <script src="https://unpkg.com/filepond-plugin-image-preview@4.6.12/dist/filepond-plugin-image-preview.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+  <script src="print-sheet.js"></script>
   <script>
     const configurator = document.getElementById("configurator");
     const faqDialog = document.getElementById("faq-dialog");
@@ -1239,56 +1240,48 @@
     function createUploadReference() {
       return `tf_${crypto.randomUUID().replaceAll("-", "")}`;
     }
-    async function uploadArtwork(blob, imageIndex) {
-      if (!(blob instanceof Blob) || !blob.size || !blob.type.startsWith("image/")) {
-        throw new Error(`Picture ${imageIndex + 1} is not a valid cropped image. Please add it again.`);
+    async function createPrintSheet(entries) {
+      if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.blob instanceof Blob))) {
+        throw new Error("All 8 cropped pictures are required.");
       }
-      let lastNetworkError = null;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        const uploadId = createOrderCode();
-        const form = new FormData();
-        form.append("kind", "original");
-        form.append("uploadId", uploadId);
-        form.append("file", blob, `tiny-frame-${uploadId}.jpg`);
-        let response;
-        try {
-          response = await fetch(`${checkoutApiBaseUrl}/artwork/upload`, {
-            method:"POST",
-            body:form
-          });
-        } catch (error) {
-          lastNetworkError = error;
-          console.error("Artwork upload request failed", {
-            endpoint:`${checkoutApiBaseUrl}/artwork/upload`,
-            image:imageIndex + 1,
-            attempt:attempt + 1,
-            error
-          });
-          continue;
-        }
-        if (response.status === 409) continue;
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(result.error || `Picture ${imageIndex + 1} could not be uploaded.`);
-        }
-        if (!result.objectKey) {
-          throw new Error(`Picture ${imageIndex + 1} upload returned an invalid response.`);
-        }
-        return result;
+      if (!window.GoodFramePrintSheet?.createA4PrintSheetPdf) {
+        throw new Error("The print-sheet generator is unavailable.");
       }
-      if (lastNetworkError) {
+      return window.GoodFramePrintSheet.createA4PrintSheetPdf(entries.map((entry) => entry.blob), {
+        includeCutMarks:true
+      });
+    }
+    async function uploadPrintSheet(pdfBlob, frameColour) {
+      if (!(pdfBlob instanceof Blob) || pdfBlob.type !== "application/pdf" || !pdfBlob.size) {
+        throw new Error("The A4 print sheet could not be generated.");
+      }
+      const uploadSessionId = createUploadReference();
+      const form = new FormData();
+      form.append("upload_session_id", uploadSessionId);
+      form.append("frame_colour", frameColour);
+      form.append("image_count", "8");
+      form.append("print_sheet", pdfBlob, "print-sheet-a4.pdf");
+      let response;
+      try {
+        response = await fetch(`${checkoutApiBaseUrl}/upload-print-sheet`, {
+          method:"POST",
+          body:form
+        });
+      } catch (error) {
+        console.error("Print-sheet upload request failed", {
+          endpoint:`${checkoutApiBaseUrl}/upload-print-sheet`,
+          uploadSessionId,
+          error
+        });
         throw new Error(isLocalPreview
           ? "The local image-upload service is unavailable. Start the checkout Worker on port 8787 and try again."
-          : "The image-upload service could not be reached. Please check your connection and try again.");
+          : "The image-upload service could not be reached.");
       }
-      throw new Error("A unique upload reference could not be created.");
-    }
-    async function uploadAllArtwork(entries) {
-      const uploaded = [];
-      for (let index = 0; index < entries.length; index += 1) {
-        uploaded.push(await uploadArtwork(entries[index]?.blob, index));
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success || result.upload_session_id !== uploadSessionId || !result.print_sheet?.objectKey) {
+        throw new Error(result.error || "The A4 print sheet could not be uploaded.");
       }
-      return uploaded;
+      return { uploadSessionId, printSheetReference:result.print_sheet.objectKey };
     }
     async function registerArtworkManifest(uploadReference, artworkObjectKeys) {
       if (!/^tf_[a-f0-9]{32}$/.test(uploadReference) || artworkObjectKeys.length !== 8) {
@@ -1320,14 +1313,15 @@
     async function preparePictureOrdersForCheckout() {
       let cartChanged = false;
       for (const item of cartItems) {
-        if (normalizeOrderType(item.order) !== "frame-plus-pictures" || item.uploadReference) continue;
+        if (normalizeOrderType(item.order) !== "frame-plus-pictures" || item.uploadSessionId || item.uploadReference) continue;
         const keys = Array.isArray(item.artworkObjectKeys) ? item.artworkObjectKeys : [];
         if (keys.length !== 8) {
           throw new Error("A Frame + 8 Pictures item is missing uploaded pictures. Please remove it and add it again.");
         }
         const uploadReference = createUploadReference();
         await registerArtworkManifest(uploadReference, keys);
-        item.uploadReference = uploadReference;
+        item.uploadSessionId = uploadReference;
+        delete item.artworkObjectKeys;
         cartChanged = true;
       }
       if (cartChanged) saveCart();
@@ -1351,7 +1345,7 @@
               size:"80x80mm",
               frameColour:item.colour,
               quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
-              uploadReference:item.uploadReference || ""
+              uploadReference:item.uploadSessionId || item.uploadReference || ""
             }))
           })
         });
@@ -1429,13 +1423,14 @@
       showPurchaseError();
       purchaseButton.disabled = true;
       const withPictures = orderType === "frame-plus-pictures";
-      document.getElementById("purchase-label").textContent = withPictures ? "UPLOADING PICTURES…" : "ADDING…";
+      document.getElementById("purchase-label").textContent = withPictures ? "PREPARING PRINTS…" : "ADDING…";
       if (!withPictures) openCart();
       try {
-        const artwork = withPictures ? await uploadAllArtwork(uploadedImages) : [];
-        const uploadReference = withPictures ? createUploadReference() : "";
+        let uploadSession = null;
         if (withPictures) {
-          await registerArtworkManifest(uploadReference, artwork.map((item) => item.objectKey));
+          const printSheet = await createPrintSheet(uploadedImages);
+          document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
+          uploadSession = await uploadPrintSheet(printSheet, selections.colour);
         }
         const cartItem = {
           id:Date.now(),
@@ -1444,8 +1439,12 @@
           order:selections.order,
           price:orderPrice,
           quantity:1,
-          uploadReference,
-          artworkObjectKeys:artwork.map((item) => item.objectKey)
+          ...(uploadSession ? {
+            productType:"frame_8_pictures",
+            frameColour:selections.colour.toLowerCase(),
+            uploadSessionId:uploadSession.uploadSessionId,
+            printSheetReference:uploadSession.printSheetReference
+          } : {})
         };
         cartItems.push(cartItem);
         saveCart();
@@ -1454,7 +1453,7 @@
         if (withPictures) openCart();
       } catch (error) {
         console.error("Add to cart failed", error);
-        showPurchaseError(`${error.message} Please try again.`);
+        showPurchaseError(withPictures ? "UPLOAD FAILED — PLEASE TRY AGAIN" : `${error.message} Please try again.`);
       } finally {
         document.getElementById("purchase-label").textContent = "ADD TO CART";
         updateAddToCartState();

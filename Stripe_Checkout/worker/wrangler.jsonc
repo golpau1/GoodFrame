@@ -6,7 +6,8 @@
   "vars": {
     "STRIPE_MODE": "live",
     "SITE_BASE_URL": "https://goodframe.com.au",
-    "ALLOWED_ORIGINS": "https://goodframe.com.au,https://www.goodframe.com.au",
+    "ALLOWED_ORIGINS": "https://goodframe.com.au",
+    "PENDING_UPLOAD_TTL_DAYS": "10",
     // Sender shown on the order-confirmation email. The domain here must
     // be a verified sender domain in Resend before this works - update
     // once that's done (see Stripe_Checkout/worker/src/index.js).
@@ -19,12 +20,16 @@
       "bucket_name": "goodframes"
     }
   ],
+  "triggers": {
+    "crons": ["0 3 * * *"]
+  },
   "env": {
     "dev": {
       "vars": {
         "STRIPE_MODE": "test",
         "SITE_BASE_URL": "http://127.0.0.1:4173",
         "ALLOWED_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000,http://localhost:4173,http://127.0.0.1:4173,http://localhost:5500,http://127.0.0.1:5500",
+        "PENDING_UPLOAD_TTL_DAYS": "10",
         "RESEND_FROM_EMAIL": "Good Frame <orders@goodframe.com.au>",
         "SUPPORT_EMAIL": "contact.goodframe@gmail.com"
       },

@@ -27,6 +27,12 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
   })
 });
 const SHIPPING_AMOUNT = 1000;
+const TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
+const TINY_FRAME_UPLOAD_IMAGE_COUNT = 8;
+const MAX_TINY_FRAME_PDF_BYTES = 80 * 1024 * 1024;
+const A4_WIDTH_POINTS = 595.275591;
+const A4_HEIGHT_POINTS = 841.889764;
+const DEFAULT_PENDING_UPLOAD_TTL_DAYS = 10;
 const CANONICAL_SIZE_BY_DIMENSIONS = Object.freeze({
   '80x80': '80x80mm',
   '210x297': '210x297mm',
@@ -104,6 +110,147 @@ function getWorkerBaseUrl(request) {
 
 function getArtworkUrl(request, objectKey) {
   return `${getWorkerBaseUrl(request)}/artwork/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function createUploadSessionId() {
+  return `tf_${crypto.randomUUID().replaceAll('-', '')}`;
+}
+
+function getTinyFrameUploadPrefix(uploadSessionId) {
+  return `${TINY_FRAME_UPLOAD_PREFIX}${uploadSessionId}/`;
+}
+
+function getUploadManifestKey(uploadSessionId) {
+  return `${getTinyFrameUploadPrefix(uploadSessionId)}manifest.json`;
+}
+
+function getLegacyUploadManifestKey(uploadReference) {
+  return `tiny-frame-uploads/${uploadReference}.json`;
+}
+
+async function deleteObjectKeys(bucket, keys) {
+  await Promise.allSettled(keys.map(key => bucket.delete(key)));
+}
+
+function inspectPrintSheetPdf(bytes) {
+  const text = new TextDecoder('latin1').decode(bytes);
+  if (!text.startsWith('%PDF-')) return { valid:false, error:'The print sheet is not a PDF' };
+  const mediaBox = text.match(/\/MediaBox\s*\[\s*0(?:\.0+)?\s+0(?:\.0+)?\s+([\d.]+)\s+([\d.]+)\s*\]/);
+  if (!mediaBox) return { valid:false, error:'The PDF page dimensions could not be verified' };
+  const width = Number(mediaBox[1]);
+  const height = Number(mediaBox[2]);
+  if (Math.abs(width - A4_WIDTH_POINTS) > 0.01 || Math.abs(height - A4_HEIGHT_POINTS) > 0.01) {
+    return { valid:false, error:'The print sheet must be an exact portrait A4 page' };
+  }
+  const embeddedImageCount = (text.match(/\/Subtype\s*\/Image\b/g) || []).length;
+  if (embeddedImageCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+    return { valid:false, error:'The print sheet must contain exactly 8 embedded pictures' };
+  }
+  return { valid:true };
+}
+
+async function uploadTinyFramePrintSheet(request, env) {
+  if (!env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error: 'Artwork storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
+  }
+
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return jsonResponse(request, env, { error: 'Upload must use multipart form data' }, 400);
+  }
+
+  const requestedSessionId = String(formData.get('upload_session_id') || '').trim().toLowerCase();
+  const uploadSessionId = requestedSessionId || createUploadSessionId();
+  const frameColour = normalizeFrameColour(formData.get('frame_colour'));
+  const imageCount = Number(formData.get('image_count'));
+  const printSheet = formData.get('print_sheet');
+  if (!normalizeUploadReference(uploadSessionId)) {
+    return jsonResponse(request, env, { error: 'Upload session ID is invalid' }, 400);
+  }
+  if (!frameColour) {
+    return jsonResponse(request, env, { error: 'Frame colour must be Oak or Walnut' }, 400);
+  }
+  if (imageCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+    return jsonResponse(request, env, { error: 'The print sheet must represent exactly 8 cropped images' }, 400);
+  }
+  if (!printSheet || typeof printSheet.arrayBuffer !== 'function' || printSheet.type !== 'application/pdf') {
+    return jsonResponse(request, env, { error: 'An A4 PDF print sheet is required' }, 400);
+  }
+  if (!printSheet.size || printSheet.size > MAX_TINY_FRAME_PDF_BYTES) {
+    return jsonResponse(request, env, { error: 'The PDF print sheet exceeds the 80 MB upload limit' }, 413);
+  }
+
+  const pdfBytes = new Uint8Array(await printSheet.arrayBuffer());
+  const pdfInspection = inspectPrintSheetPdf(pdfBytes);
+  if (!pdfInspection.valid) {
+    return jsonResponse(request, env, { error:pdfInspection.error }, 400);
+  }
+
+  const manifestKey = getUploadManifestKey(uploadSessionId);
+  if (await env.ARTWORK_BUCKET.head(manifestKey)) {
+    return jsonResponse(request, env, { error: 'Upload session already exists' }, 409);
+  }
+
+  const storedKeys = [];
+  const printSheetFilename = 'print-sheet-a4.pdf';
+  const printSheetObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}${printSheetFilename}`;
+  try {
+    const storedPrintSheet = await env.ARTWORK_BUCKET.put(printSheetObjectKey, pdfBytes, {
+      httpMetadata: { contentType:'application/pdf' },
+      onlyIf: { etagDoesNotMatch:'*' }
+    });
+    if (storedPrintSheet === null) throw new Error('Upload session already exists');
+    storedKeys.push(printSheetObjectKey);
+
+    const uploadedAt = new Date().toISOString();
+    const manifest = {
+      upload_session_id:uploadSessionId,
+      frame_colour:frameColour,
+      product_type:'frame_8_pictures',
+      image_count:TINY_FRAME_UPLOAD_IMAGE_COUNT,
+      print_sheet_filename:printSheetFilename,
+      print_sheet_object_key:printSheetObjectKey,
+      page_size_mm:{ width:210, height:297 },
+      photo_size_mm:{ width:54, height:86 },
+      files:[{
+        filename:printSheetFilename,
+        objectKey:printSheetObjectKey,
+        contentType:'application/pdf',
+        size:printSheet.size
+      }],
+      status:'pending',
+      generated_at:uploadedAt,
+      uploaded_at:uploadedAt
+    };
+    const storedManifest = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(manifest), {
+      httpMetadata: { contentType:'application/json' },
+      onlyIf: { etagDoesNotMatch:'*' }
+    });
+    if (storedManifest === null) {
+      throw new Error('Upload session already exists');
+    }
+    storedKeys.push(manifestKey);
+
+    return jsonResponse(request, env, {
+      success:true,
+      upload_session_id:uploadSessionId,
+      print_sheet:{
+        filename:printSheetFilename,
+        objectKey:printSheetObjectKey,
+        contentType:'application/pdf',
+        size:printSheet.size
+      }
+    });
+  } catch (error) {
+    await deleteObjectKeys(env.ARTWORK_BUCKET, storedKeys);
+    console.error('Tiny Frame print-sheet upload failed:', error);
+    return jsonResponse(request, env, { error:'The print sheet could not be stored. Please try again.' }, 500);
+  }
 }
 
 async function uploadArtwork(request, env) {
@@ -197,7 +344,7 @@ async function createArtworkManifest(request, env) {
     }
   }
 
-  const manifestKey = getUploadManifestKey(uploadReference);
+  const manifestKey = getLegacyUploadManifestKey(uploadReference);
   if (await env.ARTWORK_BUCKET.head(manifestKey)) {
     return jsonResponse(request, env, { error: 'Upload reference already exists' }, 409);
   }
@@ -269,10 +416,6 @@ function normalizeFrameColour(value) {
 function normalizeUploadReference(value) {
   const reference = cleanText(value, '').toLowerCase();
   return /^tf_[a-f0-9]{32}$/.test(reference) ? reference : '';
-}
-
-function getUploadManifestKey(uploadReference) {
-  return `tiny-frame-uploads/${uploadReference}.json`;
 }
 
 function getUnitAmount(item, size, productType) {
@@ -457,6 +600,8 @@ function createStripePayload(lineItems, siteBaseUrl) {
   if (uploadReferences.length > 0) {
     payload.set('metadata[upload_references]', uploadReferences.join(',').slice(0, 500));
     payload.set('payment_intent_data[metadata][upload_references]', uploadReferences.join(',').slice(0, 500));
+    payload.set('metadata[upload_session_ids]', uploadReferences.join(',').slice(0, 500));
+    payload.set('payment_intent_data[metadata][upload_session_ids]', uploadReferences.join(',').slice(0, 500));
   }
 
   lineItems.forEach((item, index) => {
@@ -470,6 +615,7 @@ function createStripePayload(lineItems, siteBaseUrl) {
       payload.set(`${prefix}[price_data][product_data][metadata][quantity]`, String(item.quantity));
       if (item.uploadReference) {
         payload.set(`${prefix}[price_data][product_data][metadata][upload_reference]`, item.uploadReference);
+        payload.set(`${prefix}[price_data][product_data][metadata][upload_session_id]`, item.uploadReference);
       }
     }
     if (item.orderCode) {
@@ -502,7 +648,11 @@ async function verifyUploadManifests(lineItems, env) {
     throw new Error('Artwork storage is not configured');
   }
   for (const item of pictureItems) {
-    if (!await env.ARTWORK_BUCKET.head(getUploadManifestKey(item.uploadReference))) {
+    const currentManifest = await env.ARTWORK_BUCKET.head(getUploadManifestKey(item.uploadReference));
+    const legacyManifest = currentManifest
+      ? null
+      : await env.ARTWORK_BUCKET.head(getLegacyUploadManifestKey(item.uploadReference));
+    if (!currentManifest && !legacyManifest) {
       throw new Error('One or more picture uploads could not be verified');
     }
   }
@@ -801,6 +951,88 @@ async function claimWebhookEvent(eventId, env) {
   return result !== null;
 }
 
+async function readR2Json(object) {
+  if (!object) return null;
+  try {
+    if (typeof object.json === 'function') return await object.json();
+    if (typeof object.text === 'function') return JSON.parse(await object.text());
+    if (object.body) return await new Response(object.body).json();
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function getCheckoutUploadSessionIds(session) {
+  const value = session?.metadata?.upload_session_ids || session?.metadata?.upload_references || '';
+  return [...new Set(String(value).split(',').map(normalizeUploadReference).filter(Boolean))];
+}
+
+async function markUploadSessionsPaid(session, env) {
+  if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
+  const uploadSessionIds = getCheckoutUploadSessionIds(session);
+  const stripeCheckoutSessionId = cleanText(session?.id, '');
+  for (const uploadSessionId of uploadSessionIds) {
+    const currentKey = getUploadManifestKey(uploadSessionId);
+    const legacyKey = getLegacyUploadManifestKey(uploadSessionId);
+    let manifestKey = currentKey;
+    let object = await env.ARTWORK_BUCKET.get(currentKey);
+    if (!object) {
+      manifestKey = legacyKey;
+      object = await env.ARTWORK_BUCKET.get(legacyKey);
+    }
+    if (!object) throw new Error(`Upload session ${uploadSessionId} could not be found`);
+    const manifest = await readR2Json(object);
+    if (!manifest) throw new Error(`Upload session ${uploadSessionId} has an invalid manifest`);
+    if (manifest.status === 'paid') continue;
+    await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
+      ...manifest,
+      status:'paid',
+      ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {}),
+      paid_at:new Date().toISOString()
+    }), {
+      httpMetadata: { contentType:'application/json' }
+    });
+  }
+  return uploadSessionIds.length;
+}
+
+async function cleanupPendingUploads(env, now = Date.now()) {
+  if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
+  const configuredDays = Number(env.PENDING_UPLOAD_TTL_DAYS);
+  const ttlDays = Number.isFinite(configuredDays) && configuredDays >= 7 && configuredDays <= 14
+    ? configuredDays
+    : DEFAULT_PENDING_UPLOAD_TTL_DAYS;
+  const cutoff = now - (ttlDays * 24 * 60 * 60 * 1000);
+  let cursor;
+  let deletedSessions = 0;
+
+  do {
+    const listing = await env.ARTWORK_BUCKET.list({
+      prefix:TINY_FRAME_UPLOAD_PREFIX,
+      ...(cursor ? { cursor } : {})
+    });
+    const manifests = listing.objects.filter(object => object.key.endsWith('/manifest.json'));
+    for (const listedManifest of manifests) {
+      const object = await env.ARTWORK_BUCKET.get(listedManifest.key);
+      const manifest = await readR2Json(object);
+      const uploadedAt = Date.parse(manifest?.uploaded_at || '');
+      if (!manifest || manifest.status !== 'pending' || !Number.isFinite(uploadedAt) || uploadedAt >= cutoff) continue;
+      const uploadSessionId = normalizeUploadReference(manifest.upload_session_id);
+      if (!uploadSessionId) continue;
+      const prefix = getTinyFrameUploadPrefix(uploadSessionId);
+      const storedFileKeys = Array.isArray(manifest.files)
+        ? manifest.files.map(file => String(file?.objectKey || '')).filter(key => key.startsWith(prefix))
+        : [];
+      await deleteObjectKeys(env.ARTWORK_BUCKET, [...new Set([...storedFileKeys, listedManifest.key])]);
+      deletedSessions += 1;
+    }
+    cursor = listing.truncated ? listing.cursor : undefined;
+  } while (cursor);
+
+  return deletedSessions;
+}
+
 async function handleStripeWebhook(request, env) {
   if (!validateStripeConfiguration(env) || !env.STRIPE_WEBHOOK_SECRET) {
     return new Response('Webhook secret is not configured', { status: 500 });
@@ -825,6 +1057,12 @@ async function handleStripeWebhook(request, env) {
   }
 
   if (event.type === 'checkout.session.completed') {
+    try {
+      await markUploadSessionsPaid(event.data.object, env);
+    } catch (error) {
+      console.error('Upload session payment update failed:', error);
+      return new Response('Upload session status could not be updated', { status: 503 });
+    }
     let claimed;
     try {
       claimed = await claimWebhookEvent(event.id, env);
@@ -833,9 +1071,9 @@ async function handleStripeWebhook(request, env) {
       return new Response('Webhook idempotency storage is unavailable', { status: 503 });
     }
     if (!claimed) {
-      return new Response(JSON.stringify({ received: true, duplicate: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify({ received:true, duplicate:true }), {
+        status:200,
+        headers: { 'Content-Type':'application/json' }
       });
     }
     try {
@@ -859,7 +1097,9 @@ async function handleStripeWebhook(request, env) {
 export {
   buildLineItems,
   claimWebhookEvent,
+  cleanupPendingUploads,
   createStripePayload,
+  markUploadSessionsPaid,
   normalizeTinyFrameProductType,
   normalizeUploadReference
 };
@@ -881,6 +1121,10 @@ export default {
 
     if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
       return createCheckoutSession(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/upload-print-sheet') {
+      return uploadTinyFramePrintSheet(request, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/checkout-session-status') {
@@ -909,5 +1153,9 @@ export default {
     }
 
     return jsonResponse(request, env, { error: 'Not found' }, 404);
+  },
+
+  async scheduled(controller, env, context) {
+    context.waitUntil(cleanupPendingUploads(env, controller.scheduledTime || Date.now()));
   }
 };
