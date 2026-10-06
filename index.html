@@ -137,6 +137,17 @@
     .cropper-actions button { padding:0; border:0; background:none; color:inherit; font:inherit; font-size:10px; font-weight:600; letter-spacing:.14em; cursor:pointer; text-transform:uppercase; }
     .cropper-actions button:hover { text-decoration:underline; text-underline-offset:5px; }
     @media (max-width:1100px) { #cropperOverlay { padding:12px; } #cropperDialog { height:calc(100vh - 24px); padding:16px; } }
+    @media (max-width:600px) {
+      #cropperOverlay { align-items:center; padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); overflow:hidden; }
+      #cropperDialog { width:min(100%,430px); height:auto; max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); gap:12px; padding:12px; overflow:hidden; }
+      #cropperStage { flex:0 1 auto; width:100%; height:min(calc(100vh - 160px),calc((100vw - 48px) * 1.5926)); height:min(calc(100dvh - 160px),calc((100vw - 48px) * 1.5926)); min-height:180px; touch-action:none; }
+      #cropperImage { max-height:100%; }
+      .cropper-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+      .cropper-actions .cropper-rotate { margin:0; }
+      .cropper-actions button { display:grid; place-items:center; min-width:0; min-height:48px; padding:0 10px; border:1px solid var(--divider); background:var(--secondary-cream); font-size:10px; line-height:1.15; }
+      .cropper-actions button:hover { text-decoration:none; }
+      .cropper-actions #saveCrop { grid-column:1 / -1; border-color:var(--brown); background:var(--brown); color:var(--light); }
+    }
     @media (prefers-reduced-motion:reduce) { .image-remove-button { transition:none; } }
     @media (min-width:769px) {
       :root { --announcement-height:32px; --header-height:48px; }
@@ -228,7 +239,7 @@
     .cart-action:hover { opacity:.72; }
     .cart-action:disabled { cursor:not-allowed; opacity:.42; }
     @media (max-width:720px) {
-      #cart-dialog { width:min(540px,calc(100% - 20px)); height:min(560px,calc(100vh - 28px)); height:min(560px,calc(100dvh - 28px)); max-height:calc(100vh - 28px); max-height:calc(100dvh - 28px); border-radius:16px; }
+      #cart-dialog { width:min(540px,91vw); height:min(560px,calc(100vh - 28px)); height:min(560px,calc(100dvh - 28px)); max-height:calc(100vh - 28px); max-height:calc(100dvh - 28px); border-radius:16px; }
       .cart-dialog-shell { padding:30px 28px max(26px,env(safe-area-inset-bottom)); }
       .cart-dialog-header { padding-bottom:19px; }
       .cart-items { min-height:0; }
@@ -420,7 +431,8 @@
     }
     @media (max-width:768px) {
       .palette-panel { height:auto; min-height:0; padding:92px 20px 84px; }
-      .palette-panel.has-pictures { padding:48px 20px 184px; }
+      .palette-panel.has-pictures { padding:48px 20px 32px; }
+      .palette-panel.has-pictures .purchase-row { padding-bottom:24px; }
       .palette-panel:not(.has-pictures) .configurator.is-open { margin-top:40px; }
       .palette-panel:not(.has-pictures) .purchase-row { padding-top:8px; padding-bottom:32px; }
     }
@@ -537,10 +549,10 @@
   </section>
 
   <input id="imageUpload" type="file" accept="image/png,image/jpeg,image/gif">
-  <div id="cropperOverlay" role="dialog" aria-modal="true" aria-label="Adjust image crop">
+  <div id="cropperOverlay" role="dialog" aria-modal="true" aria-label="Adjust image crop" aria-hidden="true">
     <section id="cropperDialog">
       <div id="cropperStage"><img id="cropperImage" alt="Image being cropped"></div>
-      <div class="cropper-actions"><button class="cropper-rotate" id="rotateCrop" type="button" aria-label="Rotate crop frame 90 degrees" aria-pressed="false">Rotate Crop</button><button id="cancelCrop" type="button">Cancel</button><button id="saveCrop" type="button">Save</button></div>
+      <div class="cropper-actions"><button class="cropper-rotate" id="rotateCrop" type="button" aria-label="Rotate crop frame 90 degrees" aria-pressed="false">Rotate Crop</button><button id="cancelCrop" type="button">Cancel / Back</button><button id="saveCrop" type="button">Save Crop</button></div>
     </section>
   </div>
 
@@ -988,8 +1000,47 @@
     let cropFrameIsPortrait = true;
     let sourceUrl = null;
     let sourceFile = null;
+    let cropperScrollLock = null;
+    let cropperReturnFocus = null;
 
     function revoke(url) { if (url) URL.revokeObjectURL(url); }
+    function lockCropperPageScroll() {
+      if (cropperScrollLock) return;
+      const scrollY = window.scrollY;
+      cropperScrollLock = {
+        scrollY,
+        bodyPosition:document.body.style.position,
+        bodyTop:document.body.style.top,
+        bodyWidth:document.body.style.width,
+        bodyOverflow:document.body.style.overflow,
+        documentOverflow:document.documentElement.style.overflow
+      };
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    }
+    function unlockCropperPageScroll() {
+      if (!cropperScrollLock) return;
+      const lock = cropperScrollLock;
+      cropperScrollLock = null;
+      document.body.style.position = lock.bodyPosition;
+      document.body.style.top = lock.bodyTop;
+      document.body.style.width = lock.bodyWidth;
+      document.body.style.overflow = lock.bodyOverflow;
+      document.documentElement.style.overflow = lock.documentOverflow;
+      window.scrollTo(0, lock.scrollY);
+    }
+    function destroyCropper() {
+      cropImage.onload = null;
+      cropImage.onerror = null;
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+      cropImage.removeAttribute("src");
+    }
     function canAddToCart() {
       return orderType === "frame-only" || (orderType === "frame-plus-pictures" && uploadedImages.filter(Boolean).length === 8);
     }
@@ -1046,26 +1097,42 @@
 
     function openCropper() {
       if (!sourceUrl) return;
-      if (cropper) cropper.destroy();
-      cropImage.src = sourceUrl;
+      destroyCropper();
+      cropperReturnFocus = activeSlotIndex === null ? document.activeElement : imageSlots[activeSlotIndex]?.querySelector(".slot-picker");
       overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+      lockCropperPageScroll();
       cropFrameIsPortrait = true;
       rotateCropButton.setAttribute("aria-pressed", "false");
-      cropper = new Cropper(cropImage, {
-        aspectRatio:frameAspectRatio, viewMode:1, autoCropArea:.9, responsive:true,
-        dragMode:"crop", movable:false, zoomable:true, zoomOnWheel:true,
-        cropBoxMovable:true, cropBoxResizable:true, background:false
-      });
+      const expectedSourceUrl = sourceUrl;
+      cropImage.onload = () => {
+        if (sourceUrl !== expectedSourceUrl || overlay.style.display !== "flex") return;
+        requestAnimationFrame(() => {
+          if (sourceUrl !== expectedSourceUrl || overlay.style.display !== "flex") return;
+          cropper = new Cropper(cropImage, {
+            aspectRatio:frameAspectRatio, viewMode:1, autoCropArea:.9, responsive:true,
+            dragMode:"crop", movable:false, zoomable:true, zoomOnWheel:true,
+            cropBoxMovable:true, cropBoxResizable:true, background:false
+          });
+          rotateCropButton.focus({ preventScroll:true });
+        });
+      };
+      cropImage.onerror = closeCropper;
+      cropImage.src = sourceUrl;
     }
 
     function closeCropper() {
       overlay.style.display = "none";
-      if (cropper) { cropper.destroy(); cropper = null; }
-      cropImage.removeAttribute("src");
+      overlay.setAttribute("aria-hidden", "true");
+      destroyCropper();
+      unlockCropperPageScroll();
       revoke(sourceUrl);
       sourceUrl = null;
       sourceFile = null;
+      activeSlotIndex = null;
       pond.removeFiles();
+      cropperReturnFocus?.focus({ preventScroll:true });
+      cropperReturnFocus = null;
     }
 
     pond.on("addfile", (error, fileItem) => {
@@ -1089,6 +1156,9 @@
     });
 
     document.getElementById("cancelCrop").addEventListener("click", closeCropper);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && overlay.style.display === "flex") closeCropper();
+    });
     rotateCropButton.addEventListener("click", () => {
       if (!cropper) return;
       cropFrameIsPortrait = !cropFrameIsPortrait;
