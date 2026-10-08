@@ -14,9 +14,23 @@
   <script>
     (() => {
       const naturalCaseClass = "item-text-wide-light-natural-case";
+      const symbolClass = "item-text-wide-light-symbol";
       const primaryItemTextWideLight = /^Item Text Wide Light$/i;
+      const specialSymbol = /[&@%+=±×÷−©®™]|\p{S}/gu;
       const style = document.createElement("style");
-      style.textContent = `.${naturalCaseClass} { text-transform: none !important; }`;
+      style.textContent = `
+        .${naturalCaseClass} { text-transform: none !important; }
+        .${symbolClass} {
+          font-family: "Goudy Bookletter 1911";
+          font-size: inherit;
+          color: inherit;
+          font-weight: 400;
+          font-synthesis: none;
+          line-height: inherit;
+          vertical-align: baseline;
+          letter-spacing: 0;
+        }
+      `;
       document.head.appendChild(style);
 
       const syncTree = (root) => {
@@ -30,14 +44,58 @@
         });
       };
 
-      const start = () => {
-        syncTree(document.body);
-        new MutationObserver((records) => {
-          records.forEach((record) => record.addedNodes.forEach(syncTree));
-          records.forEach((record) => {
-            if (record.type === "attributes") syncTree(record.target);
+      const wrapSpecialSymbols = (root) => {
+        if (!(root instanceof Element)) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+        textNodes.forEach((textNode) => {
+          const parent = textNode.parentElement;
+          if (!parent || parent.closest(`.${symbolClass},script,style,noscript,textarea,code,svg`)) return;
+          const primaryFamily = getComputedStyle(parent).fontFamily
+            .split(",")[0]
+            .trim()
+            .replace(/^['"]|['"]$/g, "");
+          if (!primaryItemTextWideLight.test(primaryFamily)) return;
+
+          specialSymbol.lastIndex = 0;
+          const matches = [...textNode.data.matchAll(specialSymbol)];
+          if (!matches.length) return;
+
+          const fragment = document.createDocumentFragment();
+          let offset = 0;
+          matches.forEach((match) => {
+            if (match.index > offset) fragment.append(document.createTextNode(textNode.data.slice(offset, match.index)));
+            const symbol = document.createElement("span");
+            symbol.className = symbolClass;
+            symbol.textContent = match[0];
+            fragment.append(symbol);
+            offset = match.index + match[0].length;
           });
-        }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] });
+          if (offset < textNode.data.length) fragment.append(document.createTextNode(textNode.data.slice(offset)));
+          textNode.replaceWith(fragment);
+        });
+      };
+
+      const syncAndWrap = (root) => {
+        if (root instanceof Element) {
+          syncTree(root);
+          wrapSpecialSymbols(root);
+        } else if (root instanceof Text && root.parentElement) {
+          wrapSpecialSymbols(root.parentElement);
+        }
+      };
+
+      const start = () => {
+        syncAndWrap(document.body);
+        new MutationObserver((records) => {
+          records.forEach((record) => record.addedNodes.forEach(syncAndWrap));
+          records.forEach((record) => {
+            if (record.type === "attributes") syncAndWrap(record.target);
+            if (record.type === "characterData") syncAndWrap(record.target);
+          });
+        }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "style"] });
         const syncDocument = () => requestAnimationFrame(() => syncTree(document.body));
         window.addEventListener("resize", syncDocument);
         document.fonts?.ready.then(syncDocument);
@@ -66,8 +124,9 @@
     @font-face { font-family:"Chunky Upload Plus"; src:url("Girthquake-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     @font-face { font-family:"Item Text Wide Light"; src:url("Assets/ItemsTextTrial-WideLight.otf") format("opentype"); font-style:normal; font-weight:300; font-display:swap; }
     @font-face { font-family:"mono #1"; src:url("Assets/mono-1.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
+    @font-face { font-family:"Goudy Bookletter 1911"; src:url("Assets/GoudyBookletter1911-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     /* Contrast: Espresso on Cream is 12.72:1 (AAA). Burnt Terracotta is reserved for underlines, hover details and active indicators. */
-    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --walnut:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-display:"Good Frame Handmade Smooth", Arial, Helvetica, sans-serif; --font-body:"Item Text Wide Light", Arial, sans-serif; --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
+    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --walnut:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-display:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-body:"Item Text Wide Light", "Goudy Bookletter 1911", Arial, sans-serif; --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; scroll-padding-top:var(--header-height); font-family:var(--font-body); }
     body { margin:0; background:var(--page-gradient); color:var(--brown); font-family:var(--font-body); font-weight:500; letter-spacing:.02em; }
@@ -221,18 +280,19 @@
       .configurator { transform:translateY(12px) scale(1.2); transform-origin:center top; }
       .configurator.is-open { transform:scale(1.2); }
     }
-    .site-footer { padding:36px 7.4% 24px; background:var(--walnut); color:var(--light); font-family:var(--font-body); }
-    .footer-grid { display:grid; grid-template-columns:1.2fr 1fr; gap:10%; max-width:760px; }
-    .footer-kicker { margin:0 0 18px; font-size:10px; font-weight:600; letter-spacing:.14em; line-height:1; text-transform:uppercase; }
-    .footer-links { display:grid; gap:13px; }
-    .footer-links a { width:max-content; font-size:16px; line-height:1.1; transition:opacity 180ms ease; }
-    .footer-links a:hover, .footer-contact a:hover { opacity:.58; }
-    .footer-contact { display:grid; align-content:start; gap:13px; }
-    .footer-contact a { display:flex; align-items:center; gap:12px; font-size:15px; line-height:1.12; transition:opacity 180ms ease; }
-    .footer-icon { display:grid; flex:none; place-items:center; width:34px; height:34px; border:1px solid var(--muted); border-radius:9px; }
-    .footer-icon svg { display:block; width:16px; height:16px; fill:none; stroke:var(--light); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; color:var(--light); overflow:visible; }
-    .footer-rule { height:1px; margin:28px 0 20px; background:rgba(255,247,226,.28); }
-    .footer-meta { display:flex; justify-content:space-between; gap:20px; font-size:12px; line-height:1.1; }
+    .site-footer { padding:40px 7.4% 22px; background:var(--walnut); color:var(--light); font-family:var(--font-body); }
+    .footer-grid { display:grid; grid-template-columns:1fr 1fr; align-items:start; gap:10%; max-width:1100px; margin:0 auto; }
+    .footer-brand { margin:0 0 12px; font-family:var(--font-display); font-size:clamp(24px,2.2vw,32px); font-weight:400; letter-spacing:.06em; line-height:1; }
+    .footer-tagline { margin:0; font-size:10px; letter-spacing:.12em; line-height:1.4; }
+    .footer-kicker { margin:0 0 15px; font-size:13px; font-weight:400; letter-spacing:.08em; line-height:1.1; text-transform:uppercase; }
+    .footer-kicker, .footer-tagline { color:rgba(255,247,226,.76); }
+    .footer-contact a:hover { opacity:.58; }
+    .footer-contact { display:grid; align-content:start; gap:12px; }
+    .footer-contact a { display:flex; align-items:center; gap:12px; width:max-content; max-width:100%; font-size:14px; line-height:1.35; transition:opacity 180ms ease; }
+    .footer-icon { display:grid; flex:none; place-items:center; width:24px; height:24px; }
+    .footer-icon svg { display:block; width:18px; height:18px; fill:none; stroke:var(--light); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; color:var(--light); overflow:visible; }
+    .footer-rule { height:1px; max-width:1100px; margin:26px auto 14px; background:rgba(255,247,226,.24); }
+    .footer-meta { display:flex; justify-content:flex-end; max-width:1100px; margin:0 auto; font-size:11px; line-height:1.2; }
     dialog { width:min(400px,calc(100% - 40px)); padding:28px; border:1px solid var(--brown); background:var(--cream); color:var(--brown); }
     dialog::backdrop { background:rgba(60,42,33,.35); }
     dialog button { padding:10px 16px; border:1px solid var(--brown); background:transparent; color:inherit; cursor:pointer; }
@@ -506,7 +566,7 @@
     .purchase-button:not(:disabled):hover { background:transparent; color:var(--brown); box-shadow:none; }
     .slot-picker:hover, .faq-button:hover { background:rgba(182,109,77,.18); }
     .cropper-actions #saveCrop:hover, .cart-action--primary:hover, .showcase-control:hover { border-color:var(--accent); background:var(--brown); color:var(--cream); box-shadow:inset 0 0 0 1px var(--accent); opacity:1; }
-    .footer-links a:hover, .footer-contact a:hover { color:var(--cream); text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; opacity:1; }
+    .footer-contact a:hover { color:var(--cream); text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; opacity:1; }
     @media (max-width:1100px) {
       /* Mobile/tablet readability refinements. Desktop typography remains unchanged. */
       .announcement-bar { font-size:clamp(13px,3.85vw,15px); font-weight:600; letter-spacing:.06em; }
@@ -531,15 +591,13 @@
       .brand-statement-track span, .brand-statement-track b { color:var(--light); font-size:14px; font-weight:500; letter-spacing:.035em; }
       .brand-statement-track b { margin:0 30px; }
 
-      .site-footer { padding:42px 24px 28px; }
-      .footer-grid { gap:30px; }
-      .footer-kicker { margin-bottom:12px; font-size:14px; line-height:1.3; }
-      .footer-links { gap:4px; }
-      .footer-links a { display:flex; align-items:center; min-height:44px; font-size:16px; line-height:1.4; }
-      .footer-contact { gap:4px; }
-      .footer-contact a { min-width:0; min-height:48px; gap:14px; font-size:16px; line-height:1.4; }
+      .site-footer { padding:30px 20px 18px; }
+      .footer-grid { gap:24px; }
+      .footer-kicker { margin-bottom:10px; font-size:12px; line-height:1.3; }
+      .footer-contact { gap:8px; }
+      .footer-contact a { min-width:0; min-height:40px; gap:12px; font-size:14px; line-height:1.4; }
       .footer-contact a > span:last-child { min-width:0; overflow-wrap:anywhere; }
-      .footer-meta { gap:12px; font-size:14px; line-height:1.4; }
+      .footer-meta { font-size:11px; line-height:1.4; }
 
       .faq-title { font-size:24px; }
       .faq-list summary { font-size:16px; font-weight:500; }
@@ -665,15 +723,11 @@
 
   <footer class="site-footer" aria-label="Good Frame footer">
     <div class="footer-grid">
-      <div>
-        <p class="footer-kicker">Explore</p>
-        <nav class="footer-links" aria-label="Footer navigation">
-          <a href="#colour-palette">Print &amp; Frame</a>
-          <a href="#home">About Good Frame</a>
-          <a href="mailto:contact.goodframe@gmail.com">Contact Us</a>
-        </nav>
+      <div class="footer-brand-block">
+        <p class="footer-brand">GOOD FRAME</p>
+        <p class="footer-tagline">TINY FRAMES, BIG MEMORIES</p>
       </div>
-      <div>
+      <div class="footer-connect">
         <p class="footer-kicker">Connect</p>
         <div class="footer-contact">
           <a href="https://instagram.com/goodframeau" aria-label="Good Frame on Instagram">
@@ -688,7 +742,7 @@
       </div>
     </div>
     <div class="footer-rule"></div>
-    <div class="footer-meta"><span>Gold Coast, Australia</span><span>© Good Frame</span></div>
+    <div class="footer-meta"><span>© Good Frame</span></div>
   </footer>
 
   <dialog id="cart-dialog" aria-labelledby="cart-title">
