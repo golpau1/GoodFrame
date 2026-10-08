@@ -471,8 +471,11 @@
       .palette-panel:not(.has-pictures) .purchase-row { padding-top:8px; padding-bottom:32px; }
     }
     @media (max-width:1100px) {
+      /* Tablet/mobile carousel breakpoint: touch navigation replaces arrow buttons at 1100px and below. */
       .showcase-gallery { width:100%; margin:0; padding:32px 0 40px; }
       .showcase-collage { --stack-step:clamp(48px,13vw,62px); width:100%; height:clamp(320px,92vw,400px); overflow:hidden; }
+      .showcase-track { display:block; transform:translate3d(var(--swipe-offset,0px),0,0); transition:transform 220ms cubic-bezier(.22,.7,.25,1); will-change:transform; }
+      .showcase-track.is-swiping { transition:none; }
       .showcase-photo { width:min(76vw,360px); }
       .showcase-photo[data-carousel-position="-1"] { --card-y:8px; }
       .showcase-photo[data-carousel-position="1"] { --card-y:8px; }
@@ -482,7 +485,7 @@
       .showcase-photo[data-carousel-position="3"] { --card-y:24px; }
       .showcase-photo[data-carousel-position="-4"] { --card-y:32px; }
       .showcase-photo[data-carousel-position="4"] { --card-y:32px; }
-      .showcase-control { width:40px; height:40px; border-radius:4px; }
+      .showcase-control { display:none; }
       .showcase-control--prev { left:8px; }
       .showcase-control--next { right:8px; }
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
@@ -927,6 +930,58 @@
       };
       previousButton.addEventListener("click", () => moveCarousel(-1));
       nextButton.addEventListener("click", () => moveCarousel(1));
+      const swipeNavigation = window.matchMedia("(max-width: 1100px)");
+      const swipeSurface = gallery.querySelector(".showcase-collage");
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchStartedAt = 0;
+      let touchDeltaX = 0;
+      let touchAxis = "";
+      let trackingTouch = false;
+      const resetSwipeOffset = () => {
+        track.classList.remove("is-swiping");
+        track.style.setProperty("--swipe-offset", "0px");
+      };
+      swipeSurface.addEventListener("touchstart", (event) => {
+        if (!swipeNavigation.matches || moving || event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchStartedAt = performance.now();
+        touchDeltaX = 0;
+        touchAxis = "";
+        trackingTouch = true;
+      }, { passive:true });
+      swipeSurface.addEventListener("touchmove", (event) => {
+        if (!trackingTouch || !swipeNavigation.matches || event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        if (!touchAxis && Math.max(Math.abs(deltaX), Math.abs(deltaY)) >= 7) {
+          touchAxis = Math.abs(deltaX) > Math.abs(deltaY) ? "horizontal" : "vertical";
+        }
+        if (touchAxis !== "horizontal") return;
+        event.preventDefault();
+        touchDeltaX = deltaX;
+        const dragLimit = Math.min(110, swipeSurface.clientWidth * .28);
+        const resistedDelta = Math.max(-dragLimit, Math.min(dragLimit, deltaX * .72));
+        track.classList.add("is-swiping");
+        track.style.setProperty("--swipe-offset", `${resistedDelta}px`);
+      }, { passive:false });
+      const finishSwipe = (cancelled = false) => {
+        if (!trackingTouch) return;
+        trackingTouch = false;
+        const elapsed = Math.max(1, performance.now() - touchStartedAt);
+        const velocity = Math.abs(touchDeltaX) / elapsed;
+        const threshold = Math.min(72, swipeSurface.clientWidth * .14);
+        const shouldMove = !cancelled && touchAxis === "horizontal" && (Math.abs(touchDeltaX) >= threshold || (Math.abs(touchDeltaX) >= 28 && velocity >= .35));
+        const direction = touchDeltaX < 0 ? 1 : -1;
+        resetSwipeOffset();
+        if (shouldMove) requestAnimationFrame(() => moveCarousel(direction));
+        window.setTimeout(() => track.style.removeProperty("--swipe-offset"), 240);
+      };
+      swipeSurface.addEventListener("touchend", () => finishSwipe(false), { passive:true });
+      swipeSurface.addEventListener("touchcancel", () => finishSwipe(true), { passive:true });
       gallery.addEventListener("keydown", (event) => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
