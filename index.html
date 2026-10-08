@@ -504,6 +504,55 @@
     .slot-picker:hover, .faq-button:hover { background:rgba(182,109,77,.18); }
     .cropper-actions #saveCrop:hover, .cart-action--primary:hover, .showcase-control:hover { border-color:var(--accent); background:var(--brown); color:var(--cream); box-shadow:inset 0 0 0 1px var(--accent); opacity:1; }
     .footer-links a:hover, .footer-contact a:hover { color:var(--cream); text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; opacity:1; }
+    @media (max-width:1100px) {
+      /* Mobile/tablet readability refinements. Desktop typography remains unchanged. */
+      .announcement-bar { font-size:14px; font-weight:600; letter-spacing:.075em; }
+      .header-faq-link { font-size:18px; font-weight:500; letter-spacing:.065em; }
+
+      .palette-title { color:var(--brown); font-size:18px; line-height:1.25; }
+      .swatch-label { margin-top:12px; color:var(--brown); font-size:14px; font-weight:600; letter-spacing:.075em; line-height:1.35; }
+      .swatch:not(.is-selected) .swatch-label { color:rgba(60,42,33,.78); font-weight:500; }
+      .configurator-heading { color:var(--brown); font-size:16px; line-height:1.3; }
+      .option-label, .option-value { color:var(--brown); font-size:14px; font-weight:500; line-height:1.4; }
+      .option-row[data-option="order"] .option-choices { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+      .choice { min-height:46px; color:rgba(60,42,33,.76); font-size:14px; font-weight:500; line-height:1.3; }
+      .order-choice { font-size:clamp(15px,3.8vw,16px); letter-spacing:.02em; line-height:1.25; white-space:nowrap; }
+      .choice.is-selected { color:var(--brown); font-weight:600; text-decoration-color:var(--brown); text-decoration-thickness:2px; text-underline-offset:7px; }
+      .purchase-button { min-height:52px; font-size:16px; font-weight:600; letter-spacing:.085em; }
+      .purchase-price { font-weight:600; }
+      .purchase-error { font-size:14px; line-height:1.55; }
+      .upload-heading, .upload-progress { font-size:14px; line-height:1.4; }
+      .reset-images-button { min-height:44px; font-size:14px; }
+      .cropper-actions button { font-size:14px; font-weight:600; }
+
+      .brand-statement-track span, .brand-statement-track b { color:var(--light); font-size:14px; font-weight:500; letter-spacing:.035em; }
+      .brand-statement-track b { margin:0 30px; }
+
+      .site-footer { padding:42px 24px 28px; }
+      .footer-grid { gap:30px; }
+      .footer-kicker { margin-bottom:12px; font-size:14px; line-height:1.3; }
+      .footer-links { gap:4px; }
+      .footer-links a { display:flex; align-items:center; min-height:44px; font-size:16px; line-height:1.4; }
+      .footer-contact { gap:4px; }
+      .footer-contact a { min-height:48px; gap:14px; font-size:16px; line-height:1.4; }
+      .footer-meta { gap:12px; font-size:14px; line-height:1.4; }
+
+      .faq-title { font-size:24px; }
+      .faq-list summary { font-size:16px; font-weight:500; }
+      .faq-list p { color:rgba(60,42,33,.82); font-size:15px; font-weight:500; }
+      .cart-dialog-title { font-size:18px; }
+      .cart-item-title { font-size:16px; }
+      .cart-item-option, .cart-item-quantity { color:rgba(60,42,33,.82); font-size:14px; line-height:1.5; }
+      .cart-item-price { font-size:15px; }
+      .cart-item-remove { min-height:32px; font-size:14px; }
+      .cart-empty, .cart-summary-row { color:rgba(60,42,33,.82); font-size:14px; line-height:1.4; }
+      .cart-total { font-size:16px; }
+      .cart-action { min-height:48px; font-size:16px; }
+      .cart-action:not(.cart-action--primary) { min-height:44px; font-size:14px; }
+    }
+    @media (max-width:360px) {
+      .option-row[data-option="order"] .option-choices { grid-template-columns:1fr; gap:2px; height:104px; }
+    }
     @keyframes brand-statement-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
     @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a { transition:none; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } }
   </style>
