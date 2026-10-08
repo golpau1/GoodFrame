@@ -76,6 +76,7 @@
     .mobile-hero-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
     .showcase-gallery { display:none; }
     .showcase-track { display:contents; }
+    .showcase-mobile-slider { display:none; }
     .showcase-item-label { display:none; }
     .brand-statement-strip { display:none; }
     .brand-statement-marquee { display:none; }
@@ -471,23 +472,16 @@
       .palette-panel:not(.has-pictures) .purchase-row { padding-top:8px; padding-bottom:32px; }
     }
     @media (max-width:1100px) {
-      /* Tablet/mobile carousel breakpoint: touch navigation replaces arrow buttons at 1100px and below. */
+      /* Tablet/mobile carousel breakpoint: native scroll-snap slider at 1100px and below. */
       .showcase-gallery { width:100%; margin:0; padding:32px 0 40px; }
-      .showcase-collage { --stack-step:clamp(48px,13vw,62px); width:100%; height:clamp(320px,92vw,400px); overflow:hidden; }
-      .showcase-track { display:block; transform:translate3d(var(--swipe-offset,0px),0,0); transition:transform 220ms cubic-bezier(.22,.7,.25,1); will-change:transform; }
-      .showcase-track.is-swiping { transition:none; }
-      .showcase-photo { width:min(76vw,360px); }
-      .showcase-photo[data-carousel-position="-1"] { --card-y:8px; }
-      .showcase-photo[data-carousel-position="1"] { --card-y:8px; }
-      .showcase-photo[data-carousel-position="-2"] { --card-y:16px; }
-      .showcase-photo[data-carousel-position="2"] { --card-y:16px; }
-      .showcase-photo[data-carousel-position="-3"] { --card-y:24px; }
-      .showcase-photo[data-carousel-position="3"] { --card-y:24px; }
-      .showcase-photo[data-carousel-position="-4"] { --card-y:32px; }
-      .showcase-photo[data-carousel-position="4"] { --card-y:32px; }
+      .showcase-collage { display:none; }
+      .showcase-mobile-slider { --mobile-slide-width:min(76vw,360px); display:block; width:100%; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scroll-behavior:smooth; scroll-snap-type:x mandatory; scrollbar-width:none; touch-action:pan-x pan-y; -webkit-overflow-scrolling:touch; }
+      .showcase-mobile-slider::-webkit-scrollbar { display:none; width:0; height:0; }
+      .showcase-mobile-slider-track { display:flex; align-items:center; width:max-content; gap:14px; padding:8px calc((100vw - var(--mobile-slide-width))/2) 14px; }
+      .showcase-mobile-slide { position:relative; flex:0 0 var(--mobile-slide-width); width:var(--mobile-slide-width); aspect-ratio:1; overflow:hidden; border-radius:6px; background:transparent; opacity:.72; scroll-snap-align:center; scroll-snap-stop:always; transform:scale(.92); transform-origin:center; transition:opacity 180ms ease, transform 180ms ease; }
+      .showcase-mobile-slide.is-active { z-index:2; opacity:1; transform:scale(1); }
+      .showcase-mobile-slide img { display:block; width:100%; height:100%; border:0; border-radius:6px; object-fit:cover; box-shadow:none; user-select:none; -webkit-user-drag:none; }
       .showcase-control { display:none; }
-      .showcase-control--prev { left:8px; }
-      .showcase-control--next { right:8px; }
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
     }
     .showcase-photo, .showcase-photo img { border-radius:6px; }
@@ -601,6 +595,9 @@
       <div class="showcase-photo showcase-photo--six" data-showcase-image="Assets/coffee/coffee-beans-scoop.jpg" aria-label="Material detail photograph"><img src="Assets/coffee/coffee-beans-scoop.jpg" alt="Warm close-up detail photograph"><span class="showcase-item-label">#06</span></div>
        </div>
        <button class="showcase-control showcase-control--next" type="button" aria-label="Next gallery image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+      </div>
+      <div class="showcase-mobile-slider" role="region" aria-label="Swipe through gallery images" tabindex="0">
+        <div class="showcase-mobile-slider-track"></div>
       </div>
     </div>
   </section>
@@ -869,6 +866,97 @@
         label:photo.getAttribute("aria-label")
       }));
       const modulo = (value, length) => ((value % length) + length) % length;
+      const mobileViewport = gallery.querySelector(".showcase-mobile-slider");
+      const mobileTrack = gallery.querySelector(".showcase-mobile-slider-track");
+      const mobileBreakpoint = window.matchMedia("(max-width: 1100px)");
+      let mobileSlides = [];
+      let mobileActiveIndex = sources.length * 2;
+      if (mobileViewport && mobileTrack) {
+        const repeatedSources = Array.from({ length:5 }, () => sources).flat();
+        mobileSlides = repeatedSources.map((source, index) => {
+          const slide = document.createElement("div");
+          const image = document.createElement("img");
+          slide.className = "showcase-mobile-slide";
+          slide.dataset.mobileSlideIndex = String(index);
+          slide.dataset.sourceIndex = String(index % sources.length);
+          slide.setAttribute("aria-label", source.label);
+          image.src = source.src;
+          image.alt = source.alt;
+          image.loading = index >= sources.length && index < sources.length * 4 ? "eager" : "lazy";
+          image.draggable = false;
+          slide.append(image);
+          return slide;
+        });
+        mobileTrack.replaceChildren(...mobileSlides);
+        const slideCentre = (slide) => slide.offsetLeft - (mobileViewport.clientWidth - slide.offsetWidth) / 2;
+        const nearestMobileSlideIndex = () => {
+          const viewportCentre = mobileViewport.scrollLeft + mobileViewport.clientWidth / 2;
+          let nearestIndex = mobileActiveIndex;
+          let nearestDistance = Infinity;
+          mobileSlides.forEach((slide, index) => {
+            const distance = Math.abs(slide.offsetLeft + slide.offsetWidth / 2 - viewportCentre);
+            if (distance < nearestDistance) {
+              nearestDistance = distance;
+              nearestIndex = index;
+            }
+          });
+          return nearestIndex;
+        };
+        const syncMobileAccessibility = (index) => {
+          mobileActiveIndex = index;
+          mobileSlides.forEach((slide, slideIndex) => {
+            const active = slideIndex === index;
+            slide.classList.toggle("is-active", active);
+            if (active) slide.setAttribute("aria-current", "true");
+            else slide.removeAttribute("aria-current");
+            slide.setAttribute("aria-hidden", active ? "false" : "true");
+          });
+        };
+        const jumpToMobileSlide = (index) => {
+          const slide = mobileSlides[index];
+          if (!slide) return;
+          const previousScrollBehavior = mobileViewport.style.scrollBehavior;
+          mobileViewport.style.scrollBehavior = "auto";
+          mobileViewport.scrollLeft = slideCentre(slide);
+          mobileViewport.style.scrollBehavior = previousScrollBehavior;
+          syncMobileAccessibility(index);
+        };
+        const recenterMobileLoop = () => {
+          const nearestIndex = nearestMobileSlideIndex();
+          syncMobileAccessibility(nearestIndex);
+          const centralStart = sources.length * 2;
+          const centralEnd = sources.length * 3;
+          if (nearestIndex >= centralStart && nearestIndex < centralEnd) return;
+          jumpToMobileSlide(centralStart + modulo(nearestIndex, sources.length));
+        };
+        let mobileScrollFrame = 0;
+        let mobileScrollTimer = 0;
+        mobileViewport.addEventListener("scroll", () => {
+          if (!mobileBreakpoint.matches) return;
+          if (!mobileScrollFrame) {
+            mobileScrollFrame = requestAnimationFrame(() => {
+              mobileScrollFrame = 0;
+              syncMobileAccessibility(nearestMobileSlideIndex());
+            });
+          }
+          window.clearTimeout(mobileScrollTimer);
+          mobileScrollTimer = window.setTimeout(recenterMobileLoop, 180);
+        }, { passive:true });
+        const prepareMobileSlider = () => {
+          if (!mobileBreakpoint.matches) return;
+          requestAnimationFrame(() => requestAnimationFrame(() => jumpToMobileSlide(sources.length * 2)));
+        };
+        mobileBreakpoint.addEventListener?.("change", prepareMobileSlider);
+        if ("ResizeObserver" in window) {
+          let mobileResizeTimer = 0;
+          new ResizeObserver(() => {
+            if (!mobileBreakpoint.matches) return;
+            window.clearTimeout(mobileResizeTimer);
+            mobileResizeTimer = window.setTimeout(() => jumpToMobileSlide(mobileActiveIndex), 80);
+          }).observe(mobileViewport);
+        }
+        prepareMobileSlider();
+      }
       const slots = Array.from({ length:9 }, (_, index) => {
         const position = index - 4;
         const slot = document.createElement("div");
@@ -930,59 +1018,8 @@
       };
       previousButton.addEventListener("click", () => moveCarousel(-1));
       nextButton.addEventListener("click", () => moveCarousel(1));
-      const swipeNavigation = window.matchMedia("(max-width: 1100px)");
-      const swipeSurface = gallery.querySelector(".showcase-collage");
-      let touchStartX = 0;
-      let touchStartY = 0;
-      let touchStartedAt = 0;
-      let touchDeltaX = 0;
-      let touchAxis = "";
-      let trackingTouch = false;
-      const resetSwipeOffset = () => {
-        track.classList.remove("is-swiping");
-        track.style.setProperty("--swipe-offset", "0px");
-      };
-      swipeSurface.addEventListener("touchstart", (event) => {
-        if (!swipeNavigation.matches || moving || event.touches.length !== 1) return;
-        const touch = event.touches[0];
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        touchStartedAt = performance.now();
-        touchDeltaX = 0;
-        touchAxis = "";
-        trackingTouch = true;
-      }, { passive:true });
-      swipeSurface.addEventListener("touchmove", (event) => {
-        if (!trackingTouch || !swipeNavigation.matches || event.touches.length !== 1) return;
-        const touch = event.touches[0];
-        const deltaX = touch.clientX - touchStartX;
-        const deltaY = touch.clientY - touchStartY;
-        if (!touchAxis && Math.max(Math.abs(deltaX), Math.abs(deltaY)) >= 7) {
-          touchAxis = Math.abs(deltaX) > Math.abs(deltaY) ? "horizontal" : "vertical";
-        }
-        if (touchAxis !== "horizontal") return;
-        event.preventDefault();
-        touchDeltaX = deltaX;
-        const dragLimit = Math.min(110, swipeSurface.clientWidth * .28);
-        const resistedDelta = Math.max(-dragLimit, Math.min(dragLimit, deltaX * .72));
-        track.classList.add("is-swiping");
-        track.style.setProperty("--swipe-offset", `${resistedDelta}px`);
-      }, { passive:false });
-      const finishSwipe = (cancelled = false) => {
-        if (!trackingTouch) return;
-        trackingTouch = false;
-        const elapsed = Math.max(1, performance.now() - touchStartedAt);
-        const velocity = Math.abs(touchDeltaX) / elapsed;
-        const threshold = Math.min(72, swipeSurface.clientWidth * .14);
-        const shouldMove = !cancelled && touchAxis === "horizontal" && (Math.abs(touchDeltaX) >= threshold || (Math.abs(touchDeltaX) >= 28 && velocity >= .35));
-        const direction = touchDeltaX < 0 ? 1 : -1;
-        resetSwipeOffset();
-        if (shouldMove) requestAnimationFrame(() => moveCarousel(direction));
-        window.setTimeout(() => track.style.removeProperty("--swipe-offset"), 240);
-      };
-      swipeSurface.addEventListener("touchend", () => finishSwipe(false), { passive:true });
-      swipeSurface.addEventListener("touchcancel", () => finishSwipe(true), { passive:true });
       gallery.addEventListener("keydown", (event) => {
+        if (mobileBreakpoint.matches && event.target.closest(".showcase-mobile-slider")) return;
         if (event.key === "ArrowLeft") {
           event.preventDefault();
           moveCarousel(-1);
