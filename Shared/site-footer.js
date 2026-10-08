@@ -31,7 +31,7 @@
               <span class="site-footer-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M4 6.5l8 6.2 8-6.2"/></svg>
               </span>
-              contact.goodframe@gmail.com
+              contact.goodframe<wbr>@gmail.com
             </a>
           </div>
         </div>
@@ -55,7 +55,7 @@
         </div>
         <div class="footer-col">
           <h3 class="footer-title footer-girthquake">Contact</h3>
-          <p><a href="mailto:contact.goodframe@gmail.com">contact.goodframe@gmail.com</a></p>
+          <p><a href="mailto:contact.goodframe@gmail.com">contact.goodframe<wbr>@gmail.com</a></p>
         </div>
         <div class="footer-col">
           <h3 class="footer-title footer-girthquake">Social</h3>

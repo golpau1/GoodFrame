@@ -13,10 +13,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
     (() => {
-      const lowercaseClass = "ntype82-lowercase";
-      const primaryNType82 = /^NType82(?:\s+Headline)?$/i;
+      const naturalCaseClass = "item-text-wide-light-natural-case";
+      const primaryItemTextWideLight = /^Item Text Wide Light$/i;
       const style = document.createElement("style");
-      style.textContent = `.${lowercaseClass} { text-transform: lowercase !important; }`;
+      style.textContent = `.${naturalCaseClass} { text-transform: none !important; }`;
       document.head.appendChild(style);
 
       const syncTree = (root) => {
@@ -26,7 +26,7 @@
             .split(",")[0]
             .trim()
             .replace(/^['"]|['"]$/g, "");
-          element.classList.toggle(lowercaseClass, primaryNType82.test(primaryFamily));
+          element.classList.toggle(naturalCaseClass, primaryItemTextWideLight.test(primaryFamily));
         });
       };
 
@@ -64,9 +64,10 @@
   <style>
     @font-face { font-family:"Good Frame Handmade Smooth"; src:url("Assets/GoodFrame-Handmade-Smooth.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     @font-face { font-family:"Chunky Upload Plus"; src:url("Girthquake-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
-    @font-face { font-family:"NType82"; src:url("NType82-Regular.otf") format("opentype"); font-style:normal; font-weight:400; font-display:swap; }
+    @font-face { font-family:"Item Text Wide Light"; src:url("Assets/ItemsTextTrial-WideLight.otf") format("opentype"); font-style:normal; font-weight:300; font-display:swap; }
+    @font-face { font-family:"mono #1"; src:url("Assets/mono-1.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     /* Contrast: Espresso on Cream is 12.72:1 (AAA). Burnt Terracotta is reserved for underlines, hover details and active indicators. */
-    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --walnut:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-display:"Good Frame Handmade Smooth", Arial, Helvetica, sans-serif; --font-body:"NType82", Arial, Helvetica, sans-serif; --checkout-meta-size:11px; --announcement-height:32px; --header-height:48px; }
+    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --walnut:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-display:"Good Frame Handmade Smooth", Arial, Helvetica, sans-serif; --font-body:"Item Text Wide Light", Arial, sans-serif; --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; scroll-padding-top:var(--header-height); font-family:var(--font-body); }
     body { margin:0; background:var(--page-gradient); color:var(--brown); font-family:var(--font-body); font-weight:500; letter-spacing:.02em; }
@@ -86,7 +87,7 @@
     a:focus-visible,button:focus-visible { outline:2px solid currentColor; outline-offset:6px; }
     .homepage { position:relative; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
     .hero-image { position:absolute; top:0; right:0; left:50%; width:50%; height:100%; object-fit:cover; object-position:center; }
-    .announcement-bar { position:relative; z-index:4; display:grid; place-items:center; height:var(--announcement-height); padding:0 12px; overflow:hidden; background:var(--announcement-background); color:var(--announcement-foreground); font-family:var(--font-body); font-size:clamp(9px,.7vw,11px); font-weight:500; letter-spacing:.14em; line-height:1; text-align:center; text-transform:uppercase; white-space:nowrap; }
+    .announcement-bar { position:relative; z-index:4; display:grid; place-items:center; height:var(--announcement-height); padding:4px 12px; overflow:hidden; background:var(--announcement-background); color:var(--announcement-foreground); font-family:var(--font-body); font-size:clamp(11px,.8vw,13px); font-weight:500; letter-spacing:.16em; line-height:1; text-align:center; text-transform:uppercase; white-space:nowrap; }
     .header { position:sticky; z-index:20; top:0; width:100%; display:grid; grid-template-columns:1fr auto; align-items:center; height:var(--header-height); padding:0 4%; background:var(--header-background); color:var(--header-foreground); font-size:clamp(12px,1vw,15px); font-weight:500; line-height:1; }
     .navigation { width:auto; display:flex; }
     .navigation a { letter-spacing:.12em; text-transform:uppercase; }
@@ -189,7 +190,7 @@
     }
     @media (prefers-reduced-motion:reduce) { .image-remove-button { transition:none; } }
     @media (min-width:1101px) {
-      :root { --announcement-height:32px; --header-height:48px; }
+      :root { --announcement-height:40px; --header-height:48px; }
       .homepage { position:relative; display:block; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
       .hero-image, .hero-left-image, .hero-detail-image { display:block; }
       .hero-intro { display:block; }
@@ -296,10 +297,10 @@
       .faq-list p { max-width:none; margin:0 30px 20px 0; font-size:14px; line-height:1.7; }
     }
     @media (max-width:1100px) {
-      :root { --announcement-height:30px; --header-height:60px; }
+      :root { --announcement-height:36px; --header-height:60px; }
       body { background:var(--page-gradient); }
       .homepage { position:relative; display:block; width:100%; max-width:none; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(620px - var(--announcement-height) - var(--header-height)); margin:0; padding:0; overflow:hidden; border-radius:0; background:transparent; box-shadow:none; }
-      .announcement-bar { position:relative; right:auto; left:auto; z-index:4; display:grid; height:var(--announcement-height); font-size:clamp(8px,1.15vw,10px); letter-spacing:.1em; }
+      .announcement-bar { position:relative; right:auto; left:auto; z-index:4; display:grid; height:var(--announcement-height); font-size:clamp(13px,1.7vw,15px); letter-spacing:.1em; }
       .header { position:sticky; top:0; right:auto; left:auto; z-index:20; display:flex; justify-content:center; width:100%; height:var(--header-height); align-items:center; padding:0 20px; border:0; background:var(--header-background); box-shadow:none; font-size:12px; }
       .navigation { width:auto; }
       .header-brand { position:absolute; top:50%; left:50%; font-size:clamp(21px,3vw,26px); letter-spacing:.06em; transform:translate(-50%,-50%); }
@@ -349,10 +350,10 @@
       .graphic-02, .graphic-71, .graphic-83, .mobile-graphic-281 { display:none; }
     }
     @media (min-width:1101px) {
-      :root { --announcement-height:36px; --header-height:72px; }
+      :root { --announcement-height:40px; --header-height:72px; }
       /* The desktop landing page follows the mobile hero system; the product page remains desktop-first below it. */
       .homepage { position:relative; display:block; width:100%; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(680px - var(--announcement-height) - var(--header-height)); margin:0; padding:0; overflow:hidden; border-radius:0; background:transparent; box-shadow:none; }
-      .announcement-bar { position:relative; right:auto; left:auto; z-index:4; height:var(--announcement-height); font-size:clamp(10px,.7vw,11px); letter-spacing:.14em; }
+      .announcement-bar { position:relative; right:auto; left:auto; z-index:4; height:var(--announcement-height); font-size:clamp(12px,.85vw,13px); letter-spacing:.16em; }
       .header { position:sticky; top:0; right:auto; left:auto; z-index:20; display:flex; justify-content:center; width:100%; height:var(--header-height); padding:0 6%; border:0; background:var(--header-background); box-shadow:none; font-size:14px; }
       .header-brand { position:absolute; top:50%; left:50%; font-size:clamp(25px,1.85vw,29px); letter-spacing:.06em; transform:translate(-50%,-50%); }
       .header-left-nav { position:absolute; left:6%; display:flex; align-items:center; gap:22px; }
@@ -506,7 +507,7 @@
     .footer-links a:hover, .footer-contact a:hover { color:var(--cream); text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; opacity:1; }
     @media (max-width:1100px) {
       /* Mobile/tablet readability refinements. Desktop typography remains unchanged. */
-      .announcement-bar { font-size:14px; font-weight:600; letter-spacing:.075em; }
+      .announcement-bar { font-size:clamp(13px,3.85vw,15px); font-weight:600; letter-spacing:.06em; }
       .header-faq-link { font-size:18px; font-weight:500; letter-spacing:.065em; }
 
       .palette-title { color:var(--brown); font-size:18px; line-height:1.25; }
@@ -534,7 +535,8 @@
       .footer-links { gap:4px; }
       .footer-links a { display:flex; align-items:center; min-height:44px; font-size:16px; line-height:1.4; }
       .footer-contact { gap:4px; }
-      .footer-contact a { min-height:48px; gap:14px; font-size:16px; line-height:1.4; }
+      .footer-contact a { min-width:0; min-height:48px; gap:14px; font-size:16px; line-height:1.4; }
+      .footer-contact a > span:last-child { min-width:0; overflow-wrap:anywhere; }
       .footer-meta { gap:12px; font-size:14px; line-height:1.4; }
 
       .faq-title { font-size:24px; }
@@ -558,7 +560,7 @@
   </style>
 </head>
 <body>
-  <div class="announcement-bar">HANDMADE TASMANIAN OAK FRAMES</div>
+  <div class="announcement-bar">Handmade Tasmanian oak frames</div>
   <header class="header">
     <nav class="header-left-nav" aria-label="Primary navigation">
       <a class="header-faq-link" href="#faq-dialog" aria-label="Open FAQ" aria-haspopup="dialog">FAQ</a>
@@ -614,19 +616,19 @@
             <div class="image-slot" data-slot="7"><button class="slot-picker" type="button" aria-label="Add image 08">+</button><input class="upload-input" type="file" accept="image/*"></div>
           </div>
         </div>
-        <div class="purchase-row"><button class="purchase-button" type="button"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">70</span></span><span id="purchase-label">ADD TO CART</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
+        <div class="purchase-row"><button class="purchase-button" type="button"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">70</span></span><span id="purchase-label">Add to cart</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
       </div>
     </div>
   </section>
 
   <section class="brand-statement-strip" aria-label="Good Frame materials and making">
-    <p class="brand-statement">HANDMADE IN OUR BURLEIGH HEADS STUDIO</p>
-    <p class="brand-statement">TASMANIAN OAK MOULDINGS</p>
-    <p class="brand-statement">CUT, SANDED, POLISHED &amp; WAXED</p>
+    <p class="brand-statement">Handmade in our Burleigh Heads studio</p>
+    <p class="brand-statement">Tasmanian oak mouldings</p>
+    <p class="brand-statement">Cut, sanded, polished &amp; waxed</p>
     <div class="brand-statement-marquee" aria-hidden="true">
       <div class="brand-statement-track">
-        <span>HANDMADE IN OUR BURLEIGH HEADS STUDIO</span><b>*</b><span>TASMANIAN OAK MOULDINGS</span><b>*</b><span>CUT, SANDED, POLISHED &amp; WAXED</span><b>*</b>
-        <span>HANDMADE IN OUR BURLEIGH HEADS STUDIO</span><b>*</b><span>TASMANIAN OAK MOULDINGS</span><b>*</b><span>CUT, SANDED, POLISHED &amp; WAXED</span><b>*</b>
+        <span>Handmade in our Burleigh Heads studio</span><b>*</b><span>Tasmanian oak mouldings</span><b>*</b><span>Cut, sanded, polished &amp; waxed</span><b>*</b>
+        <span>Handmade in our Burleigh Heads studio</span><b>*</b><span>Tasmanian oak mouldings</span><b>*</b><span>Cut, sanded, polished &amp; waxed</span><b>*</b>
       </div>
     </div>
   </section>
@@ -678,7 +680,7 @@
           </a>
           <a href="mailto:contact.goodframe@gmail.com" aria-label="Email Good Frame">
             <span class="footer-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="1.5"/><path d="m4.5 7 7.5 6 7.5-6"/></svg></span>
-            <span>contact.goodframe@gmail.com</span>
+            <span>contact.goodframe<wbr>@gmail.com</span>
           </a>
         </div>
       </div>
@@ -1652,9 +1654,9 @@
         if (withPictures) openCart();
       } catch (error) {
         console.error("Add to cart failed", error);
-        showPurchaseError(withPictures ? "UPLOAD FAILED — PLEASE TRY AGAIN" : `${error.message} Please try again.`);
+        showPurchaseError(withPictures ? "Upload failed — please try again" : `${error.message} Please try again.`);
       } finally {
-        document.getElementById("purchase-label").textContent = "ADD TO CART";
+        document.getElementById("purchase-label").textContent = "Add to cart";
         updateAddToCartState();
       }
     });

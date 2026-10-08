@@ -1,21 +1,21 @@
 @font-face {
-    font-family: 'NType82';
-    src: url('../../Assets/NType82-Regular.otf') format('opentype');
-    font-weight: 400;
+    font-family: 'Item Text Wide Light';
+    src: url('../../Assets/ItemsTextTrial-WideLight.otf') format('opentype');
+    font-weight:300;
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: 'NType82 Headline';
-    src: url('../../Assets/NType82-Headline.otf') format('opentype');
+    font-family: 'mono #1';
+    src: url('../../Assets/mono-1.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
 }
 
 body {
-    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Item Text Wide Light', Arial, sans-serif;
     margin: 0;
     padding: 20px;
     background-color: #f5f5f5;
@@ -31,7 +31,7 @@ body {
 }
 
 .admin-header h1 {
-    font-family: 'NType82 Headline', 'NType82', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Item Text Wide Light', Arial, sans-serif;
     margin: 0;
     font-size: 1.8rem;
     font-weight: 400;
@@ -164,7 +164,7 @@ body {
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
-    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Item Text Wide Light', Arial, sans-serif;
     font-size: 1rem;
     letter-spacing: 0;
     text-transform: uppercase;

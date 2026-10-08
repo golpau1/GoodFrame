@@ -37,9 +37,17 @@
 }
 
 @font-face {
-            font-family: 'NType82';
-            src: url('../Assets/NType82-Regular.otf') format('opentype');
-            font-weight: 300;
+            font-family: 'Item Text Wide Light';
+            src: url('../Assets/ItemsTextTrial-WideLight.otf') format('opentype');
+            font-weight:300;
+            font-style: normal;
+            font-display: swap;
+}
+
+@font-face {
+            font-family: 'mono #1';
+            src: url('../Assets/mono-1.ttf') format('truetype');
+            font-weight: 400;
             font-style: normal;
             font-display: swap;
 }
@@ -891,7 +899,7 @@ main.cart-page-container {
         text-decoration: none !important;
         font-size: 1.08rem !important;
         font-weight: 400 !important;
-        font-family: 'NType82', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+        font-family: 'Item Text Wide Light', Arial, sans-serif !important;
         font-variant-caps: normal !important;
         text-transform: none !important;
         letter-spacing: -0.05em !important;
@@ -993,7 +1001,7 @@ main.cart-page-container {
 
 .cart-actions .checkout-button,
 .cart-actions .continue-shopping {
-    font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+    font-family: 'Item Text Wide Light', Arial, sans-serif !important;
     text-transform: none !important;
     font-variant-caps: normal !important;
     letter-spacing: 0 !important;
@@ -1030,7 +1038,7 @@ header,
   color: #f9f2e6 !important;
   border: 0 !important;
   text-align: center !important;
-  font-family: 'NType82', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
+  font-family: 'Item Text Wide Light', Arial, sans-serif !important;
   font-size: 1rem !important;
   font-weight: 300 !important;
   font-style: normal !important;

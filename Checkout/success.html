@@ -13,6 +13,42 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+      (() => {
+        const naturalCaseClass = "item-text-wide-light-natural-case";
+        const primaryItemTextWideLight = /^Item Text Wide Light$/i;
+        const style = document.createElement("style");
+        style.textContent = `.${naturalCaseClass} { text-transform: none !important; }`;
+        document.head.appendChild(style);
+
+        const syncTree = (root) => {
+          if (!(root instanceof Element)) return;
+          [root, ...root.querySelectorAll("*")].forEach((element) => {
+            const primaryFamily = getComputedStyle(element).fontFamily
+              .split(",")[0]
+              .trim()
+              .replace(/^['"]|['"]$/g, "");
+            element.classList.toggle(naturalCaseClass, primaryItemTextWideLight.test(primaryFamily));
+          });
+        };
+
+        const start = () => {
+          syncTree(document.body);
+          new MutationObserver((records) => {
+            records.forEach((record) => record.addedNodes.forEach(syncTree));
+            records.forEach((record) => {
+              if (record.type === "attributes") syncTree(record.target);
+            });
+          }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] });
+          const syncDocument = () => requestAnimationFrame(() => syncTree(document.body));
+          window.addEventListener("resize", syncDocument);
+          document.fonts?.ready.then(syncDocument);
+        };
+
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
+        else start();
+      })();
+    </script>
     <title>Payment Successful - Good Frame</title>
     <meta name="robots" content="noindex, follow">
     <link rel="canonical" href="https://goodframe.com.au/order-confirmation">
@@ -34,8 +70,8 @@
     <link rel="stylesheet" href="/Shared/site-shell.css?v=20260824-pure-black-footer">
     <style>
         @font-face {
-            font-family: 'Girthquake';
-            src: url('/Assets/12 Font Bundle/The Fonts/Girthquake/Girthquake-Regular.otf') format('opentype');
+            font-family: 'Good Frame Handmade Smooth';
+            src: url('/Assets/GoodFrame-Handmade-Smooth.ttf') format('truetype');
             font-weight: 400;
             font-style: normal;
             font-display: swap;
@@ -150,7 +186,7 @@
 
         .success-button,
         .primary-button {
-            font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+            font-family: 'Item Text Wide Light', Arial, sans-serif !important;
             text-transform: none !important;
             font-variant-caps: normal !important;
             letter-spacing: 0 !important;
@@ -217,7 +253,7 @@
         .footer .footer-col > h3 {
             margin: 0 !important;
             padding: 0 !important;
-            font-family: 'Girthquake', 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+            font-family: 'Good Frame Handmade Smooth', Arial, sans-serif !important;
             font-size: 1rem !important;
             font-weight: 400 !important;
             line-height: 1.1 !important;
@@ -240,7 +276,7 @@
         .footer a {
             margin: 0 !important;
             padding: 0 !important;
-            font-family: 'NType82', 'Helvetica Neue', Arial, sans-serif !important;
+            font-family: 'Item Text Wide Light', Arial, sans-serif !important;
             font-size: 0.88rem !important;
             font-weight: 300 !important;
             line-height: 1.35 !important;
