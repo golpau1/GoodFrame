@@ -538,10 +538,11 @@
       .showcase-gallery > * { position:relative; z-index:1; }
       .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
       .showcase-sticky { position:relative; top:auto; display:block; width:100%; height:auto; min-height:0; padding:0; overflow:visible; }
-      .showcase-collage { --stack-step:clamp(68px,8vw,82px); position:relative; display:block; width:min(100% - 112px,940px); height:clamp(380px,56vw,500px); margin:0 auto; padding:0; overflow:visible; border:0; border-radius:0; cursor:default; touch-action:pan-y; }
-      .showcase-track { position:relative; width:100%; height:100%; margin:0; padding:0; }
-      .showcase-photo { --card-x:0px; --card-y:0px; --card-scale:.5; position:absolute; top:50%; left:50%; z-index:1; display:flex; width:clamp(270px,52vw,430px); aspect-ratio:1; margin:0; padding:0; border:0; border-radius:0; outline:0; overflow:hidden; background:transparent; cursor:default; opacity:0; pointer-events:none; transform:translate3d(calc(-50% + var(--card-x)), calc(-50% + var(--card-y)), 0) scale(var(--card-scale)); transition:transform 480ms cubic-bezier(.22,.7,.25,1), opacity 320ms ease; }
+      .showcase-collage { --stack-step:clamp(64px,9vw,92px); position:relative; display:block; width:min(calc(100% - 48px),940px); height:clamp(360px,42vw,440px); margin:0 auto; padding:0; overflow:visible; border:0; border-radius:0; cursor:default; touch-action:pan-y; }
+      .showcase-track { --swipe-offset:0px; position:relative; width:100%; height:100%; margin:0; padding:0; }
+      .showcase-photo { --card-x:0px; --card-y:0px; --card-scale:.5; position:absolute; top:50%; left:50%; z-index:1; display:flex; width:clamp(320px,45vw,430px); aspect-ratio:1; margin:0; padding:0; border:0; border-radius:0; outline:0; overflow:hidden; background:transparent; cursor:default; opacity:0; pointer-events:none; transform:translate3d(calc(-50% + var(--card-x) + var(--swipe-offset)), calc(-50% + var(--card-y)), 0) scale(var(--card-scale)); transition:transform 480ms cubic-bezier(.22,.7,.25,1), opacity 320ms ease; }
       .showcase-photo.is-recycling { transition:none; }
+      .showcase-collage.is-dragging .showcase-photo { transition:none; }
       .showcase-photo[data-carousel-position="0"] { --card-scale:1; z-index:10; opacity:1; }
       .showcase-photo[data-carousel-position="-1"] { --card-x:calc(var(--stack-step) * -1); --card-y:10px; --card-scale:.89; z-index:8; opacity:1; }
       .showcase-photo[data-carousel-position="1"] { --card-x:var(--stack-step); --card-y:10px; --card-scale:.89; z-index:8; opacity:1; }
@@ -586,10 +587,10 @@
       .palette-panel:not(.has-pictures) .purchase-row { padding-top:8px; padding-bottom:32px; }
     }
     @media (max-width:1100px) {
-      /* Tablet/mobile carousel breakpoint: native scroll-snap slider at 1100px and below. */
+      /* Tablet/mobile carousel breakpoint: stacked cards with horizontal swipe navigation. */
       .showcase-gallery { width:100%; margin:0; padding:32px 0 40px; }
-      .showcase-collage { display:none; }
-      .showcase-mobile-slider { --mobile-slide-width:min(76vw,360px); display:block; width:100%; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scroll-behavior:smooth; scroll-snap-type:x mandatory; scrollbar-width:none; touch-action:pan-x pan-y; -webkit-overflow-scrolling:touch; }
+      .showcase-collage { display:block; }
+      .showcase-mobile-slider { --mobile-slide-width:min(76vw,360px); display:none; width:100%; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scroll-behavior:smooth; scroll-snap-type:x mandatory; scrollbar-width:none; touch-action:pan-x pan-y; -webkit-overflow-scrolling:touch; }
       .showcase-mobile-slider::-webkit-scrollbar { display:none; width:0; height:0; }
       .showcase-mobile-slider-track { display:flex; align-items:center; width:max-content; gap:14px; padding:8px calc((100vw - var(--mobile-slide-width))/2) 14px; }
       .showcase-mobile-slide { position:relative; flex:0 0 var(--mobile-slide-width); width:var(--mobile-slide-width); aspect-ratio:1; overflow:hidden; border-radius:6px; background:transparent; opacity:.72; scroll-snap-align:center; scroll-snap-stop:always; transform:scale(.92); transform-origin:center; transition:opacity 180ms ease, transform 180ms ease; }
@@ -597,6 +598,10 @@
       .showcase-mobile-slide img { display:block; width:100%; height:100%; border:0; border-radius:6px; object-fit:cover; box-shadow:none; user-select:none; -webkit-user-drag:none; }
       .showcase-control { display:none; }
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
+    }
+    @media (max-width:600px) {
+      .showcase-collage { --stack-step:clamp(46px,14vw,60px); width:100%; height:clamp(270px,82vw,350px); }
+      .showcase-photo { width:min(76vw,326px); }
     }
     .showcase-photo, .showcase-photo img { border-radius:6px; }
     .showcase-photo { overflow:hidden; }
@@ -1265,6 +1270,47 @@
           });
         });
       };
+      const collage = gallery.querySelector(".showcase-collage");
+      let swipeGesture = null;
+      const finishSwipe = (event, allowNavigation) => {
+        if (!swipeGesture || event.pointerId !== swipeGesture.pointerId) return;
+        if (collage.hasPointerCapture(event.pointerId)) collage.releasePointerCapture(event.pointerId);
+        const completedGesture = swipeGesture;
+        swipeGesture = null;
+        collage.classList.remove("is-dragging");
+        track.style.setProperty("--swipe-offset", "0px");
+        const threshold = Math.min(72, Math.max(42, collage.clientWidth * .12));
+        if (allowNavigation && completedGesture.horizontal && Math.abs(completedGesture.distanceX) >= threshold) {
+          moveCarousel(completedGesture.distanceX < 0 ? 1 : -1);
+        }
+      };
+      collage.addEventListener("pointerdown", (event) => {
+        if (!mobileBreakpoint.matches || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+        swipeGesture = {
+          pointerId:event.pointerId,
+          startX:event.clientX,
+          startY:event.clientY,
+          distanceX:0,
+          horizontal:null
+        };
+        try { collage.setPointerCapture(event.pointerId); } catch {}
+      });
+      collage.addEventListener("pointermove", (event) => {
+        if (!swipeGesture || event.pointerId !== swipeGesture.pointerId) return;
+        const distanceX = event.clientX - swipeGesture.startX;
+        const distanceY = event.clientY - swipeGesture.startY;
+        if (swipeGesture.horizontal === null && Math.max(Math.abs(distanceX), Math.abs(distanceY)) >= 6) {
+          swipeGesture.horizontal = Math.abs(distanceX) > Math.abs(distanceY);
+        }
+        if (!swipeGesture.horizontal) return;
+        event.preventDefault();
+        swipeGesture.distanceX = distanceX;
+        collage.classList.add("is-dragging");
+        const visualOffset = Math.max(-70, Math.min(70, distanceX * .35));
+        track.style.setProperty("--swipe-offset", `${visualOffset}px`);
+      }, { passive:false });
+      collage.addEventListener("pointerup", (event) => finishSwipe(event, true));
+      collage.addEventListener("pointercancel", (event) => finishSwipe(event, false));
       previousButton.addEventListener("click", () => moveCarousel(-1));
       nextButton.addEventListener("click", () => moveCarousel(1));
       gallery.addEventListener("keydown", (event) => {
