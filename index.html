@@ -1134,6 +1134,7 @@
         };
         let mobileScrollFrame = 0;
         let mobileScrollTimer = 0;
+        let mobileMouseDrag = null;
         mobileViewport.addEventListener("scroll", () => {
           if (!mobileBreakpoint.matches) return;
           if (!mobileScrollFrame) {
@@ -1145,6 +1146,41 @@
           window.clearTimeout(mobileScrollTimer);
           mobileScrollTimer = window.setTimeout(recenterMobileLoop, 180);
         }, { passive:true });
+        const finishMobileMouseDrag = (event) => {
+          if (!mobileMouseDrag || event.pointerId !== mobileMouseDrag.pointerId) return;
+          if (mobileViewport.hasPointerCapture(event.pointerId)) mobileViewport.releasePointerCapture(event.pointerId);
+          const nearestIndex = nearestMobileSlideIndex();
+          mobileViewport.style.scrollBehavior = mobileMouseDrag.scrollBehavior;
+          mobileViewport.style.scrollSnapType = mobileMouseDrag.scrollSnapType;
+          mobileMouseDrag = null;
+          syncMobileAccessibility(nearestIndex);
+          mobileViewport.scrollTo({ left:slideCentre(mobileSlides[nearestIndex]), behavior:"smooth" });
+          window.clearTimeout(mobileScrollTimer);
+          mobileScrollTimer = window.setTimeout(recenterMobileLoop, 300);
+        };
+        mobileViewport.addEventListener("pointerdown", (event) => {
+          if (!mobileBreakpoint.matches || event.pointerType !== "mouse" || event.button !== 0) return;
+          mobileMouseDrag = {
+            pointerId:event.pointerId,
+            startX:event.clientX,
+            startScrollLeft:mobileViewport.scrollLeft,
+            scrollBehavior:mobileViewport.style.scrollBehavior,
+            scrollSnapType:mobileViewport.style.scrollSnapType
+          };
+          mobileViewport.style.scrollBehavior = "auto";
+          mobileViewport.style.scrollSnapType = "none";
+          mobileViewport.setPointerCapture(event.pointerId);
+          window.clearTimeout(mobileScrollTimer);
+        });
+        mobileViewport.addEventListener("pointermove", (event) => {
+          if (!mobileMouseDrag || event.pointerId !== mobileMouseDrag.pointerId) return;
+          const distance = mobileMouseDrag.startX - event.clientX;
+          if (Math.abs(distance) < 2) return;
+          event.preventDefault();
+          mobileViewport.scrollLeft = mobileMouseDrag.startScrollLeft + distance;
+        });
+        mobileViewport.addEventListener("pointerup", finishMobileMouseDrag);
+        mobileViewport.addEventListener("pointercancel", finishMobileMouseDrag);
         const prepareMobileSlider = () => {
           if (!mobileBreakpoint.matches) return;
           requestAnimationFrame(() => requestAnimationFrame(() => jumpToMobileSlide(sources.length * 2)));
@@ -1172,6 +1208,7 @@
       track.replaceChildren(...slots);
       let activeIndex = 0;
       let moving = false;
+      let queuedDirection = 0;
       const setSlotSource = (slot, sourceIndex) => {
         const source = sources[modulo(sourceIndex, sources.length)];
         slot.dataset.showcaseImage = source.src;
@@ -1191,7 +1228,10 @@
       slots.forEach((slot) => setSlotSource(slot, activeIndex + Number(slot.dataset.carouselPosition)));
       syncAccessibility();
       const moveCarousel = (direction) => {
-        if (moving) return;
+        if (moving) {
+          queuedDirection = Math.max(-sources.length, Math.min(sources.length, queuedDirection + direction));
+          return;
+        }
         moving = true;
         const futureActive = modulo(activeIndex + direction, sources.length);
         const outgoingPosition = direction > 0 ? -4 : 4;
@@ -1215,7 +1255,13 @@
             recycledSlot.dataset.carouselPosition = String(targetPosition);
             syncAccessibility();
             const transitionTime = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 540;
-            window.setTimeout(() => { moving = false; }, transitionTime);
+            window.setTimeout(() => {
+              moving = false;
+              if (!queuedDirection) return;
+              const nextDirection = Math.sign(queuedDirection);
+              queuedDirection -= nextDirection;
+              moveCarousel(nextDirection);
+            }, transitionTime);
           });
         });
       };
