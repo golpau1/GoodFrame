@@ -211,6 +211,59 @@ async function reserveProductCodes(database, units, checkoutRequestId, options =
   };
 }
 
+async function reserveCartProductCode(database, rawUnit, options = {}) {
+  requireDatabase(database);
+  const unit = validateUnit({ ...rawUnit, unitIndex:0, uploadReference:'' });
+  const existing = await first(
+    database,
+    'SELECT * FROM product_codes WHERE cart_item_id = ? AND unit_index = 0',
+    unit.cartItemId
+  );
+  if (existing) {
+    if (String(existing.product_type) !== unit.productType) {
+      throw new ProductCodeError('A cart product identity was reused for a different product');
+    }
+    return { productCode:String(existing.code), capacity:await getProductCodeCapacity(database) };
+  }
+  const provisionalRequestId = `co_${unit.cartItemId.slice(3)}`;
+  const allocation = await reserveProductCodes(database, [{
+    ...rawUnit,
+    cartItemId:unit.cartItemId,
+    unitIndex:0,
+    productType:unit.productType,
+    uploadReference:''
+  }], provisionalRequestId, options);
+  return { productCode:allocation.units[0].productCode, capacity:allocation.capacity };
+}
+
+async function attachProductPdf(database, code, cartItemId, objectKey) {
+  requireDatabase(database);
+  const normalizedCode = normalizeProductCode(code);
+  const normalizedCartItemId = normalizeCartItemId(cartItemId);
+  const key = String(objectKey || '');
+  if (!normalizedCode || !normalizedCartItemId || !/^tinyframes\/products\/[1-9][0-9]{4}\/print-sheet-[1-9][0-9]{4}\.pdf$/.test(key)) {
+    throw new ProductCodeError('Product PDF identity is invalid');
+  }
+  const row = await first(database, 'SELECT * FROM product_codes WHERE code = ?', normalizedCode);
+  if (!row || row.cart_item_id !== normalizedCartItemId || Number(row.unit_index) !== 0) {
+    throw new ProductCodeError('Product code does not belong to this cart product');
+  }
+  if (row.product_type !== 'tiny_frame_8_pictures') {
+    throw new ProductCodeError('Product code is not for a picture product');
+  }
+  if (row.upload_session_id && row.upload_session_id !== key) {
+    throw new ProductCodeError('A different PDF is already attached to this product code');
+  }
+  await run(
+    database,
+    'UPDATE product_codes SET upload_session_id = ? WHERE code = ? AND cart_item_id = ?',
+    key,
+    normalizedCode,
+    normalizedCartItemId
+  );
+  return { ...row, upload_session_id:key };
+}
+
 async function beginCheckoutRequest(database, requestId, payloadHash, productCodes) {
   requireDatabase(database);
   const normalizedRequestId = normalizeCheckoutRequestId(requestId);
@@ -306,6 +359,7 @@ export {
   PRODUCT_CODE_WARNING_REMAINING,
   ProductCodeCapacityError,
   ProductCodeError,
+  attachProductPdf,
   beginCheckoutRequest,
   completeCheckoutRequest,
   findProductCode,
@@ -315,5 +369,6 @@ export {
   normalizeCheckoutRequestId,
   normalizeProductCode,
   randomProductCode,
+  reserveCartProductCode,
   reserveProductCodes
 };

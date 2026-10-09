@@ -3,12 +3,14 @@ import test from 'node:test';
 
 import {
   ProductCodeError,
+  attachProductPdf,
   beginCheckoutRequest,
   completeCheckoutRequest,
   findProductCode,
   getProductCodeCapacity,
   markProductCodesPaid,
   randomProductCode,
+  reserveCartProductCode,
   reserveProductCodes
 } from '../src/product-codes.js';
 import { createProductCodeDatabase } from './helpers/d1.js';
@@ -65,6 +67,33 @@ test('collisions retry and previously assigned codes are never reused', async ()
   }], 'co_fedcba9876543210fedcba9876543210', { randomValues });
   assert.equal(first.units[0].productCode, '10000');
   assert.equal(second.units[0].productCode, '10001');
+  database.close();
+});
+
+test('pre-upload reservation keeps one code when its product PDF is attached and checkout begins', async () => {
+  const database = createProductCodeDatabase();
+  const cartItemId = 'ci_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const first = await reserveCartProductCode(database, {
+    cartItemId,
+    productType:'tiny_frame_8_pictures'
+  });
+  const retry = await reserveCartProductCode(database, {
+    cartItemId,
+    productType:'tiny_frame_8_pictures'
+  });
+  assert.equal(retry.productCode, first.productCode);
+  const objectKey = `tinyframes/products/${first.productCode}/print-sheet-${first.productCode}.pdf`;
+  await attachProductPdf(database, first.productCode, cartItemId, objectKey);
+  const checkout = await reserveProductCodes(database, [{
+    cartItemId,
+    unitIndex:0,
+    productType:'tiny_frame_8_pictures',
+    uploadReference:objectKey
+  }], 'co_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+  assert.equal(checkout.units[0].productCode, first.productCode);
+  const record = await findProductCode(database, first.productCode);
+  assert.equal(record.upload_session_id, objectKey);
+  assert.equal(record.checkout_request_id, 'co_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
   database.close();
 });
 

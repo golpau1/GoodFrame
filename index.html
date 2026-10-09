@@ -1746,17 +1746,76 @@
       localStorage.setItem(CHECKOUT_REQUEST_STORAGE_KEY, JSON.stringify({ id, fingerprint }));
       return id;
     }
+    function loadOriginalForPrint(file) {
+      return new Promise((resolve, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => resolve({ image, objectUrl });
+        image.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error("One of your original pictures could not be read."));
+        };
+        image.src = objectUrl;
+      });
+    }
+    function canvasToFullQualityJpeg(canvas, pictureNumber) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          canvas.width = 1;
+          canvas.height = 1;
+          if (blob) resolve(blob);
+          else reject(new Error(`Picture ${pictureNumber} could not be prepared at full print quality.`));
+        }, "image/jpeg", 1);
+      });
+    }
+    async function createFullResolutionPrintCrop(entry, pictureNumber) {
+      const crop = entry?.crop;
+      if (!(entry?.original instanceof File) || !crop) throw new Error(`Picture ${pictureNumber} is incomplete.`);
+      const { image, objectUrl } = await loadOriginalForPrint(entry.original);
+      try {
+        if (Math.abs(image.naturalWidth - Number(crop.sourceWidth)) > 1 || Math.abs(image.naturalHeight - Number(crop.sourceHeight)) > 1) {
+          throw new Error(`Picture ${pictureNumber} no longer matches its saved crop.`);
+        }
+        const left = Math.max(0, Math.floor(Number(crop.x)));
+        const top = Math.max(0, Math.floor(Number(crop.y)));
+        const right = Math.min(image.naturalWidth, Math.ceil(Number(crop.x) + Number(crop.width)));
+        const bottom = Math.min(image.naturalHeight, Math.ceil(Number(crop.y) + Number(crop.height)));
+        const sourceWidth = right - left;
+        const sourceHeight = bottom - top;
+        const rotation = Number(crop.rotation || 0);
+        if (sourceWidth < 1 || sourceHeight < 1 || ![0, 90].includes(rotation)) {
+          throw new Error(`Picture ${pictureNumber} has invalid crop information.`);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = rotation === 90 ? sourceHeight : sourceWidth;
+        canvas.height = rotation === 90 ? sourceWidth : sourceHeight;
+        const context = canvas.getContext("2d", { alpha:false });
+        if (!context) throw new Error(`Picture ${pictureNumber} could not be prepared by this browser.`);
+        context.imageSmoothingEnabled = false;
+        if (rotation === 90) {
+          context.translate(canvas.width, 0);
+          context.rotate(Math.PI / 2);
+        }
+        context.drawImage(image, left, top, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+        return await canvasToFullQualityJpeg(canvas, pictureNumber);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    }
     async function uploadPrintSheet(entries, frameColour) {
       if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.original instanceof File) || !entry?.crop)) {
         throw new Error("All 8 original pictures and crop settings are required.");
+      }
+      if (!globalThis.GoodFramePrintSheet?.createA4PrintSheetPdf) {
+        throw new Error("The print-sheet builder did not load. Please refresh and try again.");
       }
       const fingerprint = getPrintUploadFingerprint(entries, frameColour);
       if (!printUploadAttempt || printUploadAttempt.fingerprint !== fingerprint) {
         printUploadAttempt = {
           fingerprint,
-          uploadSessionId:createUploadReference(),
           cartItemId:createCartItemId(),
-          originals:Array(8).fill(null),
+          reservation:null,
+          pdfBlob:null,
           promise:null,
           result:null
         };
@@ -1767,8 +1826,8 @@
       const attempt = printUploadAttempt;
       attempt.promise = (async () => {
         const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 300000);
-        const requestUploadStage = async (endpoint, options, pictureNumber = null) => {
+        const timeout = window.setTimeout(() => controller.abort(), 600000);
+        const requestUploadStage = async (endpoint, options, stage) => {
           let response;
           try {
             response = await fetch(`${checkoutApiBaseUrl}${endpoint}`, { ...options, signal:controller.signal });
@@ -1776,8 +1835,7 @@
             const timedOut = error?.name === "AbortError";
             console.error("Picture upload request failed", {
               endpoint,
-              stage:timedOut ? "request_timeout" : "network_request",
-              pictureNumber,
+              stage:timedOut ? "request_timeout" : stage,
               errorName:String(error?.name || "Error")
             });
             const customerError = new Error(timedOut
@@ -1795,7 +1853,7 @@
             console.error("Picture upload returned an invalid response", {
               endpoint,
               status:response.status,
-              pictureNumber,
+              stage,
               contentType:response.headers.get("Content-Type") || ""
             });
           }
@@ -1803,13 +1861,12 @@
             console.error("Picture upload stage was rejected", {
               endpoint,
               status:response.status,
-              pictureNumber,
               code:String(result.code || "INVALID_UPLOAD_RESPONSE"),
-              stage:String(result.stage || "response_validation"),
+              stage:String(result.stage || stage),
               diagnosticId:String(result.diagnostic_id || "")
             });
             const customerMessage = response.status === 413
-              ? `Picture ${pictureNumber || ""} is too large. Please use files under 20 MB each.`.replace("  ", " ")
+              ? "The full-quality print sheet is too large to upload. Please contact us for help with this order."
               : response.status === 400
                 ? String(result.error || "One or more pictures could not be processed. Please review them and try again.")
                 : String(result.error || "We could not prepare your pictures. Your selections are still here, so please try again.");
@@ -1820,36 +1877,41 @@
           return result;
         };
         try {
-          for (let index = 0; index < entries.length; index += 1) {
-            if (attempt.originals[index]?.objectKey) continue;
-            const form = new FormData();
-            form.append("upload_session_id", attempt.uploadSessionId);
-            form.append("picture_number", String(index + 1));
-            form.append("file", entries[index].original, entries[index].original.name);
-            const uploaded = await requestUploadStage("/tiny-frame-upload/original", {
+          if (!attempt.reservation) {
+            attempt.reservation = await requestUploadStage("/tiny-frame-pdf/reserve", {
               method:"POST",
-              body:form
-            }, index + 1);
-            if (!uploaded.original?.objectKey) throw new Error(`Picture ${index + 1} was not stored correctly.`);
-            attempt.originals[index] = uploaded.original;
+              headers:{ "Content-Type":"application/json" },
+              body:JSON.stringify({ cartItemId:attempt.cartItemId, frameColour })
+            }, "reserving_product_code");
           }
-          const result = await requestUploadStage("/tiny-frame-upload/finalize", {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body:JSON.stringify({
-              uploadSessionId:attempt.uploadSessionId,
-              frameColour,
-              originalObjectKeys:attempt.originals.map((original) => original.objectKey),
-              crops:entries.map((entry) => entry.crop)
-            })
-          });
-          if (result.upload_session_id !== attempt.uploadSessionId || !result.manifest?.objectKey) {
-            throw new Error("The uploaded pictures could not be verified.");
+          const { productCode, filename, objectKey } = attempt.reservation;
+          if (!/^[1-9][0-9]{4}$/.test(String(productCode || "")) || filename !== `print-sheet-${productCode}.pdf`) {
+            throw new Error("The product identification code could not be verified.");
+          }
+          if (!attempt.pdfBlob) {
+            const printCrops = [];
+            for (let index = 0; index < entries.length; index += 1) {
+              printCrops.push(await createFullResolutionPrintCrop(entries[index], index + 1));
+            }
+            attempt.pdfBlob = await globalThis.GoodFramePrintSheet.createA4PrintSheetPdf(printCrops, { productCode });
+            if (attempt.pdfBlob.size > 95 * 1024 * 1024) {
+              attempt.pdfBlob = null;
+              throw new Error("The full-quality print sheet exceeds the upload limit. Please contact us for help with this order.");
+            }
+          }
+          const form = new FormData();
+          form.append("cart_item_id", attempt.cartItemId);
+          form.append("product_code", productCode);
+          form.append("pdf", attempt.pdfBlob, filename);
+          const result = await requestUploadStage("/tiny-frame-pdf/upload", { method:"POST", body:form }, "uploading_pdf");
+          if (result.productCode !== productCode || result.pdf?.objectKey !== objectKey) {
+            throw new Error("The uploaded print sheet could not be verified.");
           }
           return {
-            uploadSessionId:attempt.uploadSessionId,
-            printSheetReference:result.manifest.objectKey,
-            cartItemId:attempt.cartItemId
+            uploadSessionId:objectKey,
+            printSheetReference:objectKey,
+            cartItemId:attempt.cartItemId,
+            productCode
           };
         } finally {
           window.clearTimeout(timeout);
@@ -2027,7 +2089,8 @@
             productType:"frame_8_pictures",
             frameColour:selections.colour.toLowerCase(),
             uploadSessionId:uploadSession.uploadSessionId,
-            printSheetReference:uploadSession.printSheetReference
+            printSheetReference:uploadSession.printSheetReference,
+            productCode:uploadSession.productCode
           } : {})
         };
         cartItems.push(cartItem);

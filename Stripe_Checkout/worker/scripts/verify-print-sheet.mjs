@@ -21,7 +21,9 @@ assert.deepEqual(api.specification, {
   gapMm:5,
   guideWidthPt:0.25,
   cropMarkGapMm:2.5,
-  cropMarkLengthMm:2
+  cropMarkLengthMm:2,
+  productCodeLabelBaselineMm:5,
+  productCodeLabelFontSizePt:9
 });
 
 const placements = api.getA4PrintLayout();

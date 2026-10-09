@@ -8,6 +8,8 @@
   const GUIDE_WIDTH_POINTS = 0.25;
   const CROP_MARK_GAP_MM = 2.5;
   const CROP_MARK_LENGTH_MM = 2;
+  const PRODUCT_CODE_LABEL_BASELINE_MM = 5;
+  const PRODUCT_CODE_LABEL_FONT_SIZE_POINTS = 9;
   const PAGE_WIDTH_POINTS = PAGE_WIDTH_MM * MM_TO_POINTS;
   const PAGE_HEIGHT_POINTS = PAGE_HEIGHT_MM * MM_TO_POINTS;
   const PHOTO_WIDTH_POINTS = PHOTO_WIDTH_MM * MM_TO_POINTS;
@@ -113,12 +115,17 @@
     ].join("\n");
   }
 
-  async function createA4PrintSheetPdf(croppedBlobs, { includeCutMarks = true } = {}) {
+  async function createA4PrintSheetPdf(croppedBlobs, { includeCutMarks = true, productCode = "" } = {}) {
     if (!Array.isArray(croppedBlobs) || croppedBlobs.length !== 8) {
       throw new Error("Exactly 8 saved crops are required to prepare the print sheet.");
     }
+    productCode = String(productCode || "");
+    if (!/^[1-9][0-9]{4}$/.test(productCode)) {
+      throw new Error("A valid five-digit product code is required to prepare the print sheet.");
+    }
 
-    const images = await Promise.all(croppedBlobs.map(async (blob, index) => {
+    const images = [];
+    for (const [index, blob] of croppedBlobs.entries()) {
       if (!(blob instanceof Blob) || blob.type !== "image/jpeg" || !blob.size) {
         throw new Error(`Saved crop ${index + 1} is not a valid JPEG image.`);
       }
@@ -129,8 +136,8 @@
       if (Math.abs(actualRatio - expectedRatio) > 0.01) {
         throw new Error(`Saved crop ${index + 1} does not match the required 54 x 86 mm aspect ratio.`);
       }
-      return { bytes, ...dimensions };
-    }));
+      images.push({ bytes, ...dimensions });
+    }
 
     const placements = getA4PrintLayout();
     const imageCommands = placements.map((placement, index) => {
@@ -141,14 +148,20 @@
     const cutMarkCommands = includeCutMarks
       ? ["0.72 G", `${number(GUIDE_WIDTH_POINTS)} w`, ...placements.map(createCutMarkCommands)]
       : [];
-    const contentBytes = bytesFromText([...imageCommands, ...cutMarkCommands].join("\n"));
+    const labelCommands = [
+      "0 G",
+      `BT /F1 ${number(PRODUCT_CODE_LABEL_FONT_SIZE_POINTS)} Tf 1 0 0 1 ${number(82 * MM_TO_POINTS)} ${number(PRODUCT_CODE_LABEL_BASELINE_MM * MM_TO_POINTS)} Tm (PRODUCT ${productCode}) Tj ET`
+    ];
+    const contentBytes = bytesFromText([...imageCommands, ...cutMarkCommands, ...labelCommands].join("\n"));
 
     const objects = [];
     objects[1] = bytesFromText("<< /Type /Catalog /Pages 2 0 R >>");
     objects[2] = bytesFromText("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-    const xObjects = images.map((_, index) => `/Im${index + 1} ${index + 5} 0 R`).join(" ");
+    const imageObjectNumbers = images.map((_, index) => index + 5);
+    const fontObjectNumber = 5 + images.length;
+    const xObjects = images.map((_, index) => `/Im${index + 1} ${imageObjectNumbers[index]} 0 R`).join(" ");
     objects[3] = bytesFromText(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /ImageC] /XObject << ${xObjects} >> >> /Contents 4 0 R >>`
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /Text /ImageC] /XObject << ${xObjects} >> /Font << /F1 ${fontObjectNumber} 0 R >> >> /Contents 4 0 R >>`
     );
     objects[4] = concatenate([
       bytesFromText(`<< /Length ${contentBytes.length} >>\nstream\n`),
@@ -156,14 +169,15 @@
       bytesFromText("\nendstream")
     ]);
     images.forEach((image, index) => {
-      objects[index + 5] = concatenate([
+      objects[imageObjectNumbers[index]] = [
         bytesFromText(
           `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`
         ),
         image.bytes,
         bytesFromText("\nendstream")
-      ]);
+      ];
     });
+    objects[fontObjectNumber] = bytesFromText("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
 
     const header = new Uint8Array([
       ...bytesFromText("%PDF-1.4\n%"),
@@ -174,14 +188,15 @@
     const offsets = [0];
     let currentOffset = header.length;
     for (let objectNumber = 1; objectNumber < objects.length; objectNumber += 1) {
-      const objectBytes = concatenate([
+      const bodyChunks = Array.isArray(objects[objectNumber]) ? objects[objectNumber] : [objects[objectNumber]];
+      const objectChunks = [
         bytesFromText(`${objectNumber} 0 obj\n`),
-        objects[objectNumber],
+        ...bodyChunks,
         bytesFromText("\nendobj\n")
-      ]);
+      ];
       offsets[objectNumber] = currentOffset;
-      chunks.push(objectBytes);
-      currentOffset += objectBytes.length;
+      chunks.push(...objectChunks);
+      currentOffset += objectChunks.reduce((sum, chunk) => sum + chunk.length, 0);
     }
 
     const xrefOffset = currentOffset;
@@ -199,7 +214,7 @@
     ].join("\n");
     chunks.push(bytesFromText(xref));
 
-    return new Blob([concatenate(chunks)], { type:"application/pdf" });
+    return new Blob(chunks, { type:"application/pdf" });
   }
 
   globalThis.GoodFramePrintSheet = Object.freeze({
@@ -213,7 +228,9 @@
       gapMm:GAP_MM,
       guideWidthPt:GUIDE_WIDTH_POINTS,
       cropMarkGapMm:CROP_MARK_GAP_MM,
-      cropMarkLengthMm:CROP_MARK_LENGTH_MM
+      cropMarkLengthMm:CROP_MARK_LENGTH_MM,
+      productCodeLabelBaselineMm:PRODUCT_CODE_LABEL_BASELINE_MM,
+      productCodeLabelFontSizePt:PRODUCT_CODE_LABEL_FONT_SIZE_POINTS
     })
   });
 })();

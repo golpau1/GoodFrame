@@ -7,11 +7,13 @@ import {
 import {
   PRINT_SHEET_SPECIFICATION,
   createA4PrintSheetPdf,
+  getA4PrintLayout,
   readJpegDimensions
 } from './print-sheet-pdf.js';
 import {
   ProductCodeCapacityError,
   ProductCodeError,
+  attachProductPdf,
   beginCheckoutRequest,
   completeCheckoutRequest,
   findProductCode,
@@ -20,6 +22,7 @@ import {
   normalizeCartItemId,
   normalizeCheckoutRequestId,
   normalizeProductCode,
+  reserveCartProductCode,
   reserveProductCodes
 } from './product-codes.js';
 
@@ -49,7 +52,8 @@ const TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
 const TINY_FRAME_UPLOAD_IMAGE_COUNT = 8;
 const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
 const MAX_TINY_FRAME_UPLOAD_BYTES = 96 * 1024 * 1024;
-const MAX_TINY_FRAME_PDF_BYTES = 160 * 1024 * 1024;
+// Keep the multipart request safely below Cloudflare's 100 MB request limit.
+const MAX_TINY_FRAME_PDF_BYTES = 95 * 1024 * 1024;
 const A4_WIDTH_POINTS = 595.275591;
 const A4_HEIGHT_POINTS = 841.889764;
 const TINY_FRAME_PHOTO_WIDTH_POINTS = 54 * 72 / 25.4;
@@ -184,6 +188,17 @@ function isValidTinyFramePrintSheetKey(value) {
   return /^tinyframes\/tf_[a-f0-9]{32}\/print-sheet-(?:a4|[1-9][0-9]{4})\.pdf$/.test(String(value || ''));
 }
 
+function getProductPdfKey(productCode) {
+  const code = normalizeProductCode(productCode);
+  return code ? `tinyframes/products/${code}/print-sheet-${code}.pdf` : '';
+}
+
+function isValidProductPdfKey(value, productCode = '') {
+  const key = String(value || '');
+  const match = key.match(/^tinyframes\/products\/([1-9][0-9]{4})\/print-sheet-([1-9][0-9]{4})\.pdf$/);
+  return Boolean(match && match[1] === match[2] && (!productCode || match[1] === productCode));
+}
+
 function isValidProcessedImageKey(value) {
   return /^tinyframes\/tf_[a-f0-9]{32}\/processed\/(?:0[1-8])\.jpg$/.test(String(value || ''));
 }
@@ -201,30 +216,54 @@ async function deleteObjectKeys(bucket, keys) {
   await Promise.allSettled(keys.map(key => bucket.delete(key)));
 }
 
-function inspectPrintSheetPdf(bytes) {
-  const text = new TextDecoder('latin1').decode(bytes);
-  if (!text.startsWith('%PDF-')) return { valid:false, error:'The print sheet is not a PDF' };
-  const mediaBox = text.match(/\/MediaBox\s*\[\s*0(?:\.0+)?\s+0(?:\.0+)?\s+([\d.]+)\s+([\d.]+)\s*\]/);
-  if (!mediaBox) return { valid:false, error:'The PDF page dimensions could not be verified' };
-  const width = Number(mediaBox[1]);
-  const height = Number(mediaBox[2]);
-  if (Math.abs(width - A4_WIDTH_POINTS) > 0.01 || Math.abs(height - A4_HEIGHT_POINTS) > 0.01) {
+function countAscii(bytes, value) {
+  const needle = new TextEncoder().encode(value);
+  let count = 0;
+  for (let index = 0; index <= bytes.length - needle.length; index += 1) {
+    let matches = true;
+    for (let offset = 0; offset < needle.length; offset += 1) {
+      if (bytes[index + offset] !== needle[offset]) { matches = false; break; }
+    }
+    if (matches) { count += 1; index += needle.length - 1; }
+  }
+  return count;
+}
+
+function pdfNumber(value) {
+  return Number(value).toFixed(6).replace(/\.?0+$/, '');
+}
+
+function inspectPrintSheetPdf(bytes, expectedProductCode = '') {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 5) {
+    return { valid:false, error:'The print sheet is not a PDF' };
+  }
+  const structuralPrefix = new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length, 64 * 1024)));
+  if (!structuralPrefix.startsWith('%PDF-')) return { valid:false, error:'The print sheet is not a PDF' };
+  const mediaBox = `/MediaBox [0 0 ${pdfNumber(A4_WIDTH_POINTS)} ${pdfNumber(A4_HEIGHT_POINTS)}]`;
+  if (!structuralPrefix.includes(mediaBox)) {
     return { valid:false, error:'The print sheet must be an exact portrait A4 page' };
   }
-  const embeddedImageCount = (text.match(/\/Subtype\s*\/Image\b/g) || []).length;
-  if (embeddedImageCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+  if (countAscii(bytes, '/Subtype /Image') !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
     return { valid:false, error:'The print sheet must contain exactly 8 embedded pictures' };
   }
-  const placementPattern = /q\s+([\d.]+)\s+0\s+0\s+([\d.]+)\s+[\d.]+\s+[\d.]+\s+cm\s+\/Im\d+\s+Do\s+Q/g;
-  const placements = [...text.matchAll(placementPattern)];
-  if (placements.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-    return { valid:false, error:'The print-sheet picture placements could not be verified' };
+  const placements = getA4PrintLayout();
+  for (const [index, placement] of placements.entries()) {
+    const command = `q ${pdfNumber(TINY_FRAME_PHOTO_WIDTH_POINTS)} 0 0 ${pdfNumber(TINY_FRAME_PHOTO_HEIGHT_POINTS)} ${pdfNumber(placement.xMm * 72 / 25.4)} ${pdfNumber(placement.yMm * 72 / 25.4)} cm /Im${index + 1} Do Q`;
+    if (!structuralPrefix.includes(command)) {
+      return { valid:false, error:'The print-sheet picture placements could not be verified' };
+    }
+    const trim = `${pdfNumber(placement.xMm * 72 / 25.4)} ${pdfNumber(placement.yMm * 72 / 25.4)} ${pdfNumber(TINY_FRAME_PHOTO_WIDTH_POINTS)} ${pdfNumber(TINY_FRAME_PHOTO_HEIGHT_POINTS)} re S`;
+    if (!structuralPrefix.includes(trim)) {
+      return { valid:false, error:'The print-sheet cut lines could not be verified' };
+    }
   }
-  if (placements.some(match => (
-    Math.abs(Number(match[1]) - TINY_FRAME_PHOTO_WIDTH_POINTS) > 0.01 ||
-    Math.abs(Number(match[2]) - TINY_FRAME_PHOTO_HEIGHT_POINTS) > 0.01
-  ))) {
-    return { valid:false, error:'Every print-sheet picture must be exactly 54 x 86 mm' };
+  if (!structuralPrefix.includes(`${pdfNumber(PRINT_SHEET_SPECIFICATION.guideWidthPt)} w`)) {
+    return { valid:false, error:'The print-sheet cut-line width could not be verified' };
+  }
+  const productCode = normalizeProductCode(expectedProductCode);
+  if (expectedProductCode && !productCode) return { valid:false, error:'The product code is invalid' };
+  if (productCode && !structuralPrefix.includes(`(PRODUCT ${productCode}) Tj`)) {
+    return { valid:false, error:'The print sheet does not contain the matching product code' };
   }
   return { valid:true };
 }
@@ -921,6 +960,144 @@ async function uploadTinyFramePrintSheet(request, env) {
   }
 }
 
+async function reserveTinyFrameProductPdf(request, env) {
+  if (!env.PRODUCT_CODES_DB) {
+    return jsonResponse(request, env, { error:'Product identification database is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400);
+  }
+  const cartItemId = normalizeCartItemId(body?.cartItemId);
+  const frameColour = normalizeFrameColour(body?.frameColour);
+  if (!cartItemId || !frameColour) {
+    return jsonResponse(request, env, { error:'Cart product identity or frame colour is invalid' }, 400);
+  }
+  try {
+    const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
+      cartItemId,
+      productType:'tiny_frame_8_pictures'
+    });
+    if (reservation.capacity?.low) {
+      console.warn('Five-digit product code capacity is running low', reservation.capacity);
+    }
+    const productCode = reservation.productCode;
+    return jsonResponse(request, env, {
+      success:true,
+      productCode,
+      filename:`print-sheet-${productCode}.pdf`,
+      objectKey:getProductPdfKey(productCode)
+    });
+  } catch (error) {
+    const status = error instanceof ProductCodeCapacityError ? 503 : error instanceof ProductCodeError ? 409 : 500;
+    return jsonResponse(request, env, {
+      error:error instanceof ProductCodeError ? error.message : 'A product code could not be reserved',
+      code:'PRODUCT_CODE_RESERVATION_FAILED'
+    }, status);
+  }
+}
+
+async function uploadTinyFrameProductPdf(request, env) {
+  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return jsonResponse(request, env, { error:'Upload must use multipart form data' }, 400);
+  }
+  const cartItemId = normalizeCartItemId(formData.get('cart_item_id'));
+  const productCode = normalizeProductCode(formData.get('product_code'));
+  const pdf = formData.get('pdf');
+  const filename = `print-sheet-${productCode}.pdf`;
+  const objectKey = getProductPdfKey(productCode);
+  if (!cartItemId || !productCode || !pdf || typeof pdf.arrayBuffer !== 'function') {
+    return jsonResponse(request, env, { error:'Product code, cart identity and PDF are required' }, 400);
+  }
+  if (pdf.type !== 'application/pdf' || String(pdf.name || '') !== filename) {
+    return jsonResponse(request, env, { error:'The print-sheet PDF filename or file type is invalid' }, 400);
+  }
+  if (!pdf.size || pdf.size > MAX_TINY_FRAME_PDF_BYTES) {
+    return jsonResponse(request, env, { error:'The print-sheet PDF is empty or exceeds the storage limit' }, 413);
+  }
+
+  const diagnosticId = crypto.randomUUID().slice(0, 8);
+  try {
+    const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
+    if (!record || record.cart_item_id !== cartItemId || record.product_type !== 'tiny_frame_8_pictures') {
+      throw new TinyFrameInputError('The product code does not belong to this cart product');
+    }
+    const existing = await env.ARTWORK_BUCKET.head(objectKey);
+    if (existing) {
+      const sameUpload = existing.customMetadata?.product_code === productCode &&
+        existing.customMetadata?.cart_item_id === cartItemId &&
+        Number(existing.size || existing.contentLength || 0) === pdf.size;
+      if (!sameUpload) throw new TinyFrameInputError('A different PDF is already stored for this product');
+      await attachProductPdf(env.PRODUCT_CODES_DB, productCode, cartItemId, objectKey);
+      return jsonResponse(request, env, {
+        success:true,
+        retry_recovered:true,
+        productCode,
+        pdf:{ filename, objectKey, size:pdf.size }
+      });
+    }
+
+    const bytes = new Uint8Array(await pdf.arrayBuffer());
+    const inspection = inspectPrintSheetPdf(bytes, productCode);
+    if (!inspection.valid) throw new TinyFrameInputError(inspection.error);
+    const createdAt = new Date().toISOString();
+    const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
+      httpMetadata:{ contentType:'application/pdf' },
+      customMetadata:{
+        product_code:productCode,
+        cart_item_id:cartItemId,
+        product_type:'tiny_frame_8_pictures',
+        image_count:String(TINY_FRAME_UPLOAD_IMAGE_COUNT),
+        photo_width_mm:'54',
+        photo_height_mm:'86',
+        status:'pending',
+        created_at:createdAt
+      },
+      onlyIf:{ etagDoesNotMatch:'*' }
+    });
+    if (stored === null) throw new Error('The PDF was stored by another request; please retry');
+    try {
+      await attachProductPdf(env.PRODUCT_CODES_DB, productCode, cartItemId, objectKey);
+    } catch (error) {
+      await env.ARTWORK_BUCKET.delete(objectKey);
+      throw error;
+    }
+    return jsonResponse(request, env, {
+      success:true,
+      productCode,
+      pdf:{ filename, objectKey, size:bytes.length }
+    });
+  } catch (error) {
+    console.error('Tiny Frame PDF upload failed', {
+      diagnosticId,
+      stage:error instanceof TinyFrameInputError ? 'pdf_validation' : 'pdf_storage',
+      code:error instanceof ProductCodeError ? 'PRODUCT_IDENTITY_ERROR' : 'PDF_UPLOAD_FAILED',
+      errorName:String(error?.name || 'Error')
+    });
+    const expected = error instanceof TinyFrameInputError || error instanceof ProductCodeError;
+    return jsonResponse(request, env, {
+      error:expected ? error.message : 'We could not store the print sheet. Your pictures are still selected, so please try again.',
+      code:expected ? 'INVALID_PRINT_SHEET' : 'PDF_STORAGE_FAILED',
+      stage:expected ? 'pdf_validation' : 'pdf_storage',
+      diagnostic_id:diagnosticId
+    }, expected ? 400 : 500);
+  }
+}
+
 async function uploadArtwork(request, env) {
   if (!env.ARTWORK_BUCKET) {
     return jsonResponse(request, env, { error: 'Artwork storage is not configured' }, 503);
@@ -1086,6 +1263,11 @@ function normalizeUploadReference(value) {
   return /^tf_[a-f0-9]{32}$/.test(reference) ? reference : '';
 }
 
+function normalizePictureUploadReference(value) {
+  const reference = cleanText(value, '');
+  return normalizeUploadReference(reference) || (isValidProductPdfKey(reference) ? reference : '');
+}
+
 function getUnitAmount(item, size, productType) {
   if (size !== '80x80mm') {
     return PRICE_BY_SIZE[size];
@@ -1156,7 +1338,7 @@ function buildLineItems(items) {
       : 1;
     const cartItemId = normalizeCartItemId(item.cartItemId || item.id);
     const frameColour = normalizeFrameColour(item.frameColour || item.frameColor);
-    const uploadReference = normalizeUploadReference(item.uploadReference || item.uploadId);
+    const uploadReference = normalizePictureUploadReference(item.uploadReference || item.uploadId);
     const artworkObjectKeys = Array.isArray(item.artworkObjectKeys)
       ? item.artworkObjectKeys.filter(isValidArtworkObjectKey).slice(0, 8)
       : [];
@@ -1465,6 +1647,16 @@ async function verifyUploadManifests(lineItems, env) {
   if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
   const codesByUpload = new Map();
   for (const item of pictureItems) {
+    if (isValidProductPdfKey(item.uploadReference)) {
+      if (!isValidProductPdfKey(item.uploadReference, item.productCode)) {
+        throw new Error('The uploaded PDF does not match its product code');
+      }
+      const object = await env.ARTWORK_BUCKET.head(item.uploadReference);
+      if (!object || object.customMetadata?.product_code !== item.productCode || object.customMetadata?.cart_item_id !== item.cartItemId) {
+        throw new Error('One or more print-sheet PDFs could not be verified');
+      }
+      continue;
+    }
     const codes = codesByUpload.get(item.uploadReference) || [];
     codes.push(item.productCode);
     codesByUpload.set(item.uploadReference, codes);
@@ -1847,6 +2039,41 @@ function getCheckoutUploadSessionIds(session) {
   return [...new Set(String(value).split(',').map(normalizeUploadReference).filter(Boolean))];
 }
 
+function getCheckoutProductCodes(session) {
+  const metadata = session?.metadata || {};
+  const values = Object.entries(metadata)
+    .filter(([key]) => /^product_codes(?:_[1-9][0-9]*)?$/.test(key))
+    .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric:true }))
+    .flatMap(([, value]) => String(value || '').split(','))
+    .map(normalizeProductCode)
+    .filter(Boolean);
+  return [...new Set(values)];
+}
+
+async function markProductPdfFilesPaid(session, env) {
+  if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
+  const stripeCheckoutSessionId = cleanText(session?.id, '');
+  const productCodes = getCheckoutProductCodes(session);
+  const paidAt = new Date().toISOString();
+  let updated = 0;
+  for (const productCode of productCodes) {
+    const objectKey = getProductPdfKey(productCode);
+    const object = await env.ARTWORK_BUCKET.get(objectKey);
+    if (!object) continue;
+    await env.ARTWORK_BUCKET.put(objectKey, object.body, {
+      httpMetadata:{ contentType:'application/pdf' },
+      customMetadata:{
+        ...(object.customMetadata || {}),
+        status:'paid',
+        paid_at:paidAt,
+        ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
+      }
+    });
+    updated += 1;
+  }
+  return updated;
+}
+
 async function markUploadSessionsPaid(session, env) {
   if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
   const uploadSessionIds = getCheckoutUploadSessionIds(session);
@@ -1979,6 +2206,7 @@ async function handleStripeWebhook(request, env) {
   if (event.type === 'checkout.session.completed') {
     try {
       await markProductCodesPaid(env.PRODUCT_CODES_DB, event.data.object);
+      await markProductPdfFilesPaid(event.data.object, env);
       await markUploadSessionsPaid(event.data.object, env);
     } catch (error) {
       console.error('Paid product relationship update failed:', error);
@@ -2064,6 +2292,7 @@ export {
   claimWebhookEvent,
   cleanupPendingUploads,
   createStripePayload,
+  markProductPdfFilesPaid,
   markUploadSessionsPaid,
   normalizeTinyFrameProductType,
   normalizeUploadReference
@@ -2103,16 +2332,12 @@ export default {
       return createCheckoutSession(request, env);
     }
 
-    if (request.method === 'POST' && url.pathname === '/upload-print-sheet') {
-      return uploadTinyFramePrintSheet(request, env);
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/reserve') {
+      return reserveTinyFrameProductPdf(request, env);
     }
 
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/original') {
-      return uploadTinyFrameOriginal(request, env);
-    }
-
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/finalize') {
-      return finalizeTinyFrameUpload(request, env);
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/upload') {
+      return uploadTinyFrameProductPdf(request, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/checkout-session-status') {

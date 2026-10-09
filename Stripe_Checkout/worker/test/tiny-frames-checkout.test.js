@@ -6,9 +6,11 @@ import worker, {
   claimWebhookEvent,
   cleanupPendingUploads,
   createStripePayload,
+  markProductPdfFilesPaid,
   markUploadSessionsPaid
 } from '../src/index.js';
 import { createA4PrintSheetPdf } from '../src/print-sheet-pdf.js';
+import { createProductCodeDatabase } from './helpers/d1.js';
 await import('../../../print-sheet.js');
 
 const uploadReference = 'tf_0123456789abcdef0123456789abcdef';
@@ -23,9 +25,13 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /let printUploadAttempt = null;/);
   assert.match(html, /if \(printUploadAttempt\.promise\) return printUploadAttempt\.promise;/);
   assert.match(html, /cartItems\.some\(\(item\) => item\.uploadSessionId === uploadSession\.uploadSessionId\)/);
-  assert.match(html, /controller\.abort\(\), 300000/);
-  assert.match(html, /\/tiny-frame-upload\/original/);
-  assert.match(html, /\/tiny-frame-upload\/finalize/);
+  assert.match(html, /controller\.abort\(\), 600000/);
+  assert.match(html, /\/tiny-frame-pdf\/reserve/);
+  assert.match(html, /\/tiny-frame-pdf\/upload/);
+  assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
+  assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);
+  assert.match(html, /createFullResolutionPrintCrop/);
+  assert.match(html, /createA4PrintSheetPdf\(printCrops, \{ productCode \}\)/);
 });
 
 test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () => {
@@ -38,7 +44,9 @@ test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () =
     gapMm:5,
     guideWidthPt:0.25,
     cropMarkGapMm:2.5,
-    cropMarkLengthMm:2
+    cropMarkLengthMm:2,
+    productCodeLabelBaselineMm:5,
+    productCodeLabelFontSizePt:9
   });
   const placements = api.getA4PrintLayout();
   assert.equal(placements.length, 8);
@@ -68,7 +76,7 @@ class MemoryR2Bucket {
   }
   async head(key) {
     const stored = this.objects.get(key);
-    return stored ? { key, customMetadata:stored.customMetadata } : null;
+    return stored ? { key, size:stored.bytes.byteLength, customMetadata:stored.customMetadata } : null;
   }
   async put(key, body, options = {}) {
     if (options.onlyIf?.etagDoesNotMatch === '*' && this.objects.has(key)) return null;
@@ -112,143 +120,39 @@ function fakeJpeg(width = 1080, height = 1720) {
   ]);
 }
 
-function jpegDimensions(bytes) {
-  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  return { height:(view[7] << 8) | view[8], width:(view[9] << 8) | view[10] };
-}
+const pictureCartItemId = 'ci_22222222222222222222222222222222';
 
-class MockImagesBinding {
-  async info(bytes) {
-    return jpegDimensions(bytes);
-  }
-  input(bytes) {
-    const source = jpegDimensions(bytes);
-    const state = { width:source.width, height:source.height };
-    const handle = {
-      transform(options = {}) {
-        if (options.trim) {
-          state.width -= Number(options.trim.left || 0) + Number(options.trim.right || 0);
-          state.height -= Number(options.trim.top || 0) + Number(options.trim.bottom || 0);
-        }
-        if (options.rotate === 90 || options.rotate === 270) {
-          [state.width, state.height] = [state.height, state.width];
-        }
-        return handle;
-      },
-      async output() {
-        return {
-          response:() => new Response(fakeJpeg(state.width, state.height), {
-            status:200,
-            headers:{ 'Content-Type':'image/jpeg' }
-          })
-        };
-      }
-    };
-    return handle;
-  }
-}
-
-function uploadPrintSheetRequest({
-  imageCount = 8,
-  sessionId = uploadReference,
-  frameColour = 'Oak',
-  width = 1080,
-  height = 1720,
-  crops,
-  contentTypes = Array.from({ length:imageCount }, () => 'image/jpeg')
-} = {}) {
-  const form = new FormData();
-  form.append('upload_session_id', sessionId);
-  form.append('frame_colour', frameColour);
-  form.append('image_count', String(imageCount));
-  const cropMetadata = crops || Array.from({ length:8 }, () => ({
-    x:0,
-    y:0,
-    width,
-    height,
-    sourceWidth:width,
-    sourceHeight:height,
-    rotation:0
-  }));
-  form.append('crop_metadata', JSON.stringify(cropMetadata));
-  for (let index = 0; index < imageCount; index += 1) {
-    const type = contentTypes[index] || 'image/jpeg';
-    const extension = type === 'image/png' ? 'png' : type === 'image/gif' ? 'gif' : 'jpg';
-    form.append(`original_${index + 1}`, new File(
-      [fakeJpeg(width, height)],
-      `original-${index + 1}.${extension}`,
-      { type }
-    ));
-  }
-  return new Request('https://worker.example/upload-print-sheet', {
+function reserveProductPdfRequest(cartItemId = pictureCartItemId) {
+  return new Request('https://worker.example/tiny-frame-pdf/reserve', {
     method:'POST',
-    headers: { Origin:'https://goodframe.com.au' },
-    body:form
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ cartItemId, frameColour:'Oak' })
   });
 }
 
-function stagedOriginalRequest({
-  sessionId = uploadReference,
-  pictureNumber = 1,
-  width = 1080,
-  height = 1720,
-  contentType = 'image/jpeg'
-} = {}) {
-  const extension = contentType === 'image/png' ? 'png' : contentType === 'image/gif' ? 'gif' : 'jpg';
+function uploadProductPdfRequest(productCode, cartItemId = pictureCartItemId, pdfBytes = null) {
+  const filename = `print-sheet-${productCode}.pdf`;
+  const bytes = pdfBytes || createA4PrintSheetPdf(
+    Array.from({ length:8 }, () => ({ bytes:fakeJpeg() })),
+    { productCode }
+  );
   const form = new FormData();
-  form.append('upload_session_id', sessionId);
-  form.append('picture_number', String(pictureNumber));
-  form.append('file', new File(
-    [fakeJpeg(width, height)],
-    `original-${pictureNumber}.${extension}`,
-    { type:contentType }
-  ));
-  return new Request('https://worker.example/tiny-frame-upload/original', {
+  form.append('cart_item_id', cartItemId);
+  form.append('product_code', productCode);
+  form.append('pdf', new File([bytes], filename, { type:'application/pdf' }));
+  return new Request('https://worker.example/tiny-frame-pdf/upload', {
     method:'POST',
     headers:{ Origin:'https://goodframe.com.au' },
     body:form
   });
 }
 
-function stagedFinalizeRequest({
-  sessionId = uploadReference,
-  frameColour = 'Oak',
-  width = 1080,
-  height = 1720,
-  originalObjectKeys,
-  crops
-} = {}) {
-  return new Request('https://worker.example/tiny-frame-upload/finalize', {
-    method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
-    body:JSON.stringify({
-      uploadSessionId:sessionId,
-      frameColour,
-      originalObjectKeys:originalObjectKeys || Array.from(
-        { length:8 },
-        (_, index) => `tinyframes/${sessionId}/originals/${String(index + 1).padStart(2, '0')}.jpg`
-      ),
-      crops:crops || Array.from({ length:8 }, () => ({
-        x:0, y:0, width, height, sourceWidth:width, sourceHeight:height, rotation:0
-      }))
-    })
-  });
-}
-
-async function uploadStagedOriginals(env, options = {}) {
-  const keys = [];
-  for (let index = 0; index < 8; index += 1) {
-    const contentType = options.contentTypes?.[index] || 'image/jpeg';
-    const response = await worker.fetch(stagedOriginalRequest({
-      pictureNumber:index + 1,
-      width:options.width,
-      height:options.height,
-      contentType
-    }), env);
-    assert.equal(response.status, 200);
-    keys.push((await response.json()).original.objectKey);
-  }
-  return keys;
+async function reserveAndUploadProductPdf(env) {
+  const reservedResponse = await worker.fetch(reserveProductPdfRequest(), env);
+  assert.equal(reservedResponse.status, 200);
+  const reservation = await reservedResponse.json();
+  const uploadResponse = await worker.fetch(uploadProductPdfRequest(reservation.productCode), env);
+  return { reservation, uploadResponse };
 }
 
 function frameOnly(overrides = {}) {
@@ -369,275 +273,111 @@ test('webhook event claims are idempotent', async () => {
   assert.equal(await claimWebhookEvent('evt_TinyFrames123', env), false);
 });
 
-test('upload-print-sheet stores one A4 PDF and a pending manifest', async () => {
+test('PDF-only upload stores exactly one code-named A4 print sheet', async () => {
   const bucket = new MemoryR2Bucket();
-  const env = { ARTWORK_BUCKET:bucket, IMAGES:new MockImagesBinding(), ALLOWED_ORIGINS:'https://goodframe.com.au' };
-  const response = await worker.fetch(uploadPrintSheetRequest(), env);
-  assert.equal(response.status, 200);
-  const result = await response.json();
+  const database = createProductCodeDatabase();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  };
+  const { reservation, uploadResponse } = await reserveAndUploadProductPdf(env);
+  assert.equal(uploadResponse.status, 200);
+  const result = await uploadResponse.json();
   assert.equal(result.success, true);
-  assert.equal(result.upload_session_id, uploadReference);
-  assert.equal(result.print_sheet.filename, 'print-sheet-a4.pdf');
-  assert.equal(result.print_sheet.objectKey, `tinyframes/${uploadReference}/print-sheet-a4.pdf`);
-  assert.equal(result.image_quality.length, 8);
-  assert.equal(result.image_quality.every(item => item.effective_ppi >= 300), true);
-  assert.deepEqual(result.warnings, []);
-  const storedPrintSheet = bucket.objects.get(result.print_sheet.objectKey);
-  assert.deepEqual(storedPrintSheet.customMetadata, {
-    upload_session_id:uploadReference,
-    product_type:'frame_8_pictures',
-    frame_colour:'oak',
-    image_count:'8',
-    photo_width_mm:'54',
-    photo_height_mm:'86',
-    status:'pending',
-    created_at:storedPrintSheet.customMetadata.created_at
-  });
-  assert.match(storedPrintSheet.customMetadata.created_at, /^\d{4}-\d{2}-\d{2}T/);
-  const manifestKey = `tinyframes/${uploadReference}/manifest.json`;
-  assert.equal(bucket.objects.size, 18);
-  const manifest = await (await bucket.get(manifestKey)).json();
-  assert.equal(manifest.status, 'pending');
-  assert.equal(manifest.frame_colour, 'Oak');
-  assert.equal(manifest.product_type, 'frame_8_pictures');
-  assert.equal(manifest.image_count, 8);
-  assert.equal(manifest.print_sheet_filename, 'print-sheet-a4.pdf');
-  assert.equal(manifest.print_sheet_object_key, `tinyframes/${uploadReference}/print-sheet-a4.pdf`);
-  assert.deepEqual(manifest.page_size_mm, { width:210, height:297 });
-  assert.equal(manifest.photo_width_mm, 54);
-  assert.equal(manifest.photo_height_mm, 86);
-  assert.deepEqual(manifest.photo_size_mm, { width:54, height:86 });
-  assert.deepEqual(manifest.cutting_guides, {
-    line_width_pt:0.25,
-    colour:'light-grey',
-    crop_mark_gap_mm:2.5,
-    crop_mark_length_mm:2
-  });
-  assert.equal(manifest.originals.length, 8);
-  assert.equal(manifest.originals.every(file => file.size === fakeJpeg().length), true);
-  assert.equal(manifest.quality_warning_count, 0);
-  assert.equal(manifest.processed_images.length, 8);
-  assert.deepEqual(manifest.product_codes, []);
-  assert.deepEqual(manifest.print_sheets, []);
-  const pdfText = new TextDecoder('latin1').decode(bucket.objects.get(result.print_sheet.objectKey).bytes);
-  assert.match(pdfText, /\/MediaBox \[0 0 595\.275591 841\.889764\]/);
-  assert.equal((pdfText.match(/\/Subtype \/Image/g) || []).length, 8);
-  assert.equal((pdfText.match(/153\.070866 243\.779528/g) || []).length, 8);
-  assert.equal((pdfText.match(/153\.070866 243\.779528 re S/g) || []).length, 8);
-  assert.match(pdfText, /0\.25 w/);
+  assert.equal(result.productCode, reservation.productCode);
+  assert.equal(result.pdf.filename, `print-sheet-${reservation.productCode}.pdf`);
+  assert.equal(result.pdf.objectKey, `tinyframes/products/${reservation.productCode}/print-sheet-${reservation.productCode}.pdf`);
+  assert.equal(bucket.objects.size, 1);
+  assert.deepEqual([...bucket.objects.keys()], [result.pdf.objectKey]);
+  const stored = bucket.objects.get(result.pdf.objectKey);
+  assert.equal(stored.contentType, 'application/pdf');
+  assert.equal(stored.customMetadata.product_code, reservation.productCode);
+  assert.equal(stored.customMetadata.cart_item_id, pictureCartItemId);
+  assert.equal(stored.customMetadata.image_count, '8');
+  assert.equal(stored.customMetadata.status, 'pending');
+  const text = new TextDecoder('latin1').decode(stored.bytes);
+  assert.match(text, new RegExp(`\\(PRODUCT ${reservation.productCode}\\) Tj`));
+  assert.equal((text.match(/\/Subtype \/Image/g) || []).length, 8);
+  assert.equal((text.match(/153\.070866 243\.779528 re S/g) || []).length, 8);
+  database.close();
 });
 
-test('offset crops use Cloudflare trim edge offsets and preserve the selected resolution', async () => {
+test('reserving and uploading retries preserve one code and one R2 object', async () => {
   const bucket = new MemoryR2Bucket();
-  const crops = Array.from({ length:8 }, () => ({
-    x:100,
-    y:50,
-    width:1080,
-    height:1720,
-    sourceWidth:1280,
-    sourceHeight:1820,
-    rotation:0
-  }));
-  const response = await worker.fetch(uploadPrintSheetRequest({ width:1280, height:1820, crops }), {
+  const database = createProductCodeDatabase();
+  const env = {
     ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
+    PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:'https://goodframe.com.au'
-  });
-  assert.equal(response.status, 200);
-  const result = await response.json();
-  assert.equal(result.image_quality.every(item => item.cropped_width_px === 1080), true);
-  assert.equal(result.image_quality.every(item => item.cropped_height_px === 1720), true);
+  };
+  const firstReservation = await (await worker.fetch(reserveProductPdfRequest(), env)).json();
+  const secondReservation = await (await worker.fetch(reserveProductPdfRequest(), env)).json();
+  assert.equal(secondReservation.productCode, firstReservation.productCode);
+  const firstUpload = await worker.fetch(uploadProductPdfRequest(firstReservation.productCode), env);
+  assert.equal(firstUpload.status, 200);
+  const retryUpload = await worker.fetch(uploadProductPdfRequest(firstReservation.productCode), env);
+  assert.equal(retryUpload.status, 200);
+  assert.equal((await retryUpload.json()).retry_recovered, true);
+  assert.equal(bucket.objects.size, 1);
+  database.close();
 });
 
-test('upload-print-sheet accepts eight PNG originals without using previews as print sources', async () => {
+test('PDF upload rejects a sheet with a missing or mismatched product label', async () => {
   const bucket = new MemoryR2Bucket();
-  const response = await worker.fetch(uploadPrintSheetRequest({
-    contentTypes:Array.from({ length:8 }, () => 'image/png')
-  }), {
+  const database = createProductCodeDatabase();
+  const env = {
     ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
+    PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:'https://goodframe.com.au'
-  });
-  assert.equal(response.status, 200);
-  const manifest = await (await bucket.get(`tinyframes/${uploadReference}/manifest.json`)).json();
-  assert.equal(manifest.originals.every(file => file.contentType === 'image/png'), true);
-  assert.equal(manifest.originals.every(file => file.objectKey.endsWith('.png')), true);
-  assert.equal(manifest.processed_images.every(file => file.contentType === 'image/jpeg'), true);
-});
-
-test('upload-print-sheet accepts mixed JPEG and PNG originals', async () => {
-  const bucket = new MemoryR2Bucket();
-  const contentTypes = Array.from({ length:8 }, (_, index) => index % 2 ? 'image/png' : 'image/jpeg');
-  const response = await worker.fetch(uploadPrintSheetRequest({ contentTypes }), {
-    ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
-    ALLOWED_ORIGINS:'https://goodframe.com.au'
-  });
-  assert.equal(response.status, 200);
-  const manifest = await (await bucket.get(`tinyframes/${uploadReference}/manifest.json`)).json();
-  assert.deepEqual(manifest.originals.map(file => file.contentType), contentTypes);
-});
-
-test('large high-resolution crops are not downscaled before PDF generation', async () => {
-  const bucket = new MemoryR2Bucket();
-  const response = await worker.fetch(uploadPrintSheetRequest({ width:6000, height:9556 }), {
-    ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
-    ALLOWED_ORIGINS:'https://goodframe.com.au'
-  });
-  assert.equal(response.status, 200);
-  const result = await response.json();
-  assert.equal(result.image_quality.every(item => item.cropped_width_px === 6000), true);
-  assert.equal(result.image_quality.every(item => item.cropped_height_px === 9556), true);
-});
-
-test('retrying a completed upload returns the stored result without duplicating R2 objects', async () => {
-  const bucket = new MemoryR2Bucket();
-  const env = { ARTWORK_BUCKET:bucket, IMAGES:new MockImagesBinding(), ALLOWED_ORIGINS:'https://goodframe.com.au' };
-  const first = await worker.fetch(uploadPrintSheetRequest(), env);
-  assert.equal(first.status, 200);
-  const firstResult = await first.json();
-  const storedObjectCount = bucket.objects.size;
-
-  const retry = await worker.fetch(uploadPrintSheetRequest(), env);
-  assert.equal(retry.status, 200);
-  const retryResult = await retry.json();
-  assert.equal(retryResult.retry_recovered, true);
-  assert.equal(retryResult.upload_session_id, firstResult.upload_session_id);
-  assert.equal(retryResult.print_sheet.objectKey, firstResult.print_sheet.objectKey);
-  assert.equal(bucket.objects.size, storedObjectCount);
-});
-
-test('staged upload stores each full-resolution original before finalizing processed crops', async () => {
-  const bucket = new MemoryR2Bucket();
-  const env = { ARTWORK_BUCKET:bucket, IMAGES:new MockImagesBinding(), ALLOWED_ORIGINS:'https://goodframe.com.au' };
-  const contentTypes = Array.from({ length:8 }, (_, index) => index % 2 ? 'image/png' : 'image/jpeg');
-  const originalObjectKeys = await uploadStagedOriginals(env, { contentTypes });
-  assert.equal(bucket.objects.size, 8);
-
-  const response = await worker.fetch(stagedFinalizeRequest({ originalObjectKeys }), env);
-  assert.equal(response.status, 200);
-  const result = await response.json();
-  assert.equal(result.success, true);
-  assert.equal(result.manifest.objectKey, `tinyframes/${uploadReference}/manifest.json`);
-  assert.equal(bucket.objects.size, 17);
-  assert.equal([...bucket.objects.keys()].some(key => key.endsWith('print-sheet-a4.pdf')), false);
-  const manifest = await (await bucket.get(result.manifest.objectKey)).json();
-  assert.equal(manifest.originals.length, 8);
-  assert.deepEqual(manifest.originals.map(file => file.contentType), contentTypes);
-  assert.equal(manifest.processed_images.length, 8);
-  assert.equal(manifest.files.length, 16);
-});
-
-test('staged upload retries reuse stored originals and recover without reselecting files', async () => {
-  const bucket = new MemoryR2Bucket();
-  const env = { ARTWORK_BUCKET:bucket, IMAGES:new MockImagesBinding(), ALLOWED_ORIGINS:'https://goodframe.com.au' };
-  const first = await worker.fetch(stagedOriginalRequest(), env);
-  assert.equal(first.status, 200);
-  const firstResult = await first.json();
-  const storedCount = bucket.objects.size;
-  const retry = await worker.fetch(stagedOriginalRequest(), env);
-  assert.equal(retry.status, 200);
-  assert.equal((await retry.json()).retry_recovered, true);
-  assert.equal(bucket.objects.size, storedCount);
-
-  const originalObjectKeys = [
-    firstResult.original.objectKey,
-    ...(await uploadStagedOriginals(env)).slice(1)
-  ];
-  const badCrops = Array.from({ length:8 }, () => ({
-    x:0, y:0, width:1080, height:1720, sourceWidth:1200, sourceHeight:1720, rotation:0
-  }));
-  const failedFinalize = await worker.fetch(stagedFinalizeRequest({ originalObjectKeys, crops:badCrops }), env);
-  assert.equal(failedFinalize.status, 400);
-  assert.equal(bucket.objects.has(originalObjectKeys[0]), true);
-
-  const recovered = await worker.fetch(stagedFinalizeRequest({ originalObjectKeys }), env);
-  assert.equal(recovered.status, 200);
-  assert.equal((await recovered.json()).success, true);
-});
-
-test('upload-print-sheet rejects a sheet that does not represent eight crops', async () => {
-  const bucket = new MemoryR2Bucket();
-  const response = await worker.fetch(uploadPrintSheetRequest({ imageCount:7 }), {
-    ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
-    ALLOWED_ORIGINS:'https://goodframe.com.au'
-  });
+  };
+  const reservation = await (await worker.fetch(reserveProductPdfRequest(), env)).json();
+  const wrongPdf = createA4PrintSheetPdf(
+    Array.from({ length:8 }, () => ({ bytes:fakeJpeg() })),
+    { productCode:reservation.productCode === '58321' ? '19472' : '58321' }
+  );
+  const response = await worker.fetch(uploadProductPdfRequest(reservation.productCode, pictureCartItemId, wrongPdf), env);
   assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /matching product code/);
   assert.equal(bucket.objects.size, 0);
+  database.close();
 });
 
-test('upload-print-sheet rejects crop data that does not match the original dimensions', async () => {
-  const bucket = new MemoryR2Bucket();
-  const crops = Array.from({ length:8 }, () => ({
-    x:0, y:0, width:1080, height:1720, sourceWidth:1200, sourceHeight:1720, rotation:0
-  }));
-  const response = await worker.fetch(uploadPrintSheetRequest({ crops }), {
-    ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
-    ALLOWED_ORIGINS:'https://goodframe.com.au'
+test('browser PDF builder preserves all eight full-resolution JPEG dimensions', async () => {
+  const blobs = Array.from({ length:8 }, (_, index) => new Blob(
+    [fakeJpeg(2160 + index, 3440 + Math.round(index * (3440 / 2160)))],
+    { type:'image/jpeg' }
+  ));
+  const pdf = await globalThis.GoodFramePrintSheet.createA4PrintSheetPdf(blobs, { productCode:'58321' });
+  const text = new TextDecoder('latin1').decode(await pdf.arrayBuffer());
+  assert.equal((text.match(/\/Subtype \/Image/g) || []).length, 8);
+  assert.match(text, /\(PRODUCT 58321\) Tj/);
+  blobs.forEach((_, index) => {
+    assert.match(text, new RegExp(`/Width ${2160 + index} /Height ${3440 + Math.round(index * (3440 / 2160))}`));
   });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /does not match its saved crop information/);
-  assert.equal(bucket.objects.size, 0);
 });
 
-test('upload-print-sheet rejects a crop with the wrong print ratio', async () => {
+test('paid Stripe sessions promote only the code-named product PDF', async () => {
   const bucket = new MemoryR2Bucket();
-  const crops = Array.from({ length:8 }, () => ({
-    x:0, y:0, width:1000, height:1000, sourceWidth:1080, sourceHeight:1720, rotation:0
-  }));
-  const response = await worker.fetch(uploadPrintSheetRequest({
-    crops
-  }), {
+  const database = createProductCodeDatabase();
+  const env = {
     ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
+    PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:'https://goodframe.com.au'
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /54 x 86 mm print ratio/);
-  assert.equal(bucket.objects.size, 0);
-});
-
-test('upload-print-sheet reports cropped images below 200 PPI without upscaling them', async () => {
-  const bucket = new MemoryR2Bucket();
-  const response = await worker.fetch(uploadPrintSheetRequest({ width:270, height:430 }), {
-    ARTWORK_BUCKET:bucket,
-    IMAGES:new MockImagesBinding(),
-    ALLOWED_ORIGINS:'https://goodframe.com.au'
-  });
-  assert.equal(response.status, 200);
-  const result = await response.json();
-  assert.equal(result.image_quality.every(item => item.below_200_ppi), true);
-  assert.equal(result.warnings.length, 8);
-  const manifest = await (await bucket.get(`tinyframes/${uploadReference}/manifest.json`)).json();
-  assert.equal(manifest.quality_warning_count, 8);
-  assert.equal(manifest.originals[0].cropped_width_px, 270);
-  assert.equal(manifest.originals[0].cropped_height_px, 430);
-});
-
-test('paid Stripe sessions promote pending upload manifests', async () => {
-  const bucket = new MemoryR2Bucket();
-  const env = { ARTWORK_BUCKET:bucket, IMAGES:new MockImagesBinding(), ALLOWED_ORIGINS:'https://goodframe.com.au' };
-  assert.equal((await worker.fetch(uploadPrintSheetRequest(), env)).status, 200);
-  assert.equal(await markUploadSessionsPaid({
-    id:'cs_test_tiny_frame_paid',
-    metadata:{ upload_session_ids:uploadReference }
+  };
+  const { reservation, uploadResponse } = await reserveAndUploadProductPdf(env);
+  assert.equal(uploadResponse.status, 200);
+  assert.equal(await markProductPdfFilesPaid({
+    id:'cs_live_tiny_frame_paid',
+    metadata:{ product_codes:reservation.productCode }
   }, env), 1);
-  const manifest = await (await bucket.get(`tinyframes/${uploadReference}/manifest.json`)).json();
-  assert.equal(manifest.status, 'paid');
-  assert.equal(manifest.stripe_checkout_session_id, 'cs_test_tiny_frame_paid');
-  assert.match(manifest.paid_at, /^\d{4}-\d{2}-\d{2}T/);
-  const printSheet = bucket.objects.get(`tinyframes/${uploadReference}/print-sheet-a4.pdf`);
-  assert.equal(printSheet.customMetadata.status, 'paid');
-  assert.equal(printSheet.customMetadata.stripe_checkout_session_id, 'cs_test_tiny_frame_paid');
-  assert.equal(printSheet.customMetadata.paid_at, manifest.paid_at);
-  for (let index = 1; index <= 8; index += 1) {
-    const original = bucket.objects.get(`tinyframes/${uploadReference}/originals/${String(index).padStart(2, '0')}.jpg`);
-    assert.equal(original.customMetadata.status, 'paid');
-    assert.equal(original.customMetadata.stripe_checkout_session_id, 'cs_test_tiny_frame_paid');
-  }
+  const key = `tinyframes/products/${reservation.productCode}/print-sheet-${reservation.productCode}.pdf`;
+  const stored = bucket.objects.get(key);
+  assert.equal(stored.customMetadata.status, 'paid');
+  assert.equal(stored.customMetadata.stripe_checkout_session_id, 'cs_live_tiny_frame_paid');
+  assert.match(stored.customMetadata.paid_at, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(bucket.objects.size, 1);
+  database.close();
 });
 
 test('cleanup removes stale pending sessions but preserves paid uploads', async () => {
