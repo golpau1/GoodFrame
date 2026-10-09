@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import test from 'node:test';
 
 import worker from '../src/index.js';
@@ -36,7 +37,7 @@ function env(bucket = new MemoryBucket()) {
     ARTWORK_BUCKET: bucket,
     ALLOWED_ORIGINS: ORIGIN,
     STRIPE_MODE: 'test',
-    STRIPE_SECRET_KEY: 'sk_test_example',
+    STRIPE_TEST_SECRET_KEY: 'sk_test_example',
     SITE_BASE_URL: ORIGIN
   };
 }
@@ -77,8 +78,10 @@ test('stores and retrieves an original and thumbnail using exact returned keys',
 test('checkout sends complete artwork keys to Stripe metadata', async () => {
   const originalFetch = globalThis.fetch;
   let stripeBody;
+  let stripeAuthorization;
   globalThis.fetch = async (_url, options) => {
     stripeBody = new URLSearchParams(options.body);
+    stripeAuthorization = options.headers.Authorization;
     return Response.json({ id: 'cs_test_1', url: 'https://checkout.stripe.test/session' });
   };
   try {
@@ -93,11 +96,124 @@ test('checkout sends complete artwork keys to Stripe metadata', async () => {
       }] })
     }), env());
     assert.equal(response.status, 200);
+    assert.equal((await response.clone().json()).stripeMode, 'test');
+    assert.equal(stripeAuthorization, 'Bearer sk_test_example');
+    assert.equal(stripeBody.get('metadata[stripe_mode]'), 'test');
+    assert.match(stripeBody.get('custom_text[submit][message]'), /TEST MODE/);
     assert.equal(stripeBody.get('line_items[0][price_data][product_data][metadata][original_object_key]'), originalObjectKey);
     assert.equal(stripeBody.get('line_items[0][price_data][product_data][metadata][thumbnail_object_key]'), thumbnailObjectKey);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('test mode refuses live and legacy Stripe keys', async () => {
+  const response = await worker.fetch(new Request('https://worker.example/health', {
+    headers: { Origin: ORIGIN }
+  }), {
+    ...env(),
+    STRIPE_TEST_SECRET_KEY: '',
+    STRIPE_SECRET_KEY: 'sk_live_legacy',
+    STRIPE_LIVE_SECRET_KEY: 'sk_live_current'
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    ok:true,
+    stripeMode:'test',
+    checkoutConfigured:false,
+    fulfilmentEnabled:false
+  });
+});
+
+test('production keeps the existing live secret fallback during migration', async () => {
+  const response = await worker.fetch(new Request('https://worker.example/health'), {
+    STRIPE_MODE:'live',
+    STRIPE_SECRET_KEY:'sk_live_existing_configuration',
+    STRIPE_WEBHOOK_SECRET:'whsec_existing_configuration',
+    SITE_BASE_URL:'https://goodframe.com.au',
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual(body, {
+    ok:true,
+    stripeMode:'live',
+    checkoutConfigured:true,
+    fulfilmentEnabled:true
+  });
+  assert.doesNotMatch(JSON.stringify(body), /existing_configuration/);
+});
+
+test('test mode rejects live Checkout session IDs before contacting Stripe', async () => {
+  const originalFetch = globalThis.fetch;
+  let stripeCalled = false;
+  globalThis.fetch = async () => {
+    stripeCalled = true;
+    return Response.json({});
+  };
+  try {
+    const response = await worker.fetch(new Request(
+      'https://worker.example/checkout-session-status?session_id=cs_live_example',
+      { headers: { Origin: ORIGIN } }
+    ), env());
+    assert.equal(response.status, 400);
+    assert.equal(stripeCalled, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+function createStripeSignature(body, secret, timestamp = Math.floor(Date.now() / 1000)) {
+  const signature = createHmac('sha256', secret)
+    .update(`${timestamp}.${body}`)
+    .digest('hex');
+  return `t=${timestamp},v1=${signature}`;
+}
+
+test('test webhooks are acknowledged without fulfilment or notifications', async () => {
+  const webhookSecret = 'whsec_test_example';
+  const body = JSON.stringify({
+    id:'evt_test_no_fulfilment',
+    type:'checkout.session.completed',
+    livemode:false,
+    data:{ object:{ id:'cs_test_example', metadata:{} } }
+  });
+  const testEnv = {
+    ...env(),
+    STRIPE_TEST_WEBHOOK_SECRET:webhookSecret,
+    RESEND_API_KEY:'must-not-be-used'
+  };
+  const response = await worker.fetch(new Request('https://worker.example/stripe-webhook', {
+    method:'POST',
+    headers:{ 'Stripe-Signature':createStripeSignature(body, webhookSecret) },
+    body
+  }), testEnv);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    received:true,
+    testMode:true,
+    fulfilmentSuppressed:true
+  });
+  assert.equal(testEnv.ARTWORK_BUCKET.objects.size, 0);
+});
+
+test('webhooks reject events from the opposite Stripe mode', async () => {
+  const webhookSecret = 'whsec_test_example';
+  const body = JSON.stringify({
+    id:'evt_live_wrong_environment',
+    type:'checkout.session.completed',
+    livemode:true,
+    data:{ object:{ id:'cs_live_example', metadata:{} } }
+  });
+  const response = await worker.fetch(new Request('https://worker.example/stripe-webhook', {
+    method:'POST',
+    headers:{ 'Stripe-Signature':createStripeSignature(body, webhookSecret) },
+    body
+  }), {
+    ...env(),
+    STRIPE_TEST_WEBHOOK_SECRET:webhookSecret
+  });
+  assert.equal(response.status, 400);
 });
 
 test('checkout charges $90 for a Tiny Frame with eight pictures plus $10 shipping', async () => {

@@ -1,3 +1,4 @@
 .env
 Stripe_Checkout/.env
+Stripe_Checkout/worker/.dev.vars
 **/.wrangler/

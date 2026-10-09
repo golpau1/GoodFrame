@@ -61,17 +61,41 @@ const CANONICAL_SIZE_BY_DIMENSIONS = Object.freeze({
   '900x1200': '841x1189mm'
 });
 
-function validateStripeConfiguration(env) {
+function getStripeMode(env) {
   const stripeMode = String(env.STRIPE_MODE || '').trim().toLowerCase();
-  const secretKey = String(env.STRIPE_SECRET_KEY || '');
+  return ['live', 'test'].includes(stripeMode) ? stripeMode : '';
+}
 
-  if (!['live', 'test'].includes(stripeMode) || !secretKey) {
-    return false;
-  }
+function getStripeConfiguration(env) {
+  const mode = getStripeMode(env);
+  if (!mode) return null;
 
-  return stripeMode === 'live'
-    ? secretKey.startsWith('sk_live_')
-    : secretKey.startsWith('sk_test_');
+  // The legacy secret names remain live-only fallbacks so the currently
+  // deployed production Worker keeps working while its secrets are migrated.
+  // Test mode never reads a generic or live credential.
+  const secretKey = String(mode === 'live'
+    ? env.STRIPE_LIVE_SECRET_KEY || env.STRIPE_SECRET_KEY || ''
+    : env.STRIPE_TEST_SECRET_KEY || '');
+  const publishableKey = String(mode === 'live'
+    ? env.STRIPE_LIVE_PUBLISHABLE_KEY || ''
+    : env.STRIPE_TEST_PUBLISHABLE_KEY || '');
+  const webhookSecret = String(mode === 'live'
+    ? env.STRIPE_LIVE_WEBHOOK_SECRET || env.STRIPE_WEBHOOK_SECRET || ''
+    : env.STRIPE_TEST_WEBHOOK_SECRET || '');
+  const requiredSecretPrefix = mode === 'live' ? 'sk_live_' : 'sk_test_';
+  const requiredPublishablePrefix = mode === 'live' ? 'pk_live_' : 'pk_test_';
+
+  if (!secretKey.startsWith(requiredSecretPrefix)) return null;
+  if (publishableKey && !publishableKey.startsWith(requiredPublishablePrefix)) return null;
+  if (webhookSecret && !webhookSecret.startsWith('whsec_')) return null;
+
+  return Object.freeze({
+    mode,
+    secretKey,
+    publishableKey,
+    webhookSecret,
+    fulfilmentEnabled:mode === 'live'
+  });
 }
 
 function getSiteBaseUrl(env) {
@@ -787,7 +811,7 @@ function buildLineItems(items) {
   return lineItems;
 }
 
-function createStripePayload(lineItems, siteBaseUrl) {
+function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live') {
   const orderCodes = getOrderCodes(lineItems);
   const orderCodeMetadataValue = getOrderCodeMetadataValue(orderCodes);
   const productTypes = lineItems.map(item => item.productType).filter(Boolean);
@@ -802,6 +826,15 @@ function createStripePayload(lineItems, siteBaseUrl) {
     'shipping_address_collection[allowed_countries][1]': 'US',
     'shipping_address_collection[allowed_countries][2]': 'BR'
   });
+
+  payload.set('metadata[stripe_mode]', stripeMode);
+  payload.set('payment_intent_data[metadata][stripe_mode]', stripeMode);
+  if (stripeMode === 'test') {
+    payload.set(
+      'custom_text[submit][message]',
+      'TEST MODE — no real payment, fulfilment, shipping, or customer notification will occur.'
+    );
+  }
 
   if (orderCodes.length > 0) {
     payload.set('client_reference_id', orderCodes[0]);
@@ -878,7 +911,8 @@ async function verifyUploadManifests(lineItems, env) {
 }
 
 async function createCheckoutSession(request, env) {
-  if (!validateStripeConfiguration(env)) {
+  const stripeConfiguration = getStripeConfiguration(env);
+  if (!stripeConfiguration) {
     return jsonResponse(request, env, { error: 'Checkout is not configured' }, 503);
   }
 
@@ -908,10 +942,10 @@ async function createCheckoutSession(request, env) {
   const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      Authorization: `Bearer ${stripeConfiguration.secretKey}`,
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: createStripePayload(lineItems, siteBaseUrl)
+    body: createStripePayload(lineItems, siteBaseUrl, stripeConfiguration.mode)
   });
   const stripeResult = await stripeResponse.json();
 
@@ -926,24 +960,27 @@ async function createCheckoutSession(request, env) {
 
   return jsonResponse(request, env, {
     id: stripeResult.id,
-    url: stripeResult.url
+    url: stripeResult.url,
+    stripeMode:stripeConfiguration.mode
   });
 }
 
 async function getCheckoutSessionStatus(request, env) {
-  if (!validateStripeConfiguration(env)) {
+  const stripeConfiguration = getStripeConfiguration(env);
+  if (!stripeConfiguration) {
     return jsonResponse(request, env, { error: 'Checkout is not configured' }, 503);
   }
   if (!getAllowedOrigin(request, env)) {
     return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
   }
   const sessionId = new URL(request.url).searchParams.get('session_id') || '';
-  if (!/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(sessionId)) {
+  const expectedSessionPrefix = stripeConfiguration.mode === 'live' ? 'cs_live_' : 'cs_test_';
+  if (!sessionId.startsWith(expectedSessionPrefix) || !/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(sessionId)) {
     return jsonResponse(request, env, { error: 'Checkout session is invalid' }, 400);
   }
 
   const stripeResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
-    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` }
+    headers: { Authorization: `Bearer ${stripeConfiguration.secretKey}` }
   });
   const stripeResult = await stripeResponse.json().catch(() => ({}));
   if (!stripeResponse.ok) {
@@ -973,7 +1010,7 @@ async function getCheckoutSessionStatus(request, env) {
  * on the Worker (none of this lives in the repo - see the deploy notes
  * in this file's header comment / the project README):
  *
- *   wrangler secret put STRIPE_WEBHOOK_SECRET   (from the Stripe
+ *   wrangler secret put STRIPE_LIVE_WEBHOOK_SECRET   (from the Stripe
  *     Dashboard webhook endpoint you create, see below)
  *   wrangler secret put RESEND_API_KEY          (from resend.com)
  *
@@ -984,7 +1021,7 @@ async function getCheckoutSessionStatus(request, env) {
  * Stripe Dashboard setup (Developers -> Webhooks -> Add endpoint):
  *   URL: https://<your-worker-subdomain>.workers.dev/stripe-webhook
  *   Event: checkout.session.completed
- *   Copy the generated "Signing secret" into STRIPE_WEBHOOK_SECRET.
+ *   Copy the generated "Signing secret" into STRIPE_LIVE_WEBHOOK_SECRET.
  *
  * The email HTML itself is NOT duplicated here - it's fetched at
  * send-time from Checkout/payment-confirmation-email.html on the live
@@ -1067,9 +1104,11 @@ function formatCurrency(amountInCents, currency) {
 }
 
 async function fetchLineItems(sessionId, env) {
+  const stripeConfiguration = getStripeConfiguration(env);
+  if (!stripeConfiguration) return [];
   const response = await fetch(
     `https://api.stripe.com/v1/checkout/sessions/${sessionId}/line_items?limit=100`,
-    { headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` } }
+    { headers: { Authorization: `Bearer ${stripeConfiguration.secretKey}` } }
   );
 
   if (!response.ok) {
@@ -1283,7 +1322,8 @@ async function cleanupPendingUploads(env, now = Date.now()) {
 }
 
 async function handleStripeWebhook(request, env) {
-  if (!validateStripeConfiguration(env) || !env.STRIPE_WEBHOOK_SECRET) {
+  const stripeConfiguration = getStripeConfiguration(env);
+  if (!stripeConfiguration?.webhookSecret) {
     return new Response('Webhook secret is not configured', { status: 500 });
   }
 
@@ -1291,7 +1331,7 @@ async function handleStripeWebhook(request, env) {
   const isValid = await verifyStripeSignature(
     rawBody,
     request.headers.get('Stripe-Signature'),
-    env.STRIPE_WEBHOOK_SECRET
+    stripeConfiguration.webhookSecret
   );
 
   if (!isValid) {
@@ -1303,6 +1343,24 @@ async function handleStripeWebhook(request, env) {
     event = JSON.parse(rawBody);
   } catch {
     return new Response('Invalid JSON payload', { status: 400 });
+  }
+
+  const eventIsLive = event.livemode === true;
+  if (eventIsLive !== (stripeConfiguration.mode === 'live')) {
+    return new Response('Stripe event mode does not match this environment', { status: 400 });
+  }
+
+  // Test payments are deliberately side-effect free: do not promote uploads
+  // to paid, claim production fulfilment events, or send customer emails.
+  if (stripeConfiguration.mode === 'test') {
+    return new Response(JSON.stringify({
+      received:true,
+      testMode:true,
+      fulfilmentSuppressed:true
+    }), {
+      status:200,
+      headers: { 'Content-Type':'application/json' }
+    });
   }
 
   if (event.type === 'checkout.session.completed') {
@@ -1365,7 +1423,13 @@ export default {
     }
 
     if (request.method === 'GET' && url.pathname === '/health') {
-      return jsonResponse(request, env, { ok: true });
+      const stripeConfiguration = getStripeConfiguration(env);
+      return jsonResponse(request, env, {
+        ok:true,
+        stripeMode:getStripeMode(env) || 'invalid',
+        checkoutConfigured:Boolean(stripeConfiguration),
+        fulfilmentEnabled:Boolean(stripeConfiguration?.fulfilmentEnabled)
+      });
     }
 
     if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
