@@ -38,6 +38,8 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.doesNotMatch(html, /no longer matches its saved crop/);
   assert.match(html, /cropFrameIsPortrait \? croppedCanvas : rotateCanvasClockwise\(croppedCanvas\)/);
   assert.match(html, /productCode:attempt\.productCode/);
+  assert.match(html, /\.image-remove-button \{[^}]*top:4px; right:4px;[^}]*transform:none;/);
+  assert.doesNotMatch(html, /\.image-remove-button \{[^}]*translate\(50%,-50%\)/);
   assert.match(html, /title\.textContent = `\$\{item\.colour\} · \$\{normalizeOrderType\(item\.order\) === "frame-plus-pictures" \? "Frame \+ 8 Pictures" : "Frame Only"\}`;/);
   assert.doesNotMatch(html, /title\.textContent[^;]+item\.productCode/);
   assert.doesNotMatch(html, /product identification code could not be verified/i);
