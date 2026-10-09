@@ -2330,7 +2330,7 @@
       const checkoutContext = getStoredCheckoutContext();
       cleanCheckoutReturnUrl(url);
       if (checkoutState === "cancelled") {
-        await showUnsuccessfulCheckout();
+        openCart();
       } else if (checkoutState === "success") {
         setCheckoutConfirmationState("confirming");
         openCheckoutResultDialog(checkoutConfirmedDialog);

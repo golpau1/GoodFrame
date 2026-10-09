@@ -46,6 +46,8 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /Your payment wasn't completed\. Your items are still waiting in your cart\./);
   assert.match(html, /result\.outcome === "confirmed"/);
   assert.match(html, /result\.outcome === "failed"/);
+  assert.match(html, /checkoutState === "cancelled"\) \{\s*openCart\(\);/);
+  assert.doesNotMatch(html, /checkoutState === "cancelled"\) \{\s*await showUnsuccessfulCheckout\(\);/);
   assert.match(html, /clearPurchasedCartItems\(checkoutContext\)/);
   assert.match(html, /checkout_request_id:checkoutContext\.id/);
   assert.match(html, /title\.textContent = `\$\{item\.colour\} · \$\{normalizeOrderType\(item\.order\) === "frame-plus-pictures" \? "Frame \+ 8 Pictures" : "Frame Only"\}`;/);
