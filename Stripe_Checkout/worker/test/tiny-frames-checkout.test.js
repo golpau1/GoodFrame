@@ -40,6 +40,8 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /productCode:attempt\.productCode/);
   assert.match(html, /\.image-remove-button \{[^}]*top:4px; right:4px;[^}]*transform:none;/);
   assert.doesNotMatch(html, /\.image-remove-button \{[^}]*translate\(50%,-50%\)/);
+  assert.match(html, /\.showcase-gallery::before \{[^}]*background-size:23px 23px;/);
+  assert.doesNotMatch(html, /\.showcase-gallery::before \{[^}]*background-size:46px 46px;/);
   assert.match(html, /id="checkout-confirmed-dialog"/);
   assert.match(html, /id="checkout-unsuccessful-dialog"/);
   assert.match(html, /Thank you for your order\. Your tiny frames are on their way to becoming something special\./);
