@@ -32,6 +32,11 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);
   assert.match(html, /createFullResolutionPrintCrop/);
+  assert.match(html, /printBlob,/);
+  assert.match(html, /return entry\.printBlob/);
+  assert.match(html, /revision:crypto\.randomUUID\(\)/);
+  assert.doesNotMatch(html, /no longer matches its saved crop/);
+  assert.match(html, /cropFrameIsPortrait \? croppedCanvas : rotateCanvasClockwise\(croppedCanvas\)/);
   assert.match(html, /productCode:attempt\.productCode/);
   assert.doesNotMatch(html, /product identification code could not be verified/i);
 });
