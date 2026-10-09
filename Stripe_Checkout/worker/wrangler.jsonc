@@ -59,7 +59,8 @@
         }
       ],
       "images": {
-        "binding": "IMAGES"
+        "binding": "IMAGES",
+        "remote": true
       }
     },
     "test": {

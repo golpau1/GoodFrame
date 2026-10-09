@@ -188,6 +188,15 @@ function isValidProcessedImageKey(value) {
   return /^tinyframes\/tf_[a-f0-9]{32}\/processed\/(?:0[1-8])\.jpg$/.test(String(value || ''));
 }
 
+function isValidTinyFrameOriginalKey(value, uploadSessionId = '', pictureNumber = 0) {
+  const key = String(value || '');
+  const match = key.match(/^tinyframes\/(tf_[a-f0-9]{32})\/originals\/(0[1-8])\.(?:jpg|png|gif)$/);
+  if (!match) return false;
+  if (uploadSessionId && match[1] !== uploadSessionId) return false;
+  if (pictureNumber && Number(match[2]) !== pictureNumber) return false;
+  return true;
+}
+
 async function deleteObjectKeys(bucket, keys) {
   await Promise.allSettled(keys.map(key => bucket.delete(key)));
 }
@@ -270,10 +279,14 @@ function calculateEffectivePpi(width, height) {
 }
 
 async function transformOriginalForPrint(env, sourceBytes, crop) {
+  // Edge offsets map Cropper's x/y/width/height model directly and avoid
+  // ambiguity when a crop does not begin at the source image origin.
+  const right = Math.max(0, Math.round(crop.sourceWidth) - crop.left - crop.width);
+  const bottom = Math.max(0, Math.round(crop.sourceHeight) - crop.top - crop.height);
   let transform = env.IMAGES
     .input(sourceBytes)
     .transform({
-      trim:{ top:crop.top, left:crop.left, width:crop.width, height:crop.height },
+      trim:{ top:crop.top, right, bottom, left:crop.left },
       metadata:'keep'
     });
   if (crop.rotation === 90) {
@@ -285,6 +298,311 @@ async function transformOriginalForPrint(env, sourceBytes, crop) {
     throw new Error(`Cloudflare Images returned ${response.status} while preparing a print crop`);
   }
   return new Uint8Array(await response.arrayBuffer());
+}
+
+async function uploadTinyFrameOriginal(request, env) {
+  if (!env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error:'Artwork storage is not configured' }, 503);
+  }
+  if (!env.IMAGES) {
+    return jsonResponse(request, env, { error:'Print-quality image processing is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return jsonResponse(request, env, { error:'Upload must use multipart form data' }, 400);
+  }
+  const uploadSessionId = normalizeUploadReference(formData.get('upload_session_id'));
+  const pictureNumber = Number(formData.get('picture_number'));
+  const file = formData.get('file');
+  if (!uploadSessionId) {
+    return jsonResponse(request, env, { error:'Upload session ID is invalid' }, 400);
+  }
+  if (!Number.isInteger(pictureNumber) || pictureNumber < 1 || pictureNumber > TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+    return jsonResponse(request, env, { error:'Picture number must be between 1 and 8' }, 400);
+  }
+  if (!file || typeof file.arrayBuffer !== 'function') {
+    return jsonResponse(request, env, { error:'An original photograph is required' }, 400);
+  }
+  if (!SUPPORTED_TINY_FRAME_IMAGE_TYPES.includes(file.type)) {
+    return jsonResponse(request, env, { error:'Pictures must be JPEG, PNG, or GIF files' }, 400);
+  }
+  if (!file.size || file.size > MAX_TINY_FRAME_ORIGINAL_BYTES) {
+    return jsonResponse(request, env, { error:'Each original picture must be 20 MB or smaller' }, 413);
+  }
+
+  const objectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}originals/${String(pictureNumber).padStart(2, '0')}.${getOriginalExtension(file.type)}`;
+  const existing = await env.ARTWORK_BUCKET.head(objectKey);
+  if (existing) {
+    const sameFile = Number(existing.customMetadata?.original_size_bytes) === file.size &&
+      existing.customMetadata?.content_type === file.type;
+    if (!sameFile) {
+      return jsonResponse(request, env, {
+        error:'This picture slot already contains a different file.',
+        code:'UPLOAD_SLOT_CONFLICT'
+      }, 409);
+    }
+    return jsonResponse(request, env, {
+      success:true,
+      retry_recovered:true,
+      original:{ objectKey, contentType:file.type, size:file.size }
+    });
+  }
+
+  const diagnosticId = crypto.randomUUID().slice(0, 8);
+  try {
+    const sourceBuffer = await file.arrayBuffer();
+    const info = await env.IMAGES.info(sourceBuffer);
+    const sourceWidth = Number(info?.width);
+    const sourceHeight = Number(info?.height);
+    if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight)) {
+      throw new TinyFrameInputError('The picture dimensions could not be read');
+    }
+    const stored = await env.ARTWORK_BUCKET.put(objectKey, sourceBuffer, {
+      httpMetadata:{ contentType:file.type },
+      customMetadata:{
+        upload_session_id:uploadSessionId,
+        picture_number:String(pictureNumber),
+        original_filename:String(file.name || `picture-${pictureNumber}`).slice(0, 512),
+        original_size_bytes:String(file.size),
+        content_type:file.type,
+        source_width_px:String(sourceWidth),
+        source_height_px:String(sourceHeight),
+        status:'uploading',
+        created_at:new Date().toISOString()
+      },
+      onlyIf:{ etagDoesNotMatch:'*' }
+    });
+    if (stored === null) {
+      return jsonResponse(request, env, { error:'The picture slot was updated by another request' }, 409);
+    }
+    return jsonResponse(request, env, {
+      success:true,
+      original:{ objectKey, contentType:file.type, size:file.size, width:sourceWidth, height:sourceHeight }
+    });
+  } catch (error) {
+    console.error('Tiny Frame original upload failed', {
+      diagnosticId,
+      stage:'storing_original',
+      pictureNumber,
+      errorName:String(error?.name || 'Error'),
+      message:String(error?.message || 'Unknown upload failure')
+    });
+    return jsonResponse(request, env, {
+      error:error instanceof TinyFrameInputError
+        ? error.message
+        : 'We could not store this picture. Your selections are still here, so please try again.',
+      code:error instanceof TinyFrameInputError ? 'INVALID_ORIGINAL' : 'ORIGINAL_STORAGE_FAILED',
+      stage:'storing_original',
+      picture_number:pictureNumber,
+      diagnostic_id:diagnosticId
+    }, error instanceof TinyFrameInputError ? 400 : 500);
+  }
+}
+
+async function finalizeTinyFrameUpload(request, env) {
+  if (!env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error:'Artwork storage is not configured' }, 503);
+  }
+  if (!env.IMAGES) {
+    return jsonResponse(request, env, { error:'Print-quality image processing is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(request, env, { error:'Finalize request must be valid JSON' }, 400);
+  }
+  const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
+  const frameColour = normalizeFrameColour(body?.frameColour);
+  const originalKeys = Array.isArray(body?.originalObjectKeys) ? body.originalObjectKeys : [];
+  let crops;
+  try {
+    if (body?.crops?.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT) throw new Error('Exactly 8 crops are required');
+    crops = body.crops.map(normalizeTinyFrameCrop);
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message || 'Crop information is invalid' }, 400);
+  }
+  if (!uploadSessionId || !frameColour) {
+    return jsonResponse(request, env, { error:'Upload session or frame colour is invalid' }, 400);
+  }
+  if (
+    originalKeys.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT ||
+    originalKeys.some((key, index) => !isValidTinyFrameOriginalKey(key, uploadSessionId, index + 1))
+  ) {
+    return jsonResponse(request, env, { error:'All 8 stored original photographs are required' }, 400);
+  }
+
+  const manifestKey = getUploadManifestKey(uploadSessionId);
+  const existingManifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
+  if (existingManifestObject) {
+    const manifest = await readR2Json(existingManifestObject);
+    const files = Array.isArray(manifest?.files) ? manifest.files : [];
+    const valid = manifest?.upload_session_id === uploadSessionId &&
+      manifest?.frame_colour === frameColour &&
+      manifest?.image_count === TINY_FRAME_UPLOAD_IMAGE_COUNT &&
+      files.length >= 16;
+    if (!valid) {
+      return jsonResponse(request, env, { error:'This upload reference is already in use' }, 409);
+    }
+    const storedFiles = await Promise.all(files.map(file => env.ARTWORK_BUCKET.head(file.objectKey)));
+    if (storedFiles.some(file => !file)) {
+      return jsonResponse(request, env, { error:'A previous upload was incomplete. Please try again.' }, 409);
+    }
+    return jsonResponse(request, env, {
+      success:true,
+      retry_recovered:true,
+      upload_session_id:uploadSessionId,
+      manifest:{ objectKey:manifestKey },
+      image_quality:Array.isArray(manifest.image_quality) ? manifest.image_quality : [],
+      warnings:(Array.isArray(manifest.image_quality) ? manifest.image_quality : [])
+        .filter(item => item.below_200_ppi)
+        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
+    });
+  }
+
+  const diagnosticId = crypto.randomUUID().slice(0, 8);
+  const createdAt = new Date().toISOString();
+  const processedFiles = [];
+  const originalFiles = [];
+  const imageQuality = [];
+  let uploadStage = 'verifying_original';
+  let pictureNumber = null;
+  try {
+    for (let index = 0; index < TINY_FRAME_UPLOAD_IMAGE_COUNT; index += 1) {
+      pictureNumber = index + 1;
+      const originalObject = await env.ARTWORK_BUCKET.get(originalKeys[index]);
+      if (!originalObject) throw new TinyFrameInputError(`Original picture ${pictureNumber} could not be found`);
+      const sourceWidth = Number(originalObject.customMetadata?.source_width_px);
+      const sourceHeight = Number(originalObject.customMetadata?.source_height_px);
+      const submittedCrop = crops[index];
+      if (
+        !Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) ||
+        Math.abs(sourceWidth - submittedCrop.sourceWidth) > 1 ||
+        Math.abs(sourceHeight - submittedCrop.sourceHeight) > 1
+      ) {
+        throw new TinyFrameInputError(`Original picture ${pictureNumber} does not match its saved crop information`);
+      }
+      uploadStage = 'reading_original';
+      const sourceBuffer = await new Response(originalObject.body).arrayBuffer();
+      uploadStage = 'processing_crop';
+      const processedBytes = await transformOriginalForPrint(env, sourceBuffer, submittedCrop);
+      const processedDimensions = readJpegDimensions(processedBytes);
+      const processedObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}processed/${String(pictureNumber).padStart(2, '0')}.jpg`;
+      uploadStage = 'storing_processed_crop';
+      await env.ARTWORK_BUCKET.put(processedObjectKey, processedBytes, {
+        httpMetadata:{ contentType:'image/jpeg' },
+        customMetadata:{
+          upload_session_id:uploadSessionId,
+          picture_number:String(pictureNumber),
+          status:'pending',
+          created_at:createdAt
+        }
+      });
+      const effectivePpi = calculateEffectivePpi(processedDimensions.width, processedDimensions.height);
+      const quality = {
+        picture_number:pictureNumber,
+        cropped_width_px:processedDimensions.width,
+        cropped_height_px:processedDimensions.height,
+        effective_ppi:Number(effectivePpi.toFixed(1)),
+        below_200_ppi:effectivePpi < TINY_FRAME_LOW_RESOLUTION_PPI
+      };
+      imageQuality.push(quality);
+      processedFiles.push({
+        filename:`processed-${String(pictureNumber).padStart(2, '0')}.jpg`,
+        objectKey:processedObjectKey,
+        contentType:'image/jpeg',
+        size:processedBytes.length,
+        ...quality
+      });
+      originalFiles.push({
+        filename:String(originalObject.customMetadata?.original_filename || `picture-${pictureNumber}`).slice(0, 512),
+        objectKey:originalKeys[index],
+        contentType:String(originalObject.customMetadata?.content_type || 'application/octet-stream'),
+        size:Number(originalObject.customMetadata?.original_size_bytes || 0),
+        width_px:sourceWidth,
+        height_px:sourceHeight,
+        crop:{
+          x:submittedCrop.left,
+          y:submittedCrop.top,
+          width:submittedCrop.width,
+          height:submittedCrop.height,
+          rotation:submittedCrop.rotation
+        },
+        ...quality
+      });
+    }
+
+    pictureNumber = null;
+    uploadStage = 'storing_manifest';
+    const manifest = {
+      upload_session_id:uploadSessionId,
+      frame_colour:frameColour,
+      product_type:'frame_8_pictures',
+      image_count:TINY_FRAME_UPLOAD_IMAGE_COUNT,
+      page_size_mm:{ width:210, height:297 },
+      photo_width_mm:54,
+      photo_height_mm:86,
+      photo_size_mm:{ width:54, height:86 },
+      cutting_guides:{
+        line_width_pt:PRINT_SHEET_SPECIFICATION.guideWidthPt,
+        colour:'light-grey',
+        crop_mark_gap_mm:PRINT_SHEET_SPECIFICATION.cropMarkGapMm,
+        crop_mark_length_mm:PRINT_SHEET_SPECIFICATION.cropMarkLengthMm
+      },
+      image_quality:imageQuality,
+      quality_warning_count:imageQuality.filter(item => item.below_200_ppi).length,
+      originals:originalFiles,
+      processed_images:processedFiles,
+      product_codes:[],
+      print_sheets:[],
+      files:[...processedFiles, ...originalFiles],
+      status:'pending',
+      created_at:createdAt,
+      generated_at:createdAt,
+      uploaded_at:createdAt
+    };
+    const stored = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(manifest), {
+      httpMetadata:{ contentType:'application/json' },
+      onlyIf:{ etagDoesNotMatch:'*' }
+    });
+    if (stored === null) throw new Error('Upload session was finalized by another request');
+    return jsonResponse(request, env, {
+      success:true,
+      upload_session_id:uploadSessionId,
+      manifest:{ objectKey:manifestKey },
+      image_quality:imageQuality,
+      warnings:imageQuality
+        .filter(item => item.below_200_ppi)
+        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
+    });
+  } catch (error) {
+    console.error('Tiny Frame upload finalization failed', {
+      diagnosticId,
+      stage:uploadStage,
+      pictureNumber,
+      errorName:String(error?.name || 'Error'),
+      message:String(error?.message || 'Unknown upload failure')
+    });
+    return jsonResponse(request, env, {
+      error:error instanceof TinyFrameInputError
+        ? error.message
+        : 'We could not prepare your pictures. Your uploaded originals are safe, so please try again.',
+      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_INPUT' : 'UPLOAD_PROCESSING_FAILED',
+      stage:uploadStage,
+      picture_number:pictureNumber,
+      diagnostic_id:diagnosticId
+    }, error instanceof TinyFrameInputError ? 400 : 500);
+  }
 }
 
 async function uploadTinyFramePrintSheet(request, env) {
@@ -346,14 +664,54 @@ async function uploadTinyFramePrintSheet(request, env) {
   }
 
   const manifestKey = getUploadManifestKey(uploadSessionId);
-  if (await env.ARTWORK_BUCKET.head(manifestKey)) {
-    return jsonResponse(request, env, { error: 'Upload session already exists' }, 409);
+  const existingManifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
+  if (existingManifestObject) {
+    const existingManifest = await readR2Json(existingManifestObject);
+    const existingFiles = Array.isArray(existingManifest?.files) ? existingManifest.files : [];
+    const expectedPrefix = getTinyFrameUploadPrefix(uploadSessionId);
+    const validExistingUpload = existingManifest?.upload_session_id === uploadSessionId &&
+      existingManifest?.frame_colour === frameColour &&
+      existingManifest?.image_count === TINY_FRAME_UPLOAD_IMAGE_COUNT &&
+      existingFiles.length === 17 &&
+      existingFiles.every(file => String(file?.objectKey || '').startsWith(expectedPrefix));
+    if (!validExistingUpload) {
+      return jsonResponse(request, env, {
+        error:'This upload reference is already in use. Please try adding the product again.',
+        code:'UPLOAD_REFERENCE_CONFLICT'
+      }, 409);
+    }
+    const storedFiles = await Promise.all(existingFiles.map(file => env.ARTWORK_BUCKET.head(file.objectKey)));
+    if (storedFiles.some(file => !file)) {
+      return jsonResponse(request, env, {
+        error:'A previous upload was incomplete. Please try again.',
+        code:'UPLOAD_INCOMPLETE'
+      }, 409);
+    }
+    return jsonResponse(request, env, {
+      success:true,
+      upload_session_id:uploadSessionId,
+      retry_recovered:true,
+      print_sheet:{
+        filename:existingManifest.print_sheet_filename,
+        objectKey:existingManifest.print_sheet_object_key,
+        contentType:'application/pdf',
+        size:Number(existingFiles.find(file => file.objectKey === existingManifest.print_sheet_object_key)?.size || 0),
+        downloadUrl:getArtworkUrl(request, existingManifest.print_sheet_object_key)
+      },
+      image_quality:Array.isArray(existingManifest.image_quality) ? existingManifest.image_quality : [],
+      warnings:(Array.isArray(existingManifest.image_quality) ? existingManifest.image_quality : [])
+        .filter(item => item.below_200_ppi)
+        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
+    });
   }
 
   const storedKeys = [];
   const printSheetFilename = 'print-sheet-a4.pdf';
   const printSheetObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}${printSheetFilename}`;
   const createdAt = new Date().toISOString();
+  const diagnosticId = crypto.randomUUID().slice(0, 8);
+  let uploadStage = 'initializing';
+  let pictureNumber = null;
   try {
     const processedImages = [];
     const processedFiles = [];
@@ -361,9 +719,12 @@ async function uploadTinyFramePrintSheet(request, env) {
     const imageQuality = [];
 
     for (let index = 0; index < originals.length; index += 1) {
+      pictureNumber = index + 1;
       const file = originals[index];
+      uploadStage = 'reading_original';
       const sourceBuffer = await file.arrayBuffer();
       const sourceBytes = new Uint8Array(sourceBuffer);
+      uploadStage = 'reading_dimensions';
       const info = await env.IMAGES.info(sourceBuffer);
       const sourceWidth = Number(info?.width);
       const sourceHeight = Number(info?.height);
@@ -379,6 +740,7 @@ async function uploadTinyFramePrintSheet(request, env) {
       }
 
       const originalObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}originals/${String(index + 1).padStart(2, '0')}.${getOriginalExtension(file.type)}`;
+      uploadStage = 'storing_original';
       const storedOriginal = await env.ARTWORK_BUCKET.put(originalObjectKey, sourceBytes, {
         httpMetadata:{ contentType:file.type },
         customMetadata:{
@@ -395,9 +757,11 @@ async function uploadTinyFramePrintSheet(request, env) {
       if (storedOriginal === null) throw new Error('Upload session already exists');
       storedKeys.push(originalObjectKey);
 
+      uploadStage = 'processing_crop';
       const processedBytes = await transformOriginalForPrint(env, sourceBuffer, submittedCrop);
       const processedDimensions = readJpegDimensions(processedBytes);
       const processedObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}processed/${String(index + 1).padStart(2, '0')}.jpg`;
+      uploadStage = 'storing_processed_crop';
       const storedProcessed = await env.ARTWORK_BUCKET.put(processedObjectKey, processedBytes, {
         httpMetadata:{ contentType:'image/jpeg' },
         customMetadata:{
@@ -445,6 +809,8 @@ async function uploadTinyFramePrintSheet(request, env) {
       });
     }
 
+    pictureNumber = null;
+    uploadStage = 'generating_pdf';
     const pdfBytes = createA4PrintSheetPdf(processedImages);
     if (pdfBytes.length > MAX_TINY_FRAME_PDF_BYTES) {
       throw new Error('The generated PDF exceeds the 160 MB storage limit');
@@ -452,6 +818,7 @@ async function uploadTinyFramePrintSheet(request, env) {
     const pdfInspection = inspectPrintSheetPdf(pdfBytes);
     if (!pdfInspection.valid) throw new Error(pdfInspection.error);
 
+    uploadStage = 'storing_pdf';
     const storedPrintSheet = await env.ARTWORK_BUCKET.put(printSheetObjectKey, pdfBytes, {
       httpMetadata: { contentType:'application/pdf' },
       customMetadata: {
@@ -503,6 +870,7 @@ async function uploadTinyFramePrintSheet(request, env) {
       generated_at:createdAt,
       uploaded_at:createdAt
     };
+    uploadStage = 'storing_manifest';
     const storedManifest = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(manifest), {
       httpMetadata: { contentType:'application/json' },
       onlyIf: { etagDoesNotMatch:'*' }
@@ -530,10 +898,26 @@ async function uploadTinyFramePrintSheet(request, env) {
   } catch (error) {
     await deleteObjectKeys(env.ARTWORK_BUCKET, storedKeys);
     if (error instanceof TinyFrameInputError) {
-      return jsonResponse(request, env, { error:error.message }, 400);
+      return jsonResponse(request, env, {
+        error:error.message,
+        code:'INVALID_UPLOAD_INPUT',
+        stage:uploadStage,
+        diagnostic_id:diagnosticId
+      }, 400);
     }
-    console.error('Tiny Frame print-sheet upload failed:', error);
-    return jsonResponse(request, env, { error:'The print sheet could not be stored. Please try again.' }, 500);
+    console.error('Tiny Frame print-sheet upload failed', {
+      diagnosticId,
+      stage:uploadStage,
+      pictureNumber,
+      errorName:String(error?.name || 'Error'),
+      message:String(error?.message || 'Unknown upload failure')
+    });
+    return jsonResponse(request, env, {
+      error:'We could not prepare your pictures. Your selections are still here, so please try again.',
+      code:'UPLOAD_PROCESSING_FAILED',
+      stage:uploadStage,
+      diagnostic_id:diagnosticId
+    }, 500);
   }
 }
 
@@ -1721,6 +2105,14 @@ export default {
 
     if (request.method === 'POST' && url.pathname === '/upload-print-sheet') {
       return uploadTinyFramePrintSheet(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/original') {
+      return uploadTinyFrameOriginal(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/finalize') {
+      return finalizeTinyFrameUpload(request, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/checkout-session-status') {

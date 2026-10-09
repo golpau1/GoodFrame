@@ -167,7 +167,7 @@ function createA4PrintSheetPdf(processedImages, options = {}) {
     const dimensions = readJpegDetails(bytes);
     const expectedRatio = PHOTO_WIDTH_MM / PHOTO_HEIGHT_MM;
     if (Math.abs((dimensions.width / dimensions.height) - expectedRatio) > 0.01) {
-      throw new Error(`Processed image ${index + 1} does not match the 54 x 86 mm aspect ratio.`);
+      throw new Error(`Processed image ${index + 1} is ${dimensions.width} x ${dimensions.height}px and does not match the 54 x 86 mm aspect ratio.`);
     }
     return { bytes, ...dimensions };
   });
@@ -219,19 +219,19 @@ function createA4PrintSheetPdf(processedImages, options = {}) {
           ? '/DeviceCMYK'
           : '/DeviceRGB';
     const decode = image.components === 4 ? ' /Decode [1 0 1 0 1 0 1 0]' : '';
-    objects[imageObjectNumbers[index]] = concatenate([
+    objects[imageObjectNumbers[index]] = [
       bytesFromText(
         `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace ${colourSpace} /BitsPerComponent 8${decode} /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`
       ),
       image.bytes,
       bytesFromText('\nendstream')
-    ]);
+    ];
     if (iccObjectNumbers[index]) {
-      objects[iccObjectNumbers[index]] = concatenate([
+      objects[iccObjectNumbers[index]] = [
         bytesFromText(`<< /N 3 /Alternate /DeviceRGB /Length ${image.iccProfile.length} >>\nstream\n`),
         image.iccProfile,
         bytesFromText('\nendstream')
-      ]);
+      ];
     }
   });
   if (fontObjectNumber) {
@@ -247,14 +247,17 @@ function createA4PrintSheetPdf(processedImages, options = {}) {
   const offsets = [0];
   let currentOffset = header.length;
   for (let objectNumber = 1; objectNumber < objects.length; objectNumber += 1) {
-    const objectBytes = concatenate([
+    const bodyChunks = Array.isArray(objects[objectNumber])
+      ? objects[objectNumber]
+      : [objects[objectNumber]];
+    const objectChunks = [
       bytesFromText(`${objectNumber} 0 obj\n`),
-      objects[objectNumber],
+      ...bodyChunks,
       bytesFromText('\nendobj\n')
-    ]);
+    ];
     offsets[objectNumber] = currentOffset;
-    chunks.push(objectBytes);
-    currentOffset += objectBytes.length;
+    chunks.push(...objectChunks);
+    currentOffset += objectChunks.reduce((sum, chunk) => sum + chunk.length, 0);
   }
 
   const xrefOffset = currentOffset;

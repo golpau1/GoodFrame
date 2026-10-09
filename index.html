@@ -1715,6 +1715,19 @@
     function createUploadReference() {
       return `tf_${crypto.randomUUID().replaceAll("-", "")}`;
     }
+    let printUploadAttempt = null;
+    function getPrintUploadFingerprint(entries, frameColour) {
+      return JSON.stringify({
+        frameColour,
+        pictures:entries.map((entry) => ({
+          name:entry.original.name,
+          size:entry.original.size,
+          type:entry.original.type,
+          lastModified:entry.original.lastModified,
+          crop:entry.crop
+        }))
+      });
+    }
     function getCheckoutRequestId() {
       const fingerprint = JSON.stringify(cartItems.map((item) => ({
         cartItemId:item.cartItemId,
@@ -1737,36 +1750,117 @@
       if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.original instanceof File) || !entry?.crop)) {
         throw new Error("All 8 original pictures and crop settings are required.");
       }
-      const uploadSessionId = createUploadReference();
-      const form = new FormData();
-      form.append("upload_session_id", uploadSessionId);
-      form.append("frame_colour", frameColour);
-      form.append("image_count", "8");
-      form.append("crop_metadata", JSON.stringify(entries.map((entry) => entry.crop)));
-      entries.forEach((entry, index) => {
-        form.append(`original_${index + 1}`, entry.original, entry.original.name);
-      });
-      let response;
+      const fingerprint = getPrintUploadFingerprint(entries, frameColour);
+      if (!printUploadAttempt || printUploadAttempt.fingerprint !== fingerprint) {
+        printUploadAttempt = {
+          fingerprint,
+          uploadSessionId:createUploadReference(),
+          cartItemId:createCartItemId(),
+          originals:Array(8).fill(null),
+          promise:null,
+          result:null
+        };
+      }
+      if (printUploadAttempt.result) return printUploadAttempt.result;
+      if (printUploadAttempt.promise) return printUploadAttempt.promise;
+
+      const attempt = printUploadAttempt;
+      attempt.promise = (async () => {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 300000);
+        const requestUploadStage = async (endpoint, options, pictureNumber = null) => {
+          let response;
+          try {
+            response = await fetch(`${checkoutApiBaseUrl}${endpoint}`, { ...options, signal:controller.signal });
+          } catch (error) {
+            const timedOut = error?.name === "AbortError";
+            console.error("Picture upload request failed", {
+              endpoint,
+              stage:timedOut ? "request_timeout" : "network_request",
+              pictureNumber,
+              errorName:String(error?.name || "Error")
+            });
+            const customerError = new Error(timedOut
+              ? "The upload took too long. Your pictures are still selected — please try again."
+              : isLocalPreview
+                ? "The local image-upload service is unavailable. Start the checkout Worker on port 8787 and try again."
+                : "The image-upload service could not be reached. Your pictures are still selected — please try again.");
+            customerError.code = timedOut ? "UPLOAD_TIMEOUT" : "UPLOAD_NETWORK_ERROR";
+            throw customerError;
+          }
+          const responseText = await response.text();
+          let result = {};
+          try { result = responseText ? JSON.parse(responseText) : {}; }
+          catch {
+            console.error("Picture upload returned an invalid response", {
+              endpoint,
+              status:response.status,
+              pictureNumber,
+              contentType:response.headers.get("Content-Type") || ""
+            });
+          }
+          if (!response.ok || !result.success) {
+            console.error("Picture upload stage was rejected", {
+              endpoint,
+              status:response.status,
+              pictureNumber,
+              code:String(result.code || "INVALID_UPLOAD_RESPONSE"),
+              stage:String(result.stage || "response_validation"),
+              diagnosticId:String(result.diagnostic_id || "")
+            });
+            const customerMessage = response.status === 413
+              ? `Picture ${pictureNumber || ""} is too large. Please use files under 20 MB each.`.replace("  ", " ")
+              : response.status === 400
+                ? String(result.error || "One or more pictures could not be processed. Please review them and try again.")
+                : String(result.error || "We could not prepare your pictures. Your selections are still here, so please try again.");
+            const customerError = new Error(customerMessage);
+            customerError.code = String(result.code || "UPLOAD_FAILED");
+            throw customerError;
+          }
+          return result;
+        };
+        try {
+          for (let index = 0; index < entries.length; index += 1) {
+            if (attempt.originals[index]?.objectKey) continue;
+            const form = new FormData();
+            form.append("upload_session_id", attempt.uploadSessionId);
+            form.append("picture_number", String(index + 1));
+            form.append("file", entries[index].original, entries[index].original.name);
+            const uploaded = await requestUploadStage("/tiny-frame-upload/original", {
+              method:"POST",
+              body:form
+            }, index + 1);
+            if (!uploaded.original?.objectKey) throw new Error(`Picture ${index + 1} was not stored correctly.`);
+            attempt.originals[index] = uploaded.original;
+          }
+          const result = await requestUploadStage("/tiny-frame-upload/finalize", {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({
+              uploadSessionId:attempt.uploadSessionId,
+              frameColour,
+              originalObjectKeys:attempt.originals.map((original) => original.objectKey),
+              crops:entries.map((entry) => entry.crop)
+            })
+          });
+          if (result.upload_session_id !== attempt.uploadSessionId || !result.manifest?.objectKey) {
+            throw new Error("The uploaded pictures could not be verified.");
+          }
+          return {
+            uploadSessionId:attempt.uploadSessionId,
+            printSheetReference:result.manifest.objectKey,
+            cartItemId:attempt.cartItemId
+          };
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      })();
       try {
-        response = await fetch(`${checkoutApiBaseUrl}/upload-print-sheet`, {
-          method:"POST",
-          body:form
-        });
-      } catch (error) {
-        console.error("Print-sheet upload request failed", {
-          endpoint:`${checkoutApiBaseUrl}/upload-print-sheet`,
-          uploadSessionId,
-          error
-        });
-        throw new Error(isLocalPreview
-          ? "The local image-upload service is unavailable. Start the checkout Worker on port 8787 and try again."
-          : "The image-upload service could not be reached.");
+        attempt.result = await attempt.promise;
+        return attempt.result;
+      } finally {
+        attempt.promise = null;
       }
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.success || result.upload_session_id !== uploadSessionId || !result.print_sheet?.objectKey) {
-        throw new Error(result.error || "The A4 print sheet could not be uploaded.");
-      }
-      return { uploadSessionId, printSheetReference:result.print_sheet.objectKey };
     }
     async function registerArtworkManifest(uploadReference, artworkObjectKeys) {
       if (!/^tf_[a-f0-9]{32}$/.test(uploadReference) || artworkObjectKeys.length !== 8) {
@@ -1913,15 +2007,18 @@
       document.getElementById("purchase-label").textContent = withPictures ? "PREPARING PRINTS…" : "ADDING…";
       if (!withPictures) openCart();
       try {
-        const cartItemId = createCartItemId();
         let uploadSession = null;
         if (withPictures) {
           document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
           uploadSession = await uploadPrintSheet(uploadedImages, selections.colour);
+          if (cartItems.some((item) => item.uploadSessionId === uploadSession.uploadSessionId)) {
+            openCart();
+            return;
+          }
         }
         const cartItem = {
           id:Date.now(),
-          cartItemId,
+          cartItemId:uploadSession?.cartItemId || createCartItemId(),
           colour:selections.colour,
           order:selections.order,
           price:orderPrice,
@@ -1939,8 +2036,14 @@
         renderCart();
         if (withPictures) openCart();
       } catch (error) {
-        console.error("Add to cart failed", error);
-        showPurchaseError(withPictures ? "Upload failed — please try again" : `${error.message} Please try again.`);
+        console.error("Add to cart failed", {
+          stage:withPictures ? "picture_upload" : "cart_update",
+          code:String(error?.code || "ADD_TO_CART_FAILED"),
+          errorName:String(error?.name || "Error")
+        });
+        showPurchaseError(withPictures
+          ? String(error?.message || "Upload failed — please try again.")
+          : `${error.message} Please try again.`);
       } finally {
         document.getElementById("purchase-label").textContent = "Add to cart";
         updateAddToCartState();
