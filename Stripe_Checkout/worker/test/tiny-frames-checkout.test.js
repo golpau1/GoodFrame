@@ -8,6 +8,7 @@ import worker, {
   createStripePayload,
   markUploadSessionsPaid
 } from '../src/index.js';
+import { createA4PrintSheetPdf } from '../src/print-sheet-pdf.js';
 await import('../../../print-sheet.js');
 
 const uploadReference = 'tf_0123456789abcdef0123456789abcdef';
@@ -41,6 +42,18 @@ test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () =
     [19, 105.5], [78, 105.5], [137, 105.5],
     [48.5, 14.5], [107.5, 14.5]
   ]);
+});
+
+test('product code label sits in the A4 margin without changing image or cut geometry', () => {
+  const pdf = createA4PrintSheetPdf(
+    Array.from({ length:8 }, () => ({ bytes:fakeJpeg() })),
+    { productCode:'58321' }
+  );
+  const text = new TextDecoder('latin1').decode(pdf);
+  assert.match(text, /\(PRODUCT 58321\) Tj/);
+  assert.equal((text.match(/\/Subtype\s*\/Image\b/g) || []).length, 8);
+  assert.equal((text.match(/q\s+153\.070866\s+0\s+0\s+243\.779528/g) || []).length, 8);
+  assert.match(text, /1 0 0 1 232\.440945 14\.173228 Tm \(PRODUCT 58321\)/);
 });
 
 class MemoryR2Bucket {
@@ -164,7 +177,7 @@ function uploadPrintSheetRequest({
 function frameOnly(overrides = {}) {
   return {
     productType: 'tiny_frame_only',
-    uniqueCode: '123456',
+    cartItemId:'ci_11111111111111111111111111111111',
     size: '80x80mm',
     frameColour: 'Oak',
     quantity: 1,
@@ -176,7 +189,7 @@ function frameOnly(overrides = {}) {
 function frameWithPictures(overrides = {}) {
   return {
     productType: 'tiny_frame_8_pictures',
-    uniqueCode: '654321',
+    cartItemId:'ci_22222222222222222222222222222222',
     size: '80x80mm',
     frameColour: 'Walnut',
     quantity: 1,
@@ -206,10 +219,11 @@ test('picture products require a valid upload reference', () => {
 });
 
 test('Stripe payload contains safe Tiny Frame metadata and storefront return URLs', () => {
-  const payload = createStripePayload(
-    buildLineItems([frameOnly(), frameWithPictures()]),
-    'https://goodframe.com.au'
-  );
+  let productIndex = 0;
+  const lineItems = buildLineItems([frameOnly(), frameWithPictures()]).map(item => (
+    item.cartItemId ? { ...item, productCode:['58321', '19472'][productIndex++] } : item
+  ));
+  const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
 
   assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7000');
   assert.equal(payload.get('line_items[1][price_data][unit_amount]'), '9000');
@@ -219,6 +233,9 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   assert.equal(payload.get('line_items[1][price_data][product_data][metadata][frame_colour]'), 'Walnut');
   assert.equal(payload.get('line_items[1][price_data][product_data][metadata][upload_reference]'), uploadReference);
   assert.equal(payload.get('line_items[1][price_data][product_data][metadata][upload_session_id]'), uploadReference);
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '58321');
+  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_code]'), '19472');
+  assert.equal(payload.get('metadata[product_codes]'), '58321,19472');
   assert.equal(payload.get('metadata[upload_references]'), uploadReference);
   assert.equal(payload.get('metadata[upload_session_ids]'), uploadReference);
   assert.equal(payload.get('success_url'), 'https://goodframe.com.au/?checkout=success&session_id={CHECKOUT_SESSION_ID}');
@@ -301,7 +318,7 @@ test('upload-print-sheet stores one A4 PDF and a pending manifest', async () => 
   });
   assert.match(storedPrintSheet.customMetadata.created_at, /^\d{4}-\d{2}-\d{2}T/);
   const manifestKey = `tinyframes/${uploadReference}/manifest.json`;
-  assert.equal(bucket.objects.size, 10);
+  assert.equal(bucket.objects.size, 18);
   const manifest = await (await bucket.get(manifestKey)).json();
   assert.equal(manifest.status, 'pending');
   assert.equal(manifest.frame_colour, 'Oak');
@@ -322,6 +339,9 @@ test('upload-print-sheet stores one A4 PDF and a pending manifest', async () => 
   assert.equal(manifest.originals.length, 8);
   assert.equal(manifest.originals.every(file => file.size === fakeJpeg().length), true);
   assert.equal(manifest.quality_warning_count, 0);
+  assert.equal(manifest.processed_images.length, 8);
+  assert.deepEqual(manifest.product_codes, []);
+  assert.deepEqual(manifest.print_sheets, []);
   const pdfText = new TextDecoder('latin1').decode(bucket.objects.get(result.print_sheet.objectKey).bytes);
   assert.match(pdfText, /\/MediaBox \[0 0 595\.275591 841\.889764\]/);
   assert.equal((pdfText.match(/\/Subtype \/Image/g) || []).length, 8);

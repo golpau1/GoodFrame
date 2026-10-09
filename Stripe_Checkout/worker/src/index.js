@@ -9,6 +9,19 @@ import {
   createA4PrintSheetPdf,
   readJpegDimensions
 } from './print-sheet-pdf.js';
+import {
+  ProductCodeCapacityError,
+  ProductCodeError,
+  beginCheckoutRequest,
+  completeCheckoutRequest,
+  findProductCode,
+  getProductCodeCapacity,
+  markProductCodesPaid,
+  normalizeCartItemId,
+  normalizeCheckoutRequestId,
+  normalizeProductCode,
+  reserveProductCodes
+} from './product-codes.js';
 
 const PRICE_BY_SIZE = Object.freeze({
   '80x80mm': 7000,
@@ -122,7 +135,7 @@ function getAllowedOrigin(request, env) {
 function createCorsHeaders(request, env) {
   const headers = new Headers({
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json'
   });
   const allowedOrigin = getAllowedOrigin(request, env);
@@ -168,7 +181,11 @@ function getLegacyUploadManifestKey(uploadReference) {
 }
 
 function isValidTinyFramePrintSheetKey(value) {
-  return /^tinyframes\/tf_[a-f0-9]{32}\/print-sheet-a4\.pdf$/.test(String(value || ''));
+  return /^tinyframes\/tf_[a-f0-9]{32}\/print-sheet-(?:a4|[1-9][0-9]{4})\.pdf$/.test(String(value || ''));
+}
+
+function isValidProcessedImageKey(value) {
+  return /^tinyframes\/tf_[a-f0-9]{32}\/processed\/(?:0[1-8])\.jpg$/.test(String(value || ''));
 }
 
 async function deleteObjectKeys(bucket, keys) {
@@ -339,6 +356,7 @@ async function uploadTinyFramePrintSheet(request, env) {
   const createdAt = new Date().toISOString();
   try {
     const processedImages = [];
+    const processedFiles = [];
     const originalFiles = [];
     const imageQuality = [];
 
@@ -379,6 +397,19 @@ async function uploadTinyFramePrintSheet(request, env) {
 
       const processedBytes = await transformOriginalForPrint(env, sourceBuffer, submittedCrop);
       const processedDimensions = readJpegDimensions(processedBytes);
+      const processedObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}processed/${String(index + 1).padStart(2, '0')}.jpg`;
+      const storedProcessed = await env.ARTWORK_BUCKET.put(processedObjectKey, processedBytes, {
+        httpMetadata:{ contentType:'image/jpeg' },
+        customMetadata:{
+          upload_session_id:uploadSessionId,
+          picture_number:String(index + 1),
+          status:'pending',
+          created_at:createdAt
+        },
+        onlyIf:{ etagDoesNotMatch:'*' }
+      });
+      if (storedProcessed === null) throw new Error('Upload session already exists');
+      storedKeys.push(processedObjectKey);
       const effectivePpi = calculateEffectivePpi(processedDimensions.width, processedDimensions.height);
       const quality = {
         picture_number:index + 1,
@@ -389,6 +420,13 @@ async function uploadTinyFramePrintSheet(request, env) {
       };
       imageQuality.push(quality);
       processedImages.push({ bytes:processedBytes });
+      processedFiles.push({
+        filename:`processed-${String(index + 1).padStart(2, '0')}.jpg`,
+        objectKey:processedObjectKey,
+        contentType:'image/jpeg',
+        size:processedBytes.length,
+        ...quality
+      });
       originalFiles.push({
         filename:String(file.name || `picture-${index + 1}`).slice(0, 512),
         objectKey:originalObjectKey,
@@ -451,12 +489,15 @@ async function uploadTinyFramePrintSheet(request, env) {
       image_quality:imageQuality,
       quality_warning_count:imageQuality.filter(item => item.below_200_ppi).length,
       originals:originalFiles,
+      processed_images:processedFiles,
+      product_codes:[],
+      print_sheets:[],
       files:[{
         filename:printSheetFilename,
         objectKey:printSheetObjectKey,
         contentType:'application/pdf',
         size:pdfBytes.length
-      }, ...originalFiles],
+      }, ...processedFiles, ...originalFiles],
       status:'pending',
       created_at:createdAt,
       generated_at:createdAt,
@@ -701,46 +742,13 @@ function getRequestedSize(item) {
     normalizeRequestedSize(getLegacyProductName(item));
 }
 
-function getOrderCode(item) {
-  const values = [
-    item?.uniqueCode,
-    item?.orderCode,
-    item?.code,
-    item?.productName,
-    item?.internalTitle,
-    getLegacyProductName(item)
-  ];
-
-  for (const value of values) {
-    if (typeof value !== 'string' && typeof value !== 'number') {
-      continue;
-    }
-
-    const match = String(value).match(/\b(\d{6})\b/);
-    if (match) {
-      return match[1];
-    }
-  }
-
-  return '';
-}
-
-function getOrderCodes(lineItems) {
-  return [...new Set(lineItems
-    .map(item => item.orderCode)
-    .filter(Boolean))];
-}
-
-function getOrderCodeMetadataValue(orderCodes) {
-  return orderCodes.map(code => `#${code}`).join(', ').slice(0, 500);
-}
-
 function buildLineItems(items) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 10) {
     throw new Error('Cart must contain between 1 and 10 items');
   }
 
   const lineItems = [];
+  let physicalProductCount = 0;
 
   items.forEach(item => {
     if (getLegacyProductName(item).trim().toLowerCase() === 'shipping') {
@@ -759,10 +767,10 @@ function buildLineItems(items) {
     }
 
     const requestedQuantity = Number(item.quantity);
-    const quantity = Number.isInteger(requestedQuantity)
-      ? Math.min(Math.max(requestedQuantity, 1), 10)
+    const quantity = Number.isInteger(requestedQuantity) && requestedQuantity >= 1 && requestedQuantity <= 10
+      ? requestedQuantity
       : 1;
-    const orderCode = getOrderCode(item);
+    const cartItemId = normalizeCartItemId(item.cartItemId || item.id);
     const frameColour = normalizeFrameColour(item.frameColour || item.frameColor);
     const uploadReference = normalizeUploadReference(item.uploadReference || item.uploadId);
     const artworkObjectKeys = Array.isArray(item.artworkObjectKeys)
@@ -770,6 +778,9 @@ function buildLineItems(items) {
       : [];
     if (tinyFrameProduct && !frameColour) {
       throw new Error('One or more Tiny Frames has an invalid frame colour');
+    }
+    if (!cartItemId) {
+      throw new Error('One or more cart products has an invalid durable identity');
     }
     if (tinyFrameProduct?.requiresPictures && !uploadReference) {
       throw new Error('Frame + 8 Pictures requires a completed picture upload reference');
@@ -781,24 +792,31 @@ function buildLineItems(items) {
       tinyFrameProduct?.orderType || cleanText(item.orderType, '')
     ].filter(Boolean).join(' | ') || 'Custom framed print';
 
-    lineItems.push({
-      name: tinyFrameProduct?.name || `Print & Frame - ${size}`,
-      description,
-      unitAmount,
-      quantity,
-      orderCode,
-      productType,
-      frameColour,
-      uploadReference,
-      originalObjectKey: isValidArtworkObjectKey(item.originalObjectKey) ? item.originalObjectKey : '',
-      thumbnailObjectKey: isValidArtworkObjectKey(item.thumbnailObjectKey) ? item.thumbnailObjectKey : '',
-      artworkObjectKeys,
-      size
-    });
+    for (let unitIndex = 0; unitIndex < quantity; unitIndex += 1) {
+      lineItems.push({
+        name: tinyFrameProduct?.name || `Print & Frame - ${size}`,
+        description,
+        unitAmount,
+        quantity:1,
+        cartItemId,
+        unitIndex,
+        productType:productType || 'print_frame',
+        frameColour,
+        uploadReference,
+        originalObjectKey: isValidArtworkObjectKey(item.originalObjectKey) ? item.originalObjectKey : '',
+        thumbnailObjectKey: isValidArtworkObjectKey(item.thumbnailObjectKey) ? item.thumbnailObjectKey : '',
+        artworkObjectKeys,
+        size
+      });
+      physicalProductCount += 1;
+    }
   });
 
   if (lineItems.length === 0) {
     throw new Error('Cart does not contain any purchasable items');
+  }
+  if (physicalProductCount > 99) {
+    throw new Error('Cart cannot contain more than 99 physical products');
   }
 
   lineItems.push({
@@ -811,12 +829,11 @@ function buildLineItems(items) {
   return lineItems;
 }
 
-function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live') {
-  const orderCodes = getOrderCodes(lineItems);
-  const orderCodeMetadataValue = getOrderCodeMetadataValue(orderCodes);
+function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checkoutRequestId = '') {
+  const productCodes = lineItems.map(item => item.productCode).filter(Boolean);
   const productTypes = lineItems.map(item => item.productType).filter(Boolean);
   const frameColours = lineItems.map(item => item.frameColour).filter(Boolean);
-  const uploadReferences = lineItems.map(item => item.uploadReference).filter(Boolean);
+  const uploadReferences = [...new Set(lineItems.map(item => item.uploadReference).filter(Boolean))];
   const payload = new URLSearchParams({
     mode: 'payment',
     success_url: `${siteBaseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
@@ -829,6 +846,17 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live') {
 
   payload.set('metadata[stripe_mode]', stripeMode);
   payload.set('payment_intent_data[metadata][stripe_mode]', stripeMode);
+  payload.set('metadata[checkout_request_id]', checkoutRequestId);
+  payload.set('payment_intent_data[metadata][checkout_request_id]', checkoutRequestId);
+  const productCodeChunks = [];
+  for (let index = 0; index < productCodes.length; index += 80) {
+    productCodeChunks.push(productCodes.slice(index, index + 80).join(','));
+  }
+  productCodeChunks.forEach((value, index) => {
+    const suffix = productCodeChunks.length === 1 ? '' : `_${index + 1}`;
+    payload.set(`metadata[product_codes${suffix}]`, value);
+    payload.set(`payment_intent_data[metadata][product_codes${suffix}]`, value);
+  });
   if (stripeMode === 'test') {
     payload.set(
       'custom_text[submit][message]',
@@ -836,12 +864,7 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live') {
     );
   }
 
-  if (orderCodes.length > 0) {
-    payload.set('client_reference_id', orderCodes[0]);
-    payload.set('metadata[order_codes]', orderCodeMetadataValue);
-    payload.set('payment_intent_data[description]', 'Good Frame Order');
-    payload.set('payment_intent_data[metadata][order_codes]', orderCodeMetadataValue);
-  }
+  payload.set('payment_intent_data[description]', 'Good Frame Order');
   if (productTypes.length > 0) {
     payload.set('metadata[product_types]', productTypes.join(',').slice(0, 500));
     payload.set('payment_intent_data[metadata][product_types]', productTypes.join(',').slice(0, 500));
@@ -859,19 +882,23 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live') {
   lineItems.forEach((item, index) => {
     const prefix = `line_items[${index}]`;
     payload.set(`${prefix}[price_data][currency]`, 'aud');
-    payload.set(`${prefix}[price_data][product_data][name]`, item.name);
+    payload.set(
+      `${prefix}[price_data][product_data][name]`,
+      item.productCode ? `${item.name} · ${item.productCode}` : item.name
+    );
     payload.set(`${prefix}[price_data][product_data][description]`, item.description);
     if (item.productType) {
       payload.set(`${prefix}[price_data][product_data][metadata][product_type]`, item.productType);
       payload.set(`${prefix}[price_data][product_data][metadata][frame_colour]`, item.frameColour);
-      payload.set(`${prefix}[price_data][product_data][metadata][quantity]`, String(item.quantity));
+      payload.set(`${prefix}[price_data][product_data][metadata][product_code]`, item.productCode);
+      payload.set(`${prefix}[price_data][product_data][metadata][cart_item_id]`, item.cartItemId);
+      payload.set(`${prefix}[price_data][product_data][metadata][unit_index]`, String(item.unitIndex));
       if (item.uploadReference) {
         payload.set(`${prefix}[price_data][product_data][metadata][upload_reference]`, item.uploadReference);
         payload.set(`${prefix}[price_data][product_data][metadata][upload_session_id]`, item.uploadReference);
       }
     }
-    if (item.orderCode) {
-      payload.set(`${prefix}[price_data][product_data][metadata][order_code]`, item.orderCode);
+    if (item.productCode) {
       payload.set(`${prefix}[price_data][product_data][metadata][frame_size]`, item.size);
       if (item.originalObjectKey) {
         payload.set(`${prefix}[price_data][product_data][metadata][original_object_key]`, item.originalObjectKey);
@@ -893,20 +920,173 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live') {
   return payload;
 }
 
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function createCheckoutPayloadFingerprint(lineItems) {
+  return JSON.stringify(lineItems.map(item => ({
+    cartItemId:item.cartItemId || '',
+    unitIndex:Number.isInteger(item.unitIndex) ? item.unitIndex : -1,
+    productCode:item.productCode || '',
+    productType:item.productType || '',
+    size:item.size || '',
+    frameColour:item.frameColour || '',
+    uploadReference:item.uploadReference || '',
+    unitAmount:item.unitAmount,
+    quantity:item.quantity
+  })));
+}
+
+async function loadProcessedImagesForManifest(manifest, env) {
+  const storedProcessed = Array.isArray(manifest.processed_images) ? manifest.processed_images : [];
+  if (
+    storedProcessed.length === TINY_FRAME_UPLOAD_IMAGE_COUNT &&
+    storedProcessed.every(file => isValidProcessedImageKey(file?.objectKey))
+  ) {
+    const images = [];
+    for (const file of storedProcessed) {
+      const object = await env.ARTWORK_BUCKET.get(file.objectKey);
+      if (!object) throw new Error('A processed print image could not be found');
+      images.push({ bytes:new Uint8Array(await new Response(object.body).arrayBuffer()) });
+    }
+    return images;
+  }
+
+  const originals = Array.isArray(manifest.originals) ? manifest.originals : [];
+  if (originals.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT || !env.IMAGES) {
+    throw new Error('This picture upload must be added to the cart again before checkout');
+  }
+  const images = [];
+  for (const [index, original] of originals.entries()) {
+    const object = await env.ARTWORK_BUCKET.get(String(original?.objectKey || ''));
+    if (!object) throw new Error(`Original picture ${index + 1} could not be found`);
+    const crop = normalizeTinyFrameCrop({
+      ...original.crop,
+      sourceWidth:original.width_px,
+      sourceHeight:original.height_px
+    }, index);
+    const sourceBytes = await new Response(object.body).arrayBuffer();
+    images.push({ bytes:await transformOriginalForPrint(env, sourceBytes, crop) });
+  }
+  return images;
+}
+
+async function addProductCodesToStoredFileMetadata(files, productCodes, env) {
+  const productCodeValue = productCodes.join(',');
+  for (const file of files) {
+    const objectKey = String(file?.objectKey || '');
+    if (!objectKey) continue;
+    const object = await env.ARTWORK_BUCKET.get(objectKey);
+    if (!object) throw new Error(`Stored artwork ${objectKey} could not be found`);
+    await env.ARTWORK_BUCKET.put(objectKey, object.body, {
+      httpMetadata:{ contentType:String(file.contentType || 'application/octet-stream') },
+      customMetadata:{
+        ...(object.customMetadata || {}),
+        product_codes:productCodeValue
+      }
+    });
+  }
+}
+
+async function ensureProductCodePrintSheets(uploadReference, productCodes, env) {
+  const manifestKey = getUploadManifestKey(uploadReference);
+  const object = await env.ARTWORK_BUCKET.get(manifestKey);
+  if (!object) {
+    if (await env.ARTWORK_BUCKET.head(getLegacyUploadManifestKey(uploadReference))) {
+      throw new Error('This legacy picture upload must be added to the cart again before checkout');
+    }
+    throw new Error('One or more picture uploads could not be verified');
+  }
+  const manifest = await readR2Json(object);
+  if (!manifest) throw new Error('A picture upload manifest is invalid');
+
+  const normalizedCodes = productCodes.map(normalizeProductCode);
+  if (normalizedCodes.some(code => !code) || new Set(normalizedCodes).size !== normalizedCodes.length) {
+    throw new Error('Picture product codes are invalid');
+  }
+  const existingSheets = new Map(
+    (Array.isArray(manifest.print_sheets) ? manifest.print_sheets : [])
+      .filter(sheet => normalizeProductCode(sheet?.product_code) && isValidTinyFramePrintSheetKey(sheet?.objectKey))
+      .map(sheet => [sheet.product_code, sheet])
+  );
+  const missingCodes = normalizedCodes.filter(code => !existingSheets.has(code));
+  const processedImages = missingCodes.length ? await loadProcessedImagesForManifest(manifest, env) : [];
+  const generatedSheets = [];
+  for (const productCode of missingCodes) {
+    const filename = `print-sheet-${productCode}.pdf`;
+    const objectKey = `${getTinyFrameUploadPrefix(uploadReference)}${filename}`;
+    const pdfBytes = createA4PrintSheetPdf(processedImages, { productCode });
+    if (pdfBytes.length > MAX_TINY_FRAME_PDF_BYTES) {
+      throw new Error('The generated PDF exceeds the 160 MB storage limit');
+    }
+    const pdfInspection = inspectPrintSheetPdf(pdfBytes);
+    if (!pdfInspection.valid) throw new Error(pdfInspection.error);
+    await env.ARTWORK_BUCKET.put(objectKey, pdfBytes, {
+      httpMetadata:{ contentType:'application/pdf' },
+      customMetadata:{
+        upload_session_id:uploadReference,
+        product_code:productCode,
+        product_type:'frame_8_pictures',
+        frame_colour:String(manifest.frame_colour || '').toLowerCase(),
+        image_count:String(TINY_FRAME_UPLOAD_IMAGE_COUNT),
+        photo_width_mm:'54',
+        photo_height_mm:'86',
+        status:'pending',
+        created_at:new Date().toISOString()
+      },
+      onlyIf:{ etagDoesNotMatch:'*' }
+    });
+    const sheet = {
+      product_code:productCode,
+      filename,
+      objectKey,
+      contentType:'application/pdf',
+      size:pdfBytes.length
+    };
+    existingSheets.set(productCode, sheet);
+    generatedSheets.push(sheet);
+  }
+
+  const filesToTag = [
+    ...(Array.isArray(manifest.originals) ? manifest.originals : []),
+    ...(Array.isArray(manifest.processed_images) ? manifest.processed_images : [])
+  ];
+  await addProductCodesToStoredFileMetadata(filesToTag, normalizedCodes, env);
+  const printSheets = normalizedCodes.map(code => existingSheets.get(code));
+  const generatedAt = new Date().toISOString();
+  const updatedManifest = {
+    ...manifest,
+    product_codes:normalizedCodes,
+    print_sheets:printSheets,
+    files:[
+      ...(Array.isArray(manifest.files)
+        ? manifest.files.filter(file => !/^print-sheet-[1-9][0-9]{4}\.pdf$/.test(String(file?.filename || '')))
+        : []),
+      ...printSheets
+    ],
+    product_codes_assigned_at:manifest.product_codes_assigned_at || generatedAt,
+    updated_at:generatedAt
+  };
+  await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(updatedManifest), {
+    httpMetadata:{ contentType:'application/json' }
+  });
+  return generatedSheets.length;
+}
+
 async function verifyUploadManifests(lineItems, env) {
   const pictureItems = lineItems.filter(item => item.productType === 'tiny_frame_8_pictures');
   if (!pictureItems.length) return;
-  if (!env.ARTWORK_BUCKET) {
-    throw new Error('Artwork storage is not configured');
-  }
+  if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
+  const codesByUpload = new Map();
   for (const item of pictureItems) {
-    const currentManifest = await env.ARTWORK_BUCKET.head(getUploadManifestKey(item.uploadReference));
-    const legacyManifest = currentManifest
-      ? null
-      : await env.ARTWORK_BUCKET.head(getLegacyUploadManifestKey(item.uploadReference));
-    if (!currentManifest && !legacyManifest) {
-      throw new Error('One or more picture uploads could not be verified');
-    }
+    const codes = codesByUpload.get(item.uploadReference) || [];
+    codes.push(item.productCode);
+    codesByUpload.set(item.uploadReference, codes);
+  }
+  for (const [uploadReference, productCodes] of codesByUpload) {
+    await ensureProductCodePrintSheets(uploadReference, productCodes, env);
   }
 }
 
@@ -927,12 +1107,60 @@ async function createCheckoutSession(request, env) {
     return jsonResponse(request, env, { error: 'Request body must be valid JSON' }, 400);
   }
 
+  let checkoutRequestId = normalizeCheckoutRequestId(body.checkoutRequestId);
+  let checkoutItems = Array.isArray(body.items) ? body.items : [];
+  if (!checkoutRequestId) {
+    const legacyRequestHash = await sha256Hex(JSON.stringify(checkoutItems));
+    checkoutRequestId = `co_${legacyRequestHash.slice(0, 32)}`;
+  }
+  checkoutItems = await Promise.all(checkoutItems.map(async (item, index) => {
+    if (normalizeCartItemId(item?.cartItemId || item?.id)) return item;
+    const legacyItemHash = await sha256Hex(JSON.stringify({
+      checkoutRequestId,
+      index,
+      uniqueCode:item?.uniqueCode || item?.orderCode || '',
+      productType:item?.productType || '',
+      uploadReference:item?.uploadReference || item?.uploadId || '',
+      frameColour:item?.frameColour || item?.frameColor || '',
+      quantity:item?.quantity || 1
+    }));
+    return { ...item, cartItemId:`ci_${legacyItemHash.slice(0, 32)}` };
+  }));
+  if (!env.PRODUCT_CODES_DB) {
+    return jsonResponse(request, env, { error:'Product identification database is not configured' }, 503);
+  }
+
   let lineItems;
+  let capacity;
   try {
-    lineItems = buildLineItems(body.items);
+    lineItems = buildLineItems(checkoutItems);
+    const physicalItems = lineItems.filter(item => item.cartItemId);
+    const allocation = await reserveProductCodes(env.PRODUCT_CODES_DB, physicalItems, checkoutRequestId);
+    capacity = allocation.capacity;
+    let physicalIndex = 0;
+    lineItems = lineItems.map(item => item.cartItemId ? allocation.units[physicalIndex++] : item);
+    const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(lineItems));
+    const checkoutRequest = await beginCheckoutRequest(
+      env.PRODUCT_CODES_DB,
+      checkoutRequestId,
+      payloadHash,
+      allocation.units.map(item => item.productCode)
+    );
+    if (checkoutRequest.stripe_checkout_session_id && checkoutRequest.stripe_checkout_url) {
+      return jsonResponse(request, env, {
+        id:checkoutRequest.stripe_checkout_session_id,
+        url:checkoutRequest.stripe_checkout_url,
+        stripeMode:stripeConfiguration.mode,
+        productCodes:allocation.units.map(item => item.productCode)
+      });
+    }
     await verifyUploadManifests(lineItems, env);
   } catch (error) {
-    return jsonResponse(request, env, { error: error.message }, 400);
+    const status = error instanceof ProductCodeCapacityError ? 503 : error instanceof ProductCodeError ? 409 : 400;
+    return jsonResponse(request, env, { error:error.message }, status);
+  }
+  if (capacity?.low) {
+    console.warn('Five-digit product code capacity is running low', capacity);
   }
 
   const siteBaseUrl = getSiteBaseUrl(env);
@@ -943,9 +1171,10 @@ async function createCheckoutSession(request, env) {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${stripeConfiguration.secretKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Idempotency-Key':checkoutRequestId
     },
-    body: createStripePayload(lineItems, siteBaseUrl, stripeConfiguration.mode)
+    body: createStripePayload(lineItems, siteBaseUrl, stripeConfiguration.mode, checkoutRequestId)
   });
   const stripeResult = await stripeResponse.json();
 
@@ -958,10 +1187,18 @@ async function createCheckoutSession(request, env) {
     return jsonResponse(request, env, { error: 'Stripe could not create the checkout session' }, 502);
   }
 
+  try {
+    await completeCheckoutRequest(env.PRODUCT_CODES_DB, checkoutRequestId, stripeResult);
+  } catch (error) {
+    console.error('Checkout product identity persistence failed:', error);
+    return jsonResponse(request, env, { error:'Checkout identity could not be stored safely' }, 503);
+  }
+
   return jsonResponse(request, env, {
     id: stripeResult.id,
     url: stripeResult.url,
-    stripeMode:stripeConfiguration.mode
+    stripeMode:stripeConfiguration.mode,
+    productCodes:lineItems.map(item => item.productCode).filter(Boolean)
   });
 }
 
@@ -1244,29 +1481,21 @@ async function markUploadSessionsPaid(session, env) {
     if (!manifest) throw new Error(`Upload session ${uploadSessionId} has an invalid manifest`);
     if (manifest.status === 'paid') continue;
     const paidAt = new Date().toISOString();
-    const printSheetObjectKey = String(manifest.print_sheet_object_key || '');
-    if (printSheetObjectKey) {
-      const printSheet = await env.ARTWORK_BUCKET.get(printSheetObjectKey);
-      if (!printSheet) throw new Error(`Print sheet for ${uploadSessionId} could not be found`);
-      await env.ARTWORK_BUCKET.put(printSheetObjectKey, printSheet.body, {
-        httpMetadata: { contentType:'application/pdf' },
-        customMetadata: {
-          ...(printSheet.customMetadata || {}),
-          status:'paid',
-          paid_at:paidAt,
-          ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
-        }
-      });
-    }
-    for (const original of Array.isArray(manifest.originals) ? manifest.originals : []) {
-      const originalObjectKey = String(original?.objectKey || '');
-      if (!originalObjectKey.startsWith(`${getTinyFrameUploadPrefix(uploadSessionId)}originals/`)) continue;
-      const originalObject = await env.ARTWORK_BUCKET.get(originalObjectKey);
-      if (!originalObject) throw new Error(`Original picture for ${uploadSessionId} could not be found`);
-      await env.ARTWORK_BUCKET.put(originalObjectKey, originalObject.body, {
-        httpMetadata:{ contentType:String(original.contentType || 'application/octet-stream') },
+    const relatedFiles = [
+      ...(manifest.print_sheet_object_key ? [{ objectKey:manifest.print_sheet_object_key, contentType:'application/pdf' }] : []),
+      ...(Array.isArray(manifest.print_sheets) ? manifest.print_sheets : []),
+      ...(Array.isArray(manifest.processed_images) ? manifest.processed_images : []),
+      ...(Array.isArray(manifest.originals) ? manifest.originals : [])
+    ];
+    for (const file of relatedFiles) {
+      const objectKey = String(file?.objectKey || '');
+      if (!objectKey.startsWith(getTinyFrameUploadPrefix(uploadSessionId))) continue;
+      const storedObject = await env.ARTWORK_BUCKET.get(objectKey);
+      if (!storedObject) throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
+      await env.ARTWORK_BUCKET.put(objectKey, storedObject.body, {
+        httpMetadata:{ contentType:String(file.contentType || 'application/octet-stream') },
         customMetadata:{
-          ...(originalObject.customMetadata || {}),
+          ...(storedObject.customMetadata || {}),
           status:'paid',
           paid_at:paidAt,
           ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
@@ -1365,10 +1594,11 @@ async function handleStripeWebhook(request, env) {
 
   if (event.type === 'checkout.session.completed') {
     try {
+      await markProductCodesPaid(env.PRODUCT_CODES_DB, event.data.object);
       await markUploadSessionsPaid(event.data.object, env);
     } catch (error) {
-      console.error('Upload session payment update failed:', error);
-      return new Response('Upload session status could not be updated', { status: 503 });
+      console.error('Paid product relationship update failed:', error);
+      return new Response('Paid product relationships could not be updated', { status: 503 });
     }
     let claimed;
     try {
@@ -1401,6 +1631,50 @@ async function handleStripeWebhook(request, env) {
   });
 }
 
+function isAuthorizedAdminRequest(request, env) {
+  const configuredKey = String(env.ADMIN_API_KEY || '');
+  const suppliedKey = String(request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  return configuredKey.length >= 24 && suppliedKey === configuredKey;
+}
+
+async function getProductCodeRecord(request, env, productCode) {
+  if (!env.PRODUCT_CODES_DB || !env.ADMIN_API_KEY) {
+    return jsonResponse(request, env, { error:'Order management is not configured' }, 503);
+  }
+  if (!isAuthorizedAdminRequest(request, env)) {
+    return jsonResponse(request, env, { error:'Unauthorized' }, 401);
+  }
+  try {
+    const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
+    if (!record) return jsonResponse(request, env, { error:'Product code was not found' }, 404);
+    return jsonResponse(request, env, {
+      productCode:record.code,
+      status:record.status,
+      productType:record.product_type,
+      cartItemId:record.cart_item_id,
+      unitIndex:record.unit_index,
+      uploadSessionId:record.upload_session_id,
+      checkoutRequestId:record.checkout_request_id,
+      stripeCheckoutSessionId:record.stripe_checkout_session_id,
+      stripePaymentIntentId:record.stripe_payment_intent_id,
+      createdAt:record.created_at,
+      paidAt:record.paid_at
+    });
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message }, 400);
+  }
+}
+
+async function getProductCodeCapacityRecord(request, env) {
+  if (!env.PRODUCT_CODES_DB || !env.ADMIN_API_KEY) {
+    return jsonResponse(request, env, { error:'Order management is not configured' }, 503);
+  }
+  if (!isAuthorizedAdminRequest(request, env)) {
+    return jsonResponse(request, env, { error:'Unauthorized' }, 401);
+  }
+  return jsonResponse(request, env, await getProductCodeCapacity(env.PRODUCT_CODES_DB));
+}
+
 export {
   buildLineItems,
   claimWebhookEvent,
@@ -1428,8 +1702,17 @@ export default {
         ok:true,
         stripeMode:getStripeMode(env) || 'invalid',
         checkoutConfigured:Boolean(stripeConfiguration),
-        fulfilmentEnabled:Boolean(stripeConfiguration?.fulfilmentEnabled)
+        fulfilmentEnabled:Boolean(stripeConfiguration?.fulfilmentEnabled),
+        productIdentificationConfigured:Boolean(env.PRODUCT_CODES_DB)
       });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/admin/product-code-capacity') {
+      return getProductCodeCapacityRecord(request, env);
+    }
+
+    if (request.method === 'GET' && url.pathname.startsWith('/admin/product-code/')) {
+      return getProductCodeRecord(request, env, decodeURIComponent(url.pathname.slice('/admin/product-code/'.length)));
     }
 
     if (request.method === 'POST' && url.pathname === '/create-checkout-session') {

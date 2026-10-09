@@ -20,6 +20,14 @@
       "bucket_name": "goodframes"
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "PRODUCT_CODES_DB",
+      "database_name": "good-frame-product-codes",
+      "database_id": "39f74d95-8bb9-4063-aed8-dab0b78e6b95",
+      "migrations_dir": "migrations"
+    }
+  ],
   "images": {
     "binding": "IMAGES"
   },
@@ -42,6 +50,14 @@
           "bucket_name": "goodframes-test"
         }
       ],
+      "d1_databases": [
+        {
+          "binding": "PRODUCT_CODES_DB",
+          "database_name": "good-frame-product-codes-test",
+          "database_id": "d7788cb4-04be-4d62-a08c-ccada2c3f21a",
+          "migrations_dir": "migrations"
+        }
+      ],
       "images": {
         "binding": "IMAGES"
       }
@@ -62,6 +78,14 @@
           "bucket_name": "goodframes-test"
         }
       ],
+      "d1_databases": [
+        {
+          "binding": "PRODUCT_CODES_DB",
+          "database_name": "good-frame-product-codes-test",
+          "database_id": "d7788cb4-04be-4d62-a08c-ccada2c3f21a",
+          "migrations_dir": "migrations"
+        }
+      ],
       "images": {
         "binding": "IMAGES"
       }
@@ -72,6 +96,7 @@
   //   STRIPE_LIVE_PUBLISHABLE_KEY (reserved for Stripe.js if added later)
   //   STRIPE_LIVE_WEBHOOK_SECRET
   //   RESEND_API_KEY
+  //   ADMIN_API_KEY           (protects product-code lookup and capacity endpoints)
   // Existing STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET remain supported as
   // live-only migration fallbacks, so the current production setup is intact.
   //
@@ -80,4 +105,7 @@
   //   STRIPE_TEST_PUBLISHABLE_KEY (reserved for Stripe.js if added later)
   //   STRIPE_TEST_WEBHOOK_SECRET
   // Do not add RESEND_API_KEY to test: test webhooks suppress notifications and fulfilment.
+  //
+  // Production and test PRODUCT_CODES_DB bindings are isolated. Apply every
+  // migration to both databases before deploying. See PRODUCT_CODES.md.
 }

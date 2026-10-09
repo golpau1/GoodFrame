@@ -1600,17 +1600,35 @@
         : "https://good-frame-checkout.loganwallace049.workers.dev")
     ).trim().replace(/\/$/, "");
     const CART_STORAGE_KEY = "tinyFramesCart";
+    const CHECKOUT_REQUEST_STORAGE_KEY = "tinyFramesCheckoutRequest";
+    function createClientIdentity(prefix) {
+      return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
+    }
+    function createCartItemId() {
+      return createClientIdentity("ci");
+    }
+    function createCheckoutRequestId() {
+      return createClientIdentity("co");
+    }
+    let cartIdentityWasMigrated = false;
     const cartItems = (() => {
       try {
         const stored = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
         return Array.isArray(stored) ? stored.slice(0, 10).map((item) => {
           const currentPrice = productPriceFor(item?.order);
-          return currentPrice === null ? item : { ...item, price:currentPrice };
+          const cartItemId = /^ci_[a-f0-9]{32}$/.test(String(item?.cartItemId || ""))
+            ? item.cartItemId
+            : createCartItemId();
+          if (cartItemId !== item?.cartItemId) cartIdentityWasMigrated = true;
+          return { ...item, cartItemId, ...(currentPrice === null ? {} : { price:currentPrice }) };
         }) : [];
       } catch {
         return [];
       }
     })();
+    if (cartIdentityWasMigrated) {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    }
     const cartItemsElement = document.getElementById("cart-items");
     const cartLink = document.getElementById("cart-link");
     const purchaseError = document.getElementById("purchase-error");
@@ -1694,13 +1712,26 @@
       purchaseError.textContent = message;
       purchaseError.hidden = !message;
     }
-    function createOrderCode() {
-      const values = new Uint32Array(1);
-      crypto.getRandomValues(values);
-      return String(100000 + (values[0] % 900000));
-    }
     function createUploadReference() {
       return `tf_${crypto.randomUUID().replaceAll("-", "")}`;
+    }
+    function getCheckoutRequestId() {
+      const fingerprint = JSON.stringify(cartItems.map((item) => ({
+        cartItemId:item.cartItemId,
+        order:normalizeOrderType(item.order),
+        colour:item.colour,
+        quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
+        uploadReference:item.uploadSessionId || item.uploadReference || ""
+      })));
+      try {
+        const stored = JSON.parse(localStorage.getItem(CHECKOUT_REQUEST_STORAGE_KEY) || "null");
+        if (stored?.fingerprint === fingerprint && /^co_[a-f0-9]{32}$/.test(String(stored?.id || ""))) {
+          return stored.id;
+        }
+      } catch {}
+      const id = createCheckoutRequestId();
+      localStorage.setItem(CHECKOUT_REQUEST_STORAGE_KEY, JSON.stringify({ id, fingerprint }));
+      return id;
     }
     async function uploadPrintSheet(entries, frameColour) {
       if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.original instanceof File) || !entry?.crop)) {
@@ -1793,9 +1824,10 @@
           method:"POST",
           headers:{ "Content-Type":"application/json" },
           body:JSON.stringify({
+            checkoutRequestId:getCheckoutRequestId(),
             items:cartItems.map((item) => ({
               productType:productIdFor(item.order),
-              uniqueCode:item.orderCode,
+              cartItemId:item.cartItemId,
               size:"80x80mm",
               frameColour:item.colour,
               quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
@@ -1881,6 +1913,7 @@
       document.getElementById("purchase-label").textContent = withPictures ? "PREPARING PRINTS…" : "ADDING…";
       if (!withPictures) openCart();
       try {
+        const cartItemId = createCartItemId();
         let uploadSession = null;
         if (withPictures) {
           document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
@@ -1888,7 +1921,7 @@
         }
         const cartItem = {
           id:Date.now(),
-          orderCode:createOrderCode(),
+          cartItemId,
           colour:selections.colour,
           order:selections.order,
           price:orderPrice,
@@ -1995,6 +2028,7 @@
           }
           cartItems.splice(0, cartItems.length);
           saveCart();
+          localStorage.removeItem(CHECKOUT_REQUEST_STORAGE_KEY);
           cartNotice = `Thank you — your order is confirmed${result.orderReference ? ` (${result.orderReference})` : ""}.`;
         } catch (error) {
           console.error("Checkout confirmation failed", error);
