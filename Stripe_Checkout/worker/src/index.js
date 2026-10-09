@@ -994,7 +994,9 @@ async function reserveTinyFrameProductPdf(request, env) {
   try {
     const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
       cartItemId,
-      productType
+      productType,
+      frameColour,
+      unitAmount:TINY_FRAME_PRODUCTS[productType].unitAmount
     }, body?.productCode ? { preferredCode:body.productCode } : {});
     if (reservation.capacity?.low) {
       console.warn('Five-digit product code capacity is running low', reservation.capacity);
@@ -1050,7 +1052,9 @@ async function uploadTinyFrameProductPdf(request, env) {
   try {
     const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
       cartItemId,
-      productType:'tiny_frame_8_pictures'
+      productType:'tiny_frame_8_pictures',
+      frameColour,
+      unitAmount:TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.unitAmount
     }, requestedProductCode ? { preferredCode:requestedProductCode } : {});
     const productCode = reservation.productCode;
     if (reservation.capacity?.low) {
@@ -1363,6 +1367,9 @@ function buildLineItems(items) {
       ? requestedQuantity
       : 1;
     const cartItemId = normalizeCartItemId(item.cartItemId || item.id);
+    const submittedProductCode = item.productCode === undefined || item.productCode === null || String(item.productCode).trim() === ''
+      ? ''
+      : normalizeProductCode(item.productCode);
     const frameColour = normalizeFrameColour(item.frameColour || item.frameColor);
     const uploadReference = normalizePictureUploadReference(item.uploadReference || item.uploadId);
     const artworkObjectKeys = Array.isArray(item.artworkObjectKeys)
@@ -1373,6 +1380,9 @@ function buildLineItems(items) {
     }
     if (!cartItemId) {
       throw new Error('One or more cart products has an invalid durable identity');
+    }
+    if (item.productCode && !submittedProductCode) {
+      throw new Error('One or more cart products has an invalid product code');
     }
     if (tinyFrameProduct?.requiresPictures && !uploadReference) {
       throw new Error('Frame + 8 Pictures requires a completed picture upload reference');
@@ -1392,6 +1402,7 @@ function buildLineItems(items) {
         quantity:1,
         cartItemId,
         unitIndex,
+        productCode:submittedProductCode,
         productType:productType || 'print_frame',
         frameColour,
         uploadReference,
@@ -1419,6 +1430,36 @@ function buildLineItems(items) {
   });
 
   return lineItems;
+}
+
+function chunkStripeMetadataEntries(entries, maximumLength = 500) {
+  const chunks = [];
+  let chunk = '';
+  for (const entry of entries) {
+    if (entry.length > maximumLength) throw new Error('A Stripe product mapping entry is too long');
+    const candidate = chunk ? `${chunk}; ${entry}` : entry;
+    if (candidate.length <= maximumLength) {
+      chunk = candidate;
+      continue;
+    }
+    chunks.push(chunk);
+    chunk = entry;
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks;
+}
+
+function createStripeProductMapping(lineItems) {
+  const entries = lineItems
+    .filter(item => item.productCode)
+    .map((item, index) => {
+      const price = `AUD ${(item.unitAmount / 100).toFixed(2)}`;
+      const pdf = item.productType === 'tiny_frame_8_pictures'
+        ? ` | PDF ${getProductPdfKey(item.productCode)}`
+        : '';
+      return `${index + 1}:${item.productCode} | ${item.frameColour} | ${item.name} | ${price}${pdf}`;
+    });
+  return chunkStripeMetadataEntries(entries);
 }
 
 function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checkoutRequestId = '') {
@@ -1449,6 +1490,11 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checko
     payload.set(`metadata[product_codes${suffix}]`, value);
     payload.set(`payment_intent_data[metadata][product_codes${suffix}]`, value);
   });
+  createStripeProductMapping(lineItems).forEach((value, index) => {
+    const suffix = index === 0 ? '' : `_${index + 1}`;
+    payload.set(`metadata[product_map${suffix}]`, value);
+    payload.set(`payment_intent_data[metadata][product_map${suffix}]`, value);
+  });
   if (stripeMode === 'test') {
     payload.set(
       'custom_text[submit][message]',
@@ -1456,13 +1502,17 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checko
     );
   }
 
-  payload.set('payment_intent_data[description]', 'Good Frame Order');
+  payload.set(
+    'payment_intent_data[description]',
+    productCodes.length ? `Good Frame Order · ${productCodes.join(', ')}` : 'Good Frame Order'
+  );
   if (productTypes.length > 0) {
     payload.set('metadata[product_types]', productTypes.join(',').slice(0, 500));
     payload.set('payment_intent_data[metadata][product_types]', productTypes.join(',').slice(0, 500));
   }
   if (frameColours.length > 0) {
     payload.set('metadata[frame_colours]', frameColours.join(',').slice(0, 500));
+    payload.set('payment_intent_data[metadata][frame_colours]', frameColours.join(',').slice(0, 500));
   }
   if (uploadReferences.length > 0) {
     payload.set('metadata[upload_references]', uploadReferences.join(',').slice(0, 500));
@@ -2293,6 +2343,9 @@ async function getProductCodeRecord(request, env, productCode) {
       productCode:record.code,
       status:record.status,
       productType:record.product_type,
+      frameColour:record.frame_colour,
+      unitAmount:record.unit_amount,
+      currency:record.currency,
       cartItemId:record.cart_item_id,
       unitIndex:record.unit_index,
       uploadSessionId:record.upload_session_id,

@@ -249,6 +249,12 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '58321');
   assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_code]'), '19472');
   assert.equal(payload.get('metadata[product_codes]'), '58321,19472');
+  assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '58321,19472');
+  const productMap = '1:58321 | Oak | Tiny Frame - Frame Only | AUD 70.00; 2:19472 | Walnut | Tiny Frame + 8 Pictures | AUD 90.00 | PDF 19472/19472-print-sheet.pdf';
+  assert.equal(payload.get('metadata[product_map]'), productMap);
+  assert.equal(payload.get('payment_intent_data[metadata][product_map]'), productMap);
+  assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Oak,Walnut');
+  assert.equal(payload.get('payment_intent_data[description]'), 'Good Frame Order · 58321, 19472');
   assert.equal(payload.get('metadata[upload_references]'), uploadReference);
   assert.equal(payload.get('metadata[upload_session_ids]'), uploadReference);
   assert.equal(payload.get('success_url'), 'https://goodframe.com.au/?checkout=success&session_id={CHECKOUT_SESSION_ID}');
@@ -271,6 +277,7 @@ test('Stripe metadata uses the same code as the five-digit R2 folder', () => {
   assert.equal(payload.get('metadata[upload_references]'), objectKey);
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), productCode);
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_reference]'), objectKey);
+  assert.match(payload.get('payment_intent_data[metadata][product_map]'), /58321\/58321-print-sheet\.pdf/);
 });
 
 test('artwork manifest endpoint verifies all eight uploads', async () => {

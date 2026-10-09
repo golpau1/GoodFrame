@@ -398,6 +398,10 @@ test('quantity creates one unique five-digit code per physical frame and retries
     )), ['7000', '7000', '7000']);
     assert.equal(stripeBody.get('line_items[3][price_data][unit_amount]'), '1000');
     assert.equal(stripeBody.has('line_items[4][price_data][unit_amount]'), false);
+    const paymentProductMap = stripeBody.get('payment_intent_data[metadata][product_map]');
+    firstResult.productCodes.forEach((code, index) => {
+      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| Tiny Frame - Frame Only \\| AUD 70\\.00`));
+    });
 
     const retry = await worker.fetch(makeRequest(), testEnv);
     assert.equal(retry.status, 200);
@@ -445,6 +449,9 @@ test('authorized order management can find the Stripe relationship by product co
     assert.equal(record.productCode, productCode);
     assert.equal(record.stripeCheckoutSessionId, 'cs_test_searchable1');
     assert.equal(record.productType, 'tiny_frame_only');
+    assert.equal(record.frameColour, 'Walnut');
+    assert.equal(record.unitAmount, 7000);
+    assert.equal(record.currency, 'aud');
     const capacity = await worker.fetch(new Request(
       'https://worker.example/admin/product-code-capacity',
       { headers:{ Authorization:`Bearer ${testEnv.ADMIN_API_KEY}` } }

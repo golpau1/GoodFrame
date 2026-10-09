@@ -1,7 +1,11 @@
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
-const migration = readFileSync(new URL('../../migrations/0001_product_codes.sql', import.meta.url), 'utf8');
+const migrationsUrl = new URL('../../migrations/', import.meta.url);
+const migrations = readdirSync(migrationsUrl)
+  .filter(filename => filename.endsWith('.sql'))
+  .sort()
+  .map(filename => readFileSync(new URL(filename, migrationsUrl), 'utf8'));
 
 class D1StatementAdapter {
   constructor(database, sql) {
@@ -27,7 +31,7 @@ class D1StatementAdapter {
 class D1DatabaseAdapter {
   constructor() {
     this.database = new DatabaseSync(':memory:');
-    this.database.exec(migration);
+    migrations.forEach(migration => this.database.exec(migration));
   }
   prepare(sql) {
     return new D1StatementAdapter(this.database, sql);

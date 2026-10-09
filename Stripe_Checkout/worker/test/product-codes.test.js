@@ -70,6 +70,29 @@ test('collisions retry and previously assigned codes are never reused', async ()
   database.close();
 });
 
+test('a submitted cart code is preserved exactly and cannot be reassigned', async () => {
+  const database = createProductCodeDatabase();
+  const assigned = await reserveProductCodes(database, [{
+    ...units(1)[0],
+    productCode:'58321',
+    frameColour:'Oak'
+  }], requestId);
+  assert.equal(assigned.units[0].productCode, '58321');
+  const record = await findProductCode(database, '58321');
+  assert.equal(record.frame_colour, 'Oak');
+  assert.equal(record.unit_amount, 7000);
+  await assert.rejects(
+    reserveProductCodes(database, [{
+      ...units(1)[0],
+      cartItemId:'ci_ffffffffffffffffffffffffffffffff',
+      productCode:'58321',
+      frameColour:'Walnut'
+    }], 'co_ffffffffffffffffffffffffffffffff'),
+    ProductCodeError
+  );
+  database.close();
+});
+
 test('pre-upload reservation keeps one code when its product PDF is attached and checkout begins', async () => {
   const database = createProductCodeDatabase();
   const cartItemId = 'ci_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

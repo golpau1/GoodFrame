@@ -75,23 +75,62 @@ function validateUnit(unit) {
   const unitIndex = Number(unit?.unitIndex);
   const productType = String(unit?.productType || '').trim();
   const uploadSessionId = String(unit?.uploadReference || '').trim();
+  const frameColour = String(unit?.frameColour || '').trim();
+  const unitAmount = Number(unit?.unitAmount);
+  const productCodeWasProvided = unit?.productCode !== undefined && unit?.productCode !== null && String(unit.productCode).trim() !== '';
+  const productCode = productCodeWasProvided ? normalizeProductCode(unit.productCode) : '';
   if (!cartItemId || !Number.isInteger(unitIndex) || unitIndex < 0 || !productType) {
     throw new ProductCodeError('A product has an invalid durable identity');
   }
-  return { cartItemId, unitIndex, productType, uploadSessionId };
+  if (productCodeWasProvided && !productCode) {
+    throw new ProductCodeError('Product code must contain exactly five digits');
+  }
+  return {
+    cartItemId,
+    unitIndex,
+    productType,
+    uploadSessionId,
+    frameColour,
+    unitAmount:Number.isInteger(unitAmount) && unitAmount > 0 ? unitAmount : null,
+    productCode
+  };
 }
 
 function assertExistingUnitMatches(row, unit) {
   if (
     String(row.product_type) !== unit.productType ||
-    String(row.upload_session_id || '') !== unit.uploadSessionId
+    String(row.upload_session_id || '') !== unit.uploadSessionId ||
+    (unit.productCode && String(row.code) !== unit.productCode) ||
+    (row.frame_colour && unit.frameColour && String(row.frame_colour) !== unit.frameColour) ||
+    (row.unit_amount && unit.unitAmount && Number(row.unit_amount) !== unit.unitAmount)
   ) {
     throw new ProductCodeError('A cart product identity was reused for different product details');
   }
 }
 
+async function persistUnitDetails(database, row, unit) {
+  await run(
+    database,
+    `UPDATE product_codes
+       SET frame_colour = COALESCE(frame_colour, ?),
+           unit_amount = COALESCE(unit_amount, ?),
+           currency = COALESCE(currency, 'aud')
+     WHERE code = ?`,
+    unit.frameColour || null,
+    unit.unitAmount,
+    row.code
+  );
+  return {
+    ...row,
+    frame_colour:row.frame_colour || unit.frameColour || null,
+    unit_amount:row.unit_amount || unit.unitAmount,
+    currency:row.currency || 'aud'
+  };
+}
+
 async function attachExistingCodeToRequest(database, row, unit, checkoutRequestId) {
   assertExistingUnitMatches(row, unit);
+  row = await persistUnitDetails(database, row, unit);
   const existingRequestId = String(row.checkout_request_id || '');
   if (!existingRequestId || existingRequestId === checkoutRequestId) return row;
 
@@ -142,20 +181,43 @@ async function reserveProductCodes(database, units, checkoutRequestId, options =
     }
 
     let allocatedCode = '';
-    for (let attempt = 0; attempt < MAX_ALLOCATION_ATTEMPTS; attempt += 1) {
+    if (unit.productCode) {
+      const result = await run(
+        database,
+        `INSERT OR IGNORE INTO product_codes
+          (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at, frame_colour, unit_amount, currency)
+         VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?, 'aud')`,
+        unit.productCode,
+        unit.cartItemId,
+        unit.unitIndex,
+        unit.productType,
+        unit.uploadSessionId || null,
+        requestId,
+        new Date().toISOString(),
+        unit.frameColour || null,
+        unit.unitAmount
+      );
+      if (changes(result) < 1) {
+        throw new ProductCodeError('The assigned product code does not belong to this cart product');
+      }
+      allocatedCode = unit.productCode;
+    }
+    for (let attempt = 0; !allocatedCode && attempt < MAX_ALLOCATION_ATTEMPTS; attempt += 1) {
       const candidate = randomProductCode(options.randomValues);
       const result = await run(
         database,
         `INSERT OR IGNORE INTO product_codes
-          (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?)`,
+          (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at, frame_colour, unit_amount, currency)
+         VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?, 'aud')`,
         candidate,
         unit.cartItemId,
         unit.unitIndex,
         unit.productType,
         unit.uploadSessionId || null,
         requestId,
-        new Date().toISOString()
+        new Date().toISOString(),
+        unit.frameColour || null,
+        unit.unitAmount
       );
       if (changes(result) > 0) {
         allocatedCode = candidate;
@@ -183,15 +245,17 @@ async function reserveProductCodes(database, units, checkoutRequestId, options =
         const result = await run(
           database,
           `INSERT OR IGNORE INTO product_codes
-            (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?)`,
+            (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at, frame_colour, unit_amount, currency)
+           VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?, 'aud')`,
           candidate,
           unit.cartItemId,
           unit.unitIndex,
           unit.productType,
           unit.uploadSessionId || null,
           requestId,
-          new Date().toISOString()
+          new Date().toISOString(),
+          unit.frameColour || null,
+          unit.unitAmount
         );
         if (changes(result) > 0) {
           allocatedCode = candidate;
@@ -223,7 +287,8 @@ async function reserveCartProductCode(database, rawUnit, options = {}) {
     if (String(existing.product_type) !== unit.productType) {
       throw new ProductCodeError('A cart product identity was reused for a different product');
     }
-    return { productCode:String(existing.code), capacity:await getProductCodeCapacity(database) };
+    const stored = await persistUnitDetails(database, existing, unit);
+    return { productCode:String(stored.code), capacity:await getProductCodeCapacity(database) };
   }
   const provisionalRequestId = `co_${unit.cartItemId.slice(3)}`;
   const preferredCode = options.preferredCode === undefined
@@ -236,13 +301,15 @@ async function reserveCartProductCode(database, rawUnit, options = {}) {
     const result = await run(
       database,
       `INSERT OR IGNORE INTO product_codes
-        (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at)
-       VALUES (?, ?, 0, ?, NULL, ?, 'reserved', ?)`,
+        (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at, frame_colour, unit_amount, currency)
+       VALUES (?, ?, 0, ?, NULL, ?, 'reserved', ?, ?, ?, 'aud')`,
       preferredCode,
       unit.cartItemId,
       unit.productType,
       provisionalRequestId,
-      new Date().toISOString()
+      new Date().toISOString(),
+      unit.frameColour || null,
+      unit.unitAmount
     );
     if (changes(result) > 0) {
       return { productCode:preferredCode, capacity:await getProductCodeCapacity(database) };
