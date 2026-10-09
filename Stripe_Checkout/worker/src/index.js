@@ -1387,17 +1387,13 @@ function buildLineItems(items) {
     if (tinyFrameProduct?.requiresPictures && !uploadReference) {
       throw new Error('Frame + 8 Pictures requires a completed picture upload reference');
     }
-    const description = [
-      cleanText(item.orientation, ''),
-      frameColour ? `${frameColour} Frame` : '',
-      cleanText(item.border, ''),
-      tinyFrameProduct?.orderType || cleanText(item.orderType, '')
-    ].filter(Boolean).join(' | ') || 'Custom framed print';
+    const customerFacingName = tinyFrameProduct
+      ? `${frameColour.toUpperCase()} · ${tinyFrameProduct.requiresPictures ? 'FRAME + 8 PICTURES' : 'FRAME ONLY'}`
+      : `Print & Frame - ${size}`;
 
     for (let unitIndex = 0; unitIndex < quantity; unitIndex += 1) {
       lineItems.push({
-        name: tinyFrameProduct?.name || `Print & Frame - ${size}`,
-        description,
+        name:customerFacingName,
         unitAmount,
         quantity:1,
         cartItemId,
@@ -1424,7 +1420,6 @@ function buildLineItems(items) {
 
   lineItems.push({
     name: 'Shipping',
-    description: 'Standard shipping',
     unitAmount: SHIPPING_AMOUNT,
     quantity: 1
   });
@@ -1502,10 +1497,7 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checko
     );
   }
 
-  payload.set(
-    'payment_intent_data[description]',
-    productCodes.length ? `Good Frame Order · ${productCodes.join(', ')}` : 'Good Frame Order'
-  );
+  payload.set('payment_intent_data[description]', 'Good Frame Order');
   if (productTypes.length > 0) {
     payload.set('metadata[product_types]', productTypes.join(',').slice(0, 500));
     payload.set('payment_intent_data[metadata][product_types]', productTypes.join(',').slice(0, 500));
@@ -1524,11 +1516,7 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checko
   lineItems.forEach((item, index) => {
     const prefix = `line_items[${index}]`;
     payload.set(`${prefix}[price_data][currency]`, 'aud');
-    payload.set(
-      `${prefix}[price_data][product_data][name]`,
-      item.productCode ? `${item.name} · ${item.productCode}` : item.name
-    );
-    payload.set(`${prefix}[price_data][product_data][description]`, item.description);
+    payload.set(`${prefix}[price_data][product_data][name]`, item.name);
     if (item.productType) {
       payload.set(`${prefix}[price_data][product_data][metadata][product_type]`, item.productType);
       payload.set(`${prefix}[price_data][product_data][metadata][frame_colour]`, item.frameColour);

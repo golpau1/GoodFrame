@@ -251,6 +251,10 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7000');
   assert.equal(payload.get('line_items[1][price_data][unit_amount]'), '9000');
   assert.equal(payload.get('line_items[2][price_data][unit_amount]'), '1000');
+  assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME ONLY');
+  assert.equal(payload.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
+  assert.equal(payload.has('line_items[0][price_data][product_data][description]'), false);
+  assert.equal(payload.has('line_items[1][price_data][product_data][description]'), false);
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_only');
   assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_type]'), 'tiny_frame_8_pictures');
   assert.equal(payload.get('line_items[1][price_data][product_data][metadata][frame_colour]'), 'Walnut');
@@ -260,11 +264,11 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_code]'), '19472');
   assert.equal(payload.get('metadata[product_codes]'), '58321,19472');
   assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '58321,19472');
-  const productMap = '1:58321 | Oak | Tiny Frame - Frame Only | AUD 70.00; 2:19472 | Walnut | Tiny Frame + 8 Pictures | AUD 90.00 | PDF 19472/19472-print-sheet.pdf';
+  const productMap = '1:58321 | Oak | OAK · FRAME ONLY | AUD 70.00; 2:19472 | Walnut | WALNUT · FRAME + 8 PICTURES | AUD 90.00 | PDF 19472/19472-print-sheet.pdf';
   assert.equal(payload.get('metadata[product_map]'), productMap);
   assert.equal(payload.get('payment_intent_data[metadata][product_map]'), productMap);
   assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Oak,Walnut');
-  assert.equal(payload.get('payment_intent_data[description]'), 'Good Frame Order · 58321, 19472');
+  assert.equal(payload.get('payment_intent_data[description]'), 'Good Frame Order');
   assert.equal(payload.get('metadata[upload_references]'), uploadReference);
   assert.equal(payload.get('metadata[upload_session_ids]'), uploadReference);
   assert.equal(payload.get('success_url'), 'https://goodframe.com.au/?checkout=success&session_id={CHECKOUT_SESSION_ID}');

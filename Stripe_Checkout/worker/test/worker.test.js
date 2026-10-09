@@ -363,7 +363,8 @@ test('checkout charges $90 for a Tiny Frame with eight pictures plus $10 shippin
       bucket.objects.get(`tinyframes/${uploadReference}/processed/01.jpg`).customMetadata.product_codes,
       productCode
     );
-    assert.match(stripeBody.get('line_items[0][price_data][product_data][name]'), /^Tiny Frame \+ 8 Pictures · [1-9][0-9]{4}$/);
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME + 8 PICTURES');
+    assert.equal(stripeBody.has('line_items[0][price_data][product_data][description]'), false);
     assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '9000');
     assert.equal(
       stripeBody.get('line_items[0][price_data][product_data][metadata][upload_reference]'),
@@ -404,6 +405,8 @@ test('checkout charges $70 for Frame Only plus $10 shipping', async () => {
       }] })
     }), env());
     assert.equal(response.status, 200);
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'WALNUT · FRAME ONLY');
+    assert.equal(stripeBody.has('line_items[0][price_data][product_data][description]'), false);
     assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '7000');
     assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'Shipping');
     assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '1000');
@@ -459,7 +462,7 @@ test('quantity creates one unique five-digit code per physical frame and retries
     assert.equal(stripeBody.has('line_items[4][price_data][unit_amount]'), false);
     const paymentProductMap = stripeBody.get('payment_intent_data[metadata][product_map]');
     firstResult.productCodes.forEach((code, index) => {
-      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| Tiny Frame - Frame Only \\| AUD 70\\.00`));
+      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| OAK · FRAME ONLY \\| AUD 70\\.00`));
     });
 
     const retry = await worker.fetch(makeRequest(), testEnv);
@@ -607,6 +610,8 @@ test('checkout adds the $10 shipping line only once for multiple Tiny Frames', a
       ] })
     }), env(bucket));
     assert.equal(response.status, 200);
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME ONLY');
+    assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
     assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '7000');
     assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '9000');
     assert.equal(stripeBody.get('line_items[2][price_data][product_data][name]'), 'Shipping');
