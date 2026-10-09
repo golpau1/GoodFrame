@@ -190,13 +190,23 @@ function isValidTinyFramePrintSheetKey(value) {
 
 function getProductPdfKey(productCode) {
   const code = normalizeProductCode(productCode);
-  return code ? `tinyframes/products/${code}/print-sheet-${code}.pdf` : '';
+  return code ? `${code}/${code}-print-sheet.pdf` : '';
 }
 
 function isValidProductPdfKey(value, productCode = '') {
   const key = String(value || '');
-  const match = key.match(/^tinyframes\/products\/([1-9][0-9]{4})\/print-sheet-([1-9][0-9]{4})\.pdf$/);
+  const current = key.match(/^([1-9][0-9]{4})\/([1-9][0-9]{4})-print-sheet\.pdf$/);
+  const previous = key.match(/^tinyframes\/products\/([1-9][0-9]{4})\/print-sheet-([1-9][0-9]{4})\.pdf$/);
+  const match = current || previous;
   return Boolean(match && match[1] === match[2] && (!productCode || match[1] === productCode));
+}
+
+function getProductPdfKeyCandidates(productCode) {
+  const code = normalizeProductCode(productCode);
+  return code ? [
+    getProductPdfKey(code),
+    `tinyframes/products/${code}/print-sheet-${code}.pdf`
+  ] : [];
 }
 
 function isValidProcessedImageKey(value) {
@@ -990,7 +1000,7 @@ async function reserveTinyFrameProductPdf(request, env) {
     return jsonResponse(request, env, {
       success:true,
       productCode,
-      filename:`print-sheet-${productCode}.pdf`,
+      filename:`${productCode}-print-sheet.pdf`,
       objectKey:getProductPdfKey(productCode)
     });
   } catch (error) {
@@ -1018,7 +1028,7 @@ async function uploadTinyFrameProductPdf(request, env) {
   const cartItemId = normalizeCartItemId(formData.get('cart_item_id'));
   const productCode = normalizeProductCode(formData.get('product_code'));
   const pdf = formData.get('pdf');
-  const filename = `print-sheet-${productCode}.pdf`;
+  const filename = `${productCode}-print-sheet.pdf`;
   const objectKey = getProductPdfKey(productCode);
   if (!cartItemId || !productCode || !pdf || typeof pdf.arrayBuffer !== 'function') {
     return jsonResponse(request, env, { error:'Product code, cart identity and PDF are required' }, 400);
@@ -1574,18 +1584,20 @@ async function ensureProductCodePrintSheets(uploadReference, productCodes, env) 
   }
   const existingSheets = new Map(
     (Array.isArray(manifest.print_sheets) ? manifest.print_sheets : [])
-      .filter(sheet => normalizeProductCode(sheet?.product_code) && isValidTinyFramePrintSheetKey(sheet?.objectKey))
+      .filter(sheet => normalizeProductCode(sheet?.product_code) && (
+        isValidTinyFramePrintSheetKey(sheet?.objectKey) || isValidProductPdfKey(sheet?.objectKey, sheet?.product_code)
+      ))
       .map(sheet => [sheet.product_code, sheet])
   );
   const missingCodes = normalizedCodes.filter(code => !existingSheets.has(code));
   const processedImages = missingCodes.length ? await loadProcessedImagesForManifest(manifest, env) : [];
   const generatedSheets = [];
   for (const productCode of missingCodes) {
-    const filename = `print-sheet-${productCode}.pdf`;
-    const objectKey = `${getTinyFrameUploadPrefix(uploadReference)}${filename}`;
+    const filename = `${productCode}-print-sheet.pdf`;
+    const objectKey = getProductPdfKey(productCode);
     const pdfBytes = createA4PrintSheetPdf(processedImages, { productCode });
     if (pdfBytes.length > MAX_TINY_FRAME_PDF_BYTES) {
-      throw new Error('The generated PDF exceeds the 160 MB storage limit');
+      throw new Error('The generated PDF exceeds the 95 MB upload limit');
     }
     const pdfInspection = inspectPrintSheetPdf(pdfBytes);
     if (!pdfInspection.valid) throw new Error(pdfInspection.error);
@@ -1628,7 +1640,7 @@ async function ensureProductCodePrintSheets(uploadReference, productCodes, env) 
     print_sheets:printSheets,
     files:[
       ...(Array.isArray(manifest.files)
-        ? manifest.files.filter(file => !/^print-sheet-[1-9][0-9]{4}\.pdf$/.test(String(file?.filename || '')))
+        ? manifest.files.filter(file => !/^(?:print-sheet-[1-9][0-9]{4}|[1-9][0-9]{4}-print-sheet)\.pdf$/.test(String(file?.filename || '')))
         : []),
       ...printSheets
     ],
@@ -2057,19 +2069,21 @@ async function markProductPdfFilesPaid(session, env) {
   const paidAt = new Date().toISOString();
   let updated = 0;
   for (const productCode of productCodes) {
-    const objectKey = getProductPdfKey(productCode);
-    const object = await env.ARTWORK_BUCKET.get(objectKey);
-    if (!object) continue;
-    await env.ARTWORK_BUCKET.put(objectKey, object.body, {
-      httpMetadata:{ contentType:'application/pdf' },
-      customMetadata:{
-        ...(object.customMetadata || {}),
-        status:'paid',
-        paid_at:paidAt,
-        ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
-      }
-    });
-    updated += 1;
+    for (const objectKey of getProductPdfKeyCandidates(productCode)) {
+      const object = await env.ARTWORK_BUCKET.get(objectKey);
+      if (!object) continue;
+      await env.ARTWORK_BUCKET.put(objectKey, object.body, {
+        httpMetadata:{ contentType:'application/pdf' },
+        customMetadata:{
+          ...(object.customMetadata || {}),
+          status:'paid',
+          paid_at:paidAt,
+          ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
+        }
+      });
+      updated += 1;
+      break;
+    }
   }
   return updated;
 }

@@ -1885,7 +1885,7 @@
             }, "reserving_product_code");
           }
           const { productCode, filename, objectKey } = attempt.reservation;
-          if (!/^[1-9][0-9]{4}$/.test(String(productCode || "")) || filename !== `print-sheet-${productCode}.pdf`) {
+          if (!/^[1-9][0-9]{4}$/.test(String(productCode || "")) || filename !== `${productCode}-print-sheet.pdf`) {
             throw new Error("The product identification code could not be verified.");
           }
           if (!attempt.pdfBlob) {

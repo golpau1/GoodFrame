@@ -241,7 +241,10 @@ async function attachProductPdf(database, code, cartItemId, objectKey) {
   const normalizedCode = normalizeProductCode(code);
   const normalizedCartItemId = normalizeCartItemId(cartItemId);
   const key = String(objectKey || '');
-  if (!normalizedCode || !normalizedCartItemId || !/^tinyframes\/products\/[1-9][0-9]{4}\/print-sheet-[1-9][0-9]{4}\.pdf$/.test(key)) {
+  const currentKey = /^([1-9][0-9]{4})\/([1-9][0-9]{4})-print-sheet\.pdf$/.exec(key);
+  const previousKey = /^tinyframes\/products\/([1-9][0-9]{4})\/print-sheet-([1-9][0-9]{4})\.pdf$/.exec(key);
+  const keyMatch = currentKey || previousKey;
+  if (!normalizedCode || !normalizedCartItemId || !keyMatch || keyMatch[1] !== normalizedCode || keyMatch[2] !== normalizedCode) {
     throw new ProductCodeError('Product PDF identity is invalid');
   }
   const row = await first(database, 'SELECT * FROM product_codes WHERE code = ?', normalizedCode);

@@ -82,7 +82,7 @@ test('pre-upload reservation keeps one code when its product PDF is attached and
     productType:'tiny_frame_8_pictures'
   });
   assert.equal(retry.productCode, first.productCode);
-  const objectKey = `tinyframes/products/${first.productCode}/print-sheet-${first.productCode}.pdf`;
+  const objectKey = `${first.productCode}/${first.productCode}-print-sheet.pdf`;
   await attachProductPdf(database, first.productCode, cartItemId, objectKey);
   const checkout = await reserveProductCodes(database, [{
     cartItemId,
@@ -94,6 +94,20 @@ test('pre-upload reservation keeps one code when its product PDF is attached and
   const record = await findProductCode(database, first.productCode);
   assert.equal(record.upload_session_id, objectKey);
   assert.equal(record.checkout_request_id, 'co_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+  database.close();
+});
+
+test('previous code-based PDF paths remain attached to their original products', async () => {
+  const database = createProductCodeDatabase();
+  const cartItemId = 'ci_cccccccccccccccccccccccccccccccc';
+  const reservation = await reserveCartProductCode(database, {
+    cartItemId,
+    productType:'tiny_frame_8_pictures'
+  });
+  const previousObjectKey = `tinyframes/products/${reservation.productCode}/print-sheet-${reservation.productCode}.pdf`;
+  await attachProductPdf(database, reservation.productCode, cartItemId, previousObjectKey);
+  const record = await findProductCode(database, reservation.productCode);
+  assert.equal(record.upload_session_id, previousObjectKey);
   database.close();
 });
 

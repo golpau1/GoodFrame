@@ -294,8 +294,8 @@ test('checkout charges $90 for a Tiny Frame with eight pictures plus $10 shippin
       bucket.objects.get(`tinyframes/${uploadReference}/manifest.json`).body
     ));
     assert.deepEqual(manifest.product_codes, [productCode]);
-    assert.equal(manifest.print_sheets[0].filename, `print-sheet-${productCode}.pdf`);
-    assert.equal(manifest.print_sheets[0].objectKey, `tinyframes/${uploadReference}/print-sheet-${productCode}.pdf`);
+    assert.equal(manifest.print_sheets[0].filename, `${productCode}-print-sheet.pdf`);
+    assert.equal(manifest.print_sheets[0].objectKey, `${productCode}/${productCode}-print-sheet.pdf`);
     const labelledPdf = new TextDecoder('latin1').decode(
       bucket.objects.get(manifest.print_sheets[0].objectKey).body
     );

@@ -32,6 +32,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);
   assert.match(html, /createFullResolutionPrintCrop/);
   assert.match(html, /createA4PrintSheetPdf\(printCrops, \{ productCode \}\)/);
+  assert.match(html, /filename !== `\$\{productCode\}-print-sheet\.pdf`/);
 });
 
 test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () => {
@@ -131,7 +132,7 @@ function reserveProductPdfRequest(cartItemId = pictureCartItemId) {
 }
 
 function uploadProductPdfRequest(productCode, cartItemId = pictureCartItemId, pdfBytes = null) {
-  const filename = `print-sheet-${productCode}.pdf`;
+  const filename = `${productCode}-print-sheet.pdf`;
   const bytes = pdfBytes || createA4PrintSheetPdf(
     Array.from({ length:8 }, () => ({ bytes:fakeJpeg() })),
     { productCode }
@@ -147,11 +148,11 @@ function uploadProductPdfRequest(productCode, cartItemId = pictureCartItemId, pd
   });
 }
 
-async function reserveAndUploadProductPdf(env) {
-  const reservedResponse = await worker.fetch(reserveProductPdfRequest(), env);
+async function reserveAndUploadProductPdf(env, cartItemId = pictureCartItemId) {
+  const reservedResponse = await worker.fetch(reserveProductPdfRequest(cartItemId), env);
   assert.equal(reservedResponse.status, 200);
   const reservation = await reservedResponse.json();
-  const uploadResponse = await worker.fetch(uploadProductPdfRequest(reservation.productCode), env);
+  const uploadResponse = await worker.fetch(uploadProductPdfRequest(reservation.productCode, cartItemId), env);
   return { reservation, uploadResponse };
 }
 
@@ -224,6 +225,23 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   assert.equal([...payload.keys()].some(key => key.includes('artwork_object_keys')), false);
 });
 
+test('Stripe metadata uses the same code as the five-digit R2 folder', () => {
+  const productCode = '58321';
+  const objectKey = `${productCode}/${productCode}-print-sheet.pdf`;
+  const lineItems = buildLineItems([frameWithPictures({ uploadReference:objectKey })])
+    .map(item => item.cartItemId ? { ...item, productCode } : item);
+  const payload = createStripePayload(
+    lineItems,
+    'https://goodframe.com.au',
+    'live',
+    'co_0123456789abcdef0123456789abcdef'
+  );
+  assert.equal(payload.get('metadata[product_codes]'), productCode);
+  assert.equal(payload.get('metadata[upload_references]'), objectKey);
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), productCode);
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_reference]'), objectKey);
+});
+
 test('artwork manifest endpoint verifies all eight uploads', async () => {
   const objectKeys = Array.from(
     { length: 8 },
@@ -286,8 +304,8 @@ test('PDF-only upload stores exactly one code-named A4 print sheet', async () =>
   const result = await uploadResponse.json();
   assert.equal(result.success, true);
   assert.equal(result.productCode, reservation.productCode);
-  assert.equal(result.pdf.filename, `print-sheet-${reservation.productCode}.pdf`);
-  assert.equal(result.pdf.objectKey, `tinyframes/products/${reservation.productCode}/print-sheet-${reservation.productCode}.pdf`);
+  assert.equal(result.pdf.filename, `${reservation.productCode}-print-sheet.pdf`);
+  assert.equal(result.pdf.objectKey, `${reservation.productCode}/${reservation.productCode}-print-sheet.pdf`);
   assert.equal(bucket.objects.size, 1);
   assert.deepEqual([...bucket.objects.keys()], [result.pdf.objectKey]);
   const stored = bucket.objects.get(result.pdf.objectKey);
@@ -320,6 +338,28 @@ test('reserving and uploading retries preserve one code and one R2 object', asyn
   assert.equal(retryUpload.status, 200);
   assert.equal((await retryUpload.json()).retry_recovered, true);
   assert.equal(bucket.objects.size, 1);
+  database.close();
+});
+
+test('two products receive different five-digit R2 folders and code-named PDFs', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  };
+  const firstCartItemId = 'ci_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const secondCartItemId = 'ci_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+  const first = await reserveAndUploadProductPdf(env, firstCartItemId);
+  const second = await reserveAndUploadProductPdf(env, secondCartItemId);
+  assert.equal(first.uploadResponse.status, 200);
+  assert.equal(second.uploadResponse.status, 200);
+  assert.notEqual(first.reservation.productCode, second.reservation.productCode);
+  assert.deepEqual(new Set(bucket.objects.keys()), new Set([
+    `${first.reservation.productCode}/${first.reservation.productCode}-print-sheet.pdf`,
+    `${second.reservation.productCode}/${second.reservation.productCode}-print-sheet.pdf`
+  ]));
   database.close();
 });
 
@@ -371,7 +411,7 @@ test('paid Stripe sessions promote only the code-named product PDF', async () =>
     id:'cs_live_tiny_frame_paid',
     metadata:{ product_codes:reservation.productCode }
   }, env), 1);
-  const key = `tinyframes/products/${reservation.productCode}/print-sheet-${reservation.productCode}.pdf`;
+  const key = `${reservation.productCode}/${reservation.productCode}-print-sheet.pdf`;
   const stored = bucket.objects.get(key);
   assert.equal(stored.customMetadata.status, 'paid');
   assert.equal(stored.customMetadata.stripe_checkout_session_id, 'cs_live_tiny_frame_paid');
