@@ -5,7 +5,8 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev --env dev --port 8787",
-    "test": "node --test"
+    "test": "node --test",
+    "verify:print-sheet": "node scripts/verify-print-sheet.mjs ../../../output/pdf/tiny-frame-a4-print-sheet-proof.pdf"
   },
   "devDependencies": {
     "wrangler": "^4.98.0"

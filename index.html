@@ -114,25 +114,30 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://goodframe.com.au/">
   <meta name="twitter:card" content="summary">
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="icon" href="/favicon.ico?v=tree-ring-20261009" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=tree-ring-20261009">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=tree-ring-20261009">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png?v=tree-ring-20261009">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png?v=tree-ring-20261009">
+  <link rel="manifest" href="/site.webmanifest?v=tree-ring-20261009">
   <link rel="stylesheet" href="https://unpkg.com/filepond@4.32.12/dist/filepond.min.css">
   <link rel="stylesheet" href="https://unpkg.com/filepond-plugin-image-preview@4.6.12/dist/filepond-plugin-image-preview.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <style>
-    @font-face { font-family:"Good Frame Handmade Smooth"; src:url("Assets/GoodFrame-Handmade-Smooth.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
-    @font-face { font-family:"Chunky Upload Plus"; src:url("Girthquake-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     @font-face { font-family:"Item Text Wide Light"; src:url("Assets/ItemsTextTrial-WideLight.otf") format("opentype"); font-style:normal; font-weight:300; font-display:swap; }
     @font-face { font-family:"mono #1"; src:url("Assets/mono-1.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
+    @font-face { font-family:"Good Frame Handmade Smooth"; src:url("Assets/GoodFrame-Handmade-Smooth.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     @font-face { font-family:"Goudy Bookletter 1911"; src:url("Assets/GoudyBookletter1911-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
+    @font-face { font-family:"Chunky Upload Plus"; src:url("Girthquake-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     /* Contrast: Espresso on Cream is 12.72:1 (AAA). Burnt Terracotta is reserved for underlines, hover details and active indicators. */
-    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --walnut:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-display:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-body:"Item Text Wide Light", "Goudy Bookletter 1911", Arial, sans-serif; --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
+    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --walnut:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-heading:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-display:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-body:"Item Text Wide Light", "Goudy Bookletter 1911", Arial, sans-serif; --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; scroll-padding-top:var(--header-height); font-family:var(--font-body); }
     body { margin:0; background:var(--page-gradient); color:var(--brown); font-family:var(--font-body); font-weight:500; letter-spacing:.02em; }
     button, input, select, textarea { font-family:inherit; }
     .filepond--root, .filepond--root * { font-family:var(--font-body) !important; }
-    .hero-intro-title, .palette-title, .configurator-heading, .option-label, .showcase-heading, .cart-dialog-title, .cart-item-title, .faq-title, .faq-list summary, .header-left-nav a, .navigation a, .cart-action { font-family:var(--font-display); }
+    .hero-intro-title, .hero-intro-title-mobile, .palette-title, .configurator-heading, .showcase-heading, .cart-dialog-title, .cart-item-title, .faq-title, .faq-list summary, .footer-kicker { font-family:var(--font-heading); font-synthesis:none; font-weight:400; }
+    .option-label, .header-left-nav a, .navigation a, .cart-action { font-family:var(--font-display); }
     .mobile-hero-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
     .showcase-gallery { display:none; }
     .showcase-track { display:contents; }
@@ -150,7 +155,7 @@
     .header { position:sticky; z-index:20; top:0; width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; height:var(--header-height); padding:0 4%; background:var(--header-background); color:var(--header-foreground); font-size:clamp(12px,1vw,15px); font-weight:500; line-height:1; }
     .navigation { width:auto; display:flex; }
     .navigation a { letter-spacing:.12em; text-transform:uppercase; }
-    .header-brand { grid-column:2; align-self:center; justify-self:center; font-family:var(--font-display); font-size:clamp(22px,1.85vw,29px); font-weight:600; letter-spacing:.08em; line-height:1; text-align:center; text-transform:uppercase; }
+    .header-brand { grid-column:2; align-self:center; justify-self:center; font-family:var(--font-heading); font-size:clamp(22px,1.85vw,29px); font-weight:400; letter-spacing:.08em; line-height:1; text-align:center; text-transform:uppercase; white-space:nowrap; }
     .header > #cart-link { position:relative; grid-column:3; align-self:center; justify-self:end; display:inline-flex; align-items:center; color:inherit; }
     .cart-icon { display:block; width:clamp(24px,1.75vw,28px); height:clamp(24px,1.75vw,28px); object-fit:contain; object-position:center; }
     .cart-count { position:absolute; top:-7px; right:-9px; display:grid; place-items:center; min-width:15px; height:15px; padding:0 3px; border:1px solid var(--header-background); border-radius:999px; background:var(--header-foreground); color:var(--announcement-foreground); font-family:var(--font-body); font-size:8px; font-weight:600; letter-spacing:0; line-height:1; }
@@ -164,7 +169,7 @@
     .graphic-71 { top:58%; left:2.8%; width:4vw; }
     .graphic-83 { top:84%; left:42%; width:4.5vw; }
     .hero-intro { position:absolute; z-index:2; bottom:7%; left:6%; width:min(42%,440px); color:var(--brown); }
-    .hero-intro-title { margin:0 0 18px; font-size:clamp(14px,1.7vw,19px); font-weight:600; letter-spacing:.04em; line-height:1.18; white-space:nowrap; text-transform:uppercase; }
+    .hero-intro-title { margin:0 0 18px; font-size:clamp(17px,1.8vw,22px); letter-spacing:.02em; line-height:1.12; white-space:nowrap; text-transform:uppercase; }
     .hero-intro-copy { width:48ch; max-width:100%; margin:0; color:var(--brown); font-size:14px; letter-spacing:0; line-height:1.7; }
     .hero-intro-link { display:inline-flex; align-items:center; gap:7px; margin-top:24px; padding-bottom:4px; border-bottom:1px solid var(--brown); color:var(--brown); font-family:var(--font-display); font-size:11px; font-weight:600; letter-spacing:.095em; line-height:1.2; text-transform:uppercase; }
     .hero-intro-link .hero-intro-arrow { display:inline-block; transition:transform 200ms ease; }
@@ -174,7 +179,7 @@
     .palette-panel { display:flex; flex-direction:column; justify-content:center; align-items:center; min-width:0; padding:6vw; background:var(--page-gradient); }
     .palette { width:min(60%,350px); min-width:232px; transform:translateY(-1.5vh); }
     .palette-heading-row { position:relative; margin-bottom:22px; text-align:center; }
-    .palette-title { margin:0; font-size:13px; font-weight:500; letter-spacing:.14em; line-height:1.1; text-align:center; }
+    .palette-title { margin:0; font-size:16px; letter-spacing:.06em; line-height:1.15; text-align:center; }
     .swatches { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:14px; row-gap:18px; }
     .swatch { min-width:0; text-align:center; }
     .swatch-button { display:block; width:100%; padding:0; border:0; background:none; color:inherit; font:inherit; cursor:pointer; }
@@ -186,7 +191,7 @@
     .swatch-label { display:block; margin-top:9px; color:var(--muted); font-size:10px; font-weight:500; letter-spacing:.1em; line-height:1.2; text-transform:uppercase; }
     .configurator { width:min(60%,350px); max-height:0; margin-top:0; overflow:hidden; opacity:0; transform:translateY(12px); transition:max-height 260ms ease, margin-top 260ms ease, opacity 220ms ease, transform 260ms ease; }
     .configurator.is-open { max-height:640px; margin-top:56px; opacity:1; transform:none; }
-    .configurator-heading { margin:0 0 14px; font-size:10px; font-weight:600; letter-spacing:.15em; line-height:1; text-transform:uppercase; }
+    .configurator-heading { margin:0 0 14px; font-size:13px; letter-spacing:.07em; line-height:1.15; text-transform:uppercase; }
     .option-row { border-top:1px solid var(--divider); }
     .option-row[data-option="order"] { border-top:0; border-bottom:1px solid var(--divider); }
     .option-row[data-option="order"] .option-choices { display:grid; grid-template-columns:repeat(2,max-content); align-items:center; justify-content:center; gap:8px 26px; width:100%; height:74px; max-height:none; padding:0; overflow:visible; opacity:1; }
@@ -219,12 +224,14 @@
     .upload-section[hidden] { display:none; }
     .upload-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0; font-size:var(--checkout-meta-size); font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
     .upload-progress { margin-left:auto; color:var(--muted); font-weight:400; white-space:nowrap; }
+    .image-quality-warning { margin:-8px 0 0; color:var(--brown); font-size:10px; font-weight:500; letter-spacing:.035em; line-height:1.45; }
+    .image-quality-warning[hidden] { display:none; }
     .reset-images-button { padding:0; border:0; background:none; color:var(--muted); font:inherit; font-size:9px; letter-spacing:.1em; cursor:pointer; text-transform:uppercase; }
     .reset-images-button[hidden] { display:none; }
     .reset-images-button:hover { color:var(--brown); text-decoration:underline; text-underline-offset:4px; }
     .upload-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
     .image-slot { position:relative; aspect-ratio:54 / 86; overflow:visible; border:1px solid var(--divider); background:rgba(182,109,77,.10); box-shadow:0 2px 10px rgba(60,42,33,.06); }
-    .slot-picker { position:absolute; inset:0; display:grid; place-items:center; padding:8px; border:0; background:transparent; color:var(--muted); font-family:"Chunky Upload Plus"; font-size:22px; font-weight:600; line-height:1; cursor:pointer; }
+    .slot-picker { position:absolute; inset:0; display:grid; place-items:center; padding:8px; border:0; background:transparent; color:var(--muted); font-family:"Chunky Upload Plus", "Goudy Bookletter 1911"; font-size:22px; font-weight:600; line-height:1; cursor:pointer; }
     .slot-picker[hidden] { display:none; }
     .slot-picker:hover { background:rgba(182,109,77,.18); }
     .slot-preview { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
@@ -286,7 +293,8 @@
     }
     .site-footer { padding:40px 7.4% 22px; background:var(--walnut); color:var(--light); font-family:var(--font-body); }
     .footer-grid { display:grid; grid-template-columns:1fr 1fr; align-items:start; gap:10%; max-width:1100px; margin:0 auto; }
-    .footer-brand { margin:0 0 12px; font-family:var(--font-display); font-size:clamp(24px,2.2vw,32px); font-weight:400; letter-spacing:.06em; line-height:1; }
+    .footer-brand-block { display:block; }
+    .footer-brand { margin:0 0 12px; font-family:var(--font-heading); font-size:clamp(24px,2.2vw,32px); font-weight:400; letter-spacing:.06em; line-height:1; }
     .footer-tagline { margin:0; font-size:10px; letter-spacing:.12em; line-height:1.4; }
     .footer-kicker { margin:0 0 15px; font-size:13px; font-weight:400; letter-spacing:.08em; line-height:1.1; text-transform:uppercase; }
     .footer-kicker, .footer-tagline { color:rgba(255,247,226,.76); }
@@ -306,11 +314,11 @@
     #faq-dialog::backdrop { background:rgba(60,42,33,.18); }
     .faq-shell { padding:28px 30px; }
     .faq-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:18px; border-bottom:1px solid var(--divider); }
-    .faq-title { margin:0; font-family:var(--font-display); font-size:19px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; }
+    .faq-title { margin:0; font-size:24px; letter-spacing:.035em; line-height:1.05; text-transform:uppercase; }
     .faq-close { padding:0 !important; border:0 !important; font-size:22px; font-weight:300; line-height:1; }
     .faq-list { display:grid; gap:0; margin-top:10px; }
     .faq-list details { border-bottom:1px solid var(--divider); }
-    .faq-list summary { display:flex; justify-content:space-between; align-items:center; min-height:54px; gap:20px; padding:17px 0; color:var(--brown); font-family:var(--font-display); font-size:14px; font-weight:500; letter-spacing:.035em; line-height:1.35; cursor:pointer; list-style:none; }
+    .faq-list summary { display:flex; justify-content:space-between; align-items:center; min-height:54px; gap:20px; padding:17px 0; color:var(--brown); font-size:16px; letter-spacing:.015em; line-height:1.35; cursor:pointer; list-style:none; }
     .faq-list summary::-webkit-details-marker { display:none; }
     .faq-list summary::after { flex:none; content:"+"; color:var(--brown); font-family:var(--font-body); font-size:18px; font-weight:500; line-height:1; }
     .faq-list details[open] summary::after { content:"−"; }
@@ -321,13 +329,13 @@
     .cart-dialog-shell { display:flex; flex-direction:column; height:100%; min-height:0; padding:44px; overflow:hidden; overscroll-behavior:contain; }
     .cart-dialog-shell::-webkit-scrollbar, .cart-items::-webkit-scrollbar { width:0; height:0; }
     .cart-dialog-header { display:flex; flex:none; justify-content:space-between; align-items:center; min-height:30px; padding-bottom:22px; border-bottom:1px solid var(--divider); }
-    .cart-dialog-title { margin:0; font-size:12px; font-weight:600; letter-spacing:.17em; text-transform:uppercase; }
+    .cart-dialog-title { margin:0; font-size:17px; letter-spacing:.06em; line-height:1.1; text-transform:uppercase; }
     .cart-close { display:grid; place-items:center; width:32px; height:32px; margin:-6px -6px -6px 0; padding:0 !important; border:0 !important; font-size:21px; font-weight:300; line-height:1; }
     .cart-layout { display:flex; flex:1; min-height:0; flex-direction:column; overflow:hidden; }
     .cart-items { flex:1 1 auto; min-width:0; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; }
     .cart-item { display:grid; grid-template-columns:minmax(0,1fr) max-content; align-items:start; gap:24px; padding:28px 0; border-bottom:1px solid var(--divider); }
     .cart-item-details { min-width:0; }
-    .cart-item-title { margin:1px 0 7px; font-size:12px; font-weight:600; letter-spacing:.105em; line-height:1.2; text-transform:uppercase; }
+    .cart-item-title { margin:1px 0 7px; font-size:15px; letter-spacing:.045em; line-height:1.2; text-transform:uppercase; }
     .cart-item-option, .cart-item-quantity { margin:0; color:var(--muted); font-size:9px; font-weight:400; letter-spacing:.075em; line-height:1.55; text-transform:uppercase; }
     .cart-item-aside { display:flex; min-width:58px; flex-direction:column; align-items:flex-end; gap:14px; padding-top:1px; }
     .cart-item-price { font-size:12px; font-weight:600; white-space:nowrap; }
@@ -338,7 +346,13 @@
     .cart-summary-row span:last-child { text-align:right; }
     .cart-summary-rule { height:1px; margin:3px 0 14px; background:var(--divider); }
     .cart-total { display:grid; grid-template-columns:1fr auto; align-items:center; gap:20px; margin-bottom:15px; font-size:14px; font-weight:600; letter-spacing:.085em; text-transform:uppercase; }
-    .cart-total span:last-child { text-align:right; }
+    .cart-total > span:last-child { text-align:right; }
+    .cart-total-value { display:flex; align-items:baseline; justify-content:flex-end; gap:7px; min-width:0; white-space:nowrap; }
+    .cart-currency-picker { position:relative; display:inline-flex; align-items:center; color:var(--brown); }
+    .cart-currency-select { max-width:50px; padding:2px 13px 2px 0; border:0; border-radius:0; outline-offset:3px; appearance:none; -webkit-appearance:none; background:transparent; color:inherit; font:inherit; font-size:9px; font-weight:500; letter-spacing:.09em; line-height:1; cursor:pointer; text-transform:uppercase; }
+    .cart-currency-picker::after { position:absolute; top:50%; right:2px; width:4px; height:4px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
+    .cart-currency-select:disabled { cursor:wait; opacity:.55; }
+    .cart-currency-note { margin:-7px 0 12px; color:var(--muted); font-size:8px; font-weight:400; letter-spacing:.055em; line-height:1.4; text-align:right; }
     .cart-action { width:100%; margin-top:7px; padding:13px 16px !important; border:1px solid var(--brown) !important; font:inherit; font-family:var(--font-display); font-size:10px; font-weight:600; letter-spacing:.15em; text-transform:uppercase; }
     .cart-action--primary { background:var(--brown); color:var(--cream); }
     .cart-action:not(.cart-action--primary) { margin-top:5px; padding:8px 12px !important; border:0 !important; color:var(--muted); font-size:9px; font-weight:500; }
@@ -352,13 +366,16 @@
       .cart-item { grid-template-columns:minmax(0,1fr) max-content; gap:16px; padding:24px 0; }
       .cart-item-aside { min-width:48px; gap:12px; }
       .cart-summary { padding-top:23px; }
+      .cart-total-value { gap:6px; }
+      .cart-currency-select { font-size:9px; }
+      .cart-currency-note { margin-top:-6px; font-size:8px; }
       .cart-action { padding:12px 14px !important; }
       #faq-dialog { width:calc(100% - 24px); max-height:calc(100vh - 32px); max-height:calc(100dvh - 32px); }
       .faq-shell { padding:20px; }
       .faq-header { padding-bottom:14px; }
-      .faq-title { font-size:18px; }
+      .faq-title { font-size:22px; }
       .faq-list { margin-top:8px; }
-      .faq-list summary { min-height:58px; gap:16px; padding:17px 0; font-size:13px; line-height:1.4; }
+      .faq-list summary { min-height:58px; gap:16px; padding:17px 0; font-size:15px; line-height:1.4; }
       .faq-list details[open] summary { padding-bottom:10px; }
       .faq-list p { max-width:none; margin:0 30px 20px 0; font-size:14px; line-height:1.7; }
     }
@@ -376,7 +393,7 @@
       .homepage::after { position:absolute; top:40%; right:0; bottom:0; left:0; z-index:2; content:""; pointer-events:none; background:linear-gradient(to bottom,transparent 0%,rgba(60,42,33,.08) 20%,rgba(60,42,33,.72) 100%); }
       .hero-intro { position:absolute; right:20px; bottom:calc(104px + env(safe-area-inset-bottom)); left:20px; z-index:3; width:auto; margin:0; color:var(--light); text-align:center; }
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
-      .hero-intro-title-mobile { display:block; margin:0; font-family:var(--font-display); font-size:clamp(36px,10vw,42px); font-weight:600; letter-spacing:.01em; line-height:1.02; }
+      .hero-intro-title-mobile { display:block; margin:0; font-size:clamp(27px,9.5vw,40px); letter-spacing:.01em; line-height:1.08; }
       .hero-intro-copy-mobile, .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
       .mobile-hero-cta { position:absolute; right:auto; bottom:calc(32px + env(safe-area-inset-bottom)); left:50%; z-index:3; display:grid; place-items:center; width:48px; height:48px; margin:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--light); transform:translateX(-50%); }
       .mobile-hero-cta svg { display:block; width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
@@ -396,16 +413,13 @@
       .purchase-row { margin-top:8px; padding:4px 0 clamp(52px,14vw,76px); }
       .purchase-button { min-height:44px; }
       .image-remove-button { top:0; right:0; width:15px; height:15px; padding:0 0 1px; font-size:11px; opacity:.86; transform:translate(50%,-50%); }
-      .site-footer { padding:40px 24px 24px; }
-      .footer-grid { grid-template-columns:1fr; gap:32px; }
-      .footer-kicker { margin-bottom:15px; font-size:9px; }
-      .footer-links { gap:11px; }
-      .footer-links a { font-size:15px; }
-      .footer-contact { gap:11px; }
+      .site-footer { padding:32px 24px 20px; }
+      .footer-grid { grid-template-columns:1fr; gap:28px; }
+      .footer-brand { margin-bottom:10px; }
+      .footer-kicker { margin-bottom:12px; }
+      .footer-contact { gap:10px; }
       .footer-contact a { font-size:14px; }
-      .footer-icon { width:32px; height:32px; border-radius:8px; }
-      .footer-rule { margin:26px 0 18px; }
-      .footer-meta { flex-direction:column; align-items:flex-start; gap:10px; font-size:11px; }
+      .footer-rule { margin:22px auto 13px; }
       .floating-graphic { display:none !important; }
       .graphic-02, .graphic-83 { display:none !important; }
       .graphic-71, .mobile-graphic-281 { display:block !important; position:absolute; z-index:0; pointer-events:none; }
@@ -433,7 +447,7 @@
       .homepage::after { position:absolute; top:40%; right:0; bottom:0; left:0; z-index:2; content:""; pointer-events:none; background:linear-gradient(to bottom,transparent 0%,rgba(60,42,33,.08) 20%,rgba(60,42,33,.72) 100%); }
       .hero-intro { position:absolute; right:6%; bottom:calc(132px + env(safe-area-inset-bottom)); left:6%; z-index:3; width:auto; margin:0 auto; color:var(--light); text-align:center; }
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
-      .hero-intro-title-mobile { display:block; margin:0; font-family:var(--font-display); font-size:clamp(48px,5vw,76px); font-weight:600; letter-spacing:.01em; line-height:1.02; }
+      .hero-intro-title-mobile { display:block; margin:0; font-size:clamp(48px,4.6vw,70px); letter-spacing:.01em; line-height:1.08; }
       .hero-intro-copy-mobile { display:none; }
       .mobile-hero-cta { position:absolute; right:auto; bottom:calc(44px + env(safe-area-inset-bottom)); left:50%; z-index:3; display:grid; place-items:center; width:56px; height:56px; margin:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--light); transform:translateX(-50%); }
       .mobile-hero-cta svg { display:block; width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
@@ -686,6 +700,7 @@
         </div>
         <div class="upload-section" id="upload-section" hidden aria-hidden="true">
           <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 8 Added</span></p>
+          <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
           <div class="upload-grid" aria-label="Upload up to eight pictures">
             <div class="image-slot" data-slot="0"><button class="slot-picker" type="button" aria-label="Add image 01">+</button><input class="upload-input" type="file" accept="image/*"></div>
             <div class="image-slot" data-slot="1"><button class="slot-picker" type="button" aria-label="Add image 02">+</button><input class="upload-input" type="file" accept="image/*"></div>
@@ -775,7 +790,8 @@
           <div class="cart-summary-row"><span>Subtotal</span><span id="cart-subtotal">$0</span></div>
           <div class="cart-summary-row"><span>Shipping</span><span id="cart-shipping">$0</span></div>
           <div class="cart-summary-rule"></div>
-          <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+          <div class="cart-total"><span>Total</span><span class="cart-total-value"><span id="cart-total">$0.00</span><span class="cart-currency-picker"><select class="cart-currency-select" id="cart-currency" aria-label="Display currency" aria-describedby="cart-currency-note"><option value="AUD">AUD</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option><option value="NZD">NZD</option><option value="CAD">CAD</option></select></span></span></div>
+          <p class="cart-currency-note" id="cart-currency-note" role="status" aria-live="polite" hidden></p>
           <button class="cart-action cart-action--primary" id="checkout-button" type="button">Checkout</button>
           <button class="cart-action" id="continue-shopping" type="button">Continue Shopping</button>
         </aside>
@@ -1267,6 +1283,7 @@
     const uploadedImages = Array(8).fill(null);
     const imageSlots = [...document.querySelectorAll(".image-slot")];
     const progress = document.getElementById("upload-progress");
+    const imageQualityWarning = document.getElementById("image-quality-warning");
     const resetImagesButton = document.getElementById("reset-images");
     const purchaseButton = document.querySelector(".purchase-button");
     const rotateCropButton = document.getElementById("rotateCrop");
@@ -1277,35 +1294,75 @@
     let sourceFile = null;
     let cropperScrollLock = null;
     let cropperReturnFocus = null;
+    let pendingUploadScrollPosition = null;
+    let cropperScrollRestoreFrame = null;
 
     function revoke(url) { if (url) URL.revokeObjectURL(url); }
+    function capturePageScroll() {
+      return { scrollX:window.scrollX, scrollY:window.scrollY };
+    }
+    function scrollToPagePosition(position) {
+      if (!position) return;
+      const html = document.documentElement;
+      const previousScrollBehavior = html.style.scrollBehavior;
+      html.style.scrollBehavior = "auto";
+      window.scrollTo(position.scrollX, position.scrollY);
+      html.style.scrollBehavior = previousScrollBehavior;
+    }
+    function restorePageScrollAfterLayout(position, settlingWork) {
+      if (!position) return;
+      if (cropperScrollRestoreFrame) cancelAnimationFrame(cropperScrollRestoreFrame);
+      scrollToPagePosition(position);
+      Promise.resolve(settlingWork).catch(() => {}).finally(() => {
+        cropperScrollRestoreFrame = requestAnimationFrame(() => {
+          scrollToPagePosition(position);
+          cropperScrollRestoreFrame = requestAnimationFrame(() => {
+            scrollToPagePosition(position);
+            cropperScrollRestoreFrame = null;
+          });
+        });
+      });
+    }
     function lockCropperPageScroll() {
       if (cropperScrollLock) return;
-      const scrollY = window.scrollY;
+      if (cropperScrollRestoreFrame) {
+        cancelAnimationFrame(cropperScrollRestoreFrame);
+        cropperScrollRestoreFrame = null;
+      }
+      const position = pendingUploadScrollPosition || capturePageScroll();
+      pendingUploadScrollPosition = null;
+      scrollToPagePosition(position);
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       cropperScrollLock = {
-        scrollY,
+        ...position,
         bodyPosition:document.body.style.position,
         bodyTop:document.body.style.top,
+        bodyLeft:document.body.style.left,
         bodyWidth:document.body.style.width,
         bodyOverflow:document.body.style.overflow,
+        bodyPaddingRight:document.body.style.paddingRight,
         documentOverflow:document.documentElement.style.overflow
       };
       document.body.style.position = "fixed";
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${position.scrollY}px`;
+      document.body.style.left = `-${position.scrollX}px`;
       document.body.style.width = "100%";
       document.body.style.overflow = "hidden";
+      if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
       document.documentElement.style.overflow = "hidden";
     }
     function unlockCropperPageScroll() {
-      if (!cropperScrollLock) return;
+      if (!cropperScrollLock) return null;
       const lock = cropperScrollLock;
       cropperScrollLock = null;
       document.body.style.position = lock.bodyPosition;
       document.body.style.top = lock.bodyTop;
+      document.body.style.left = lock.bodyLeft;
       document.body.style.width = lock.bodyWidth;
       document.body.style.overflow = lock.bodyOverflow;
+      document.body.style.paddingRight = lock.bodyPaddingRight;
       document.documentElement.style.overflow = lock.documentOverflow;
-      window.scrollTo(0, lock.scrollY);
+      return lock;
     }
     function destroyCropper() {
       cropImage.onload = null;
@@ -1326,8 +1383,13 @@
     }
     function updateUploadProgress() {
       const count = uploadedImages.filter(Boolean).length;
+      const lowResolutionEntries = uploadedImages.filter((entry) => entry?.effectivePpi < 200);
       progress.textContent = `${count} / 8 Added`;
       resetImagesButton.hidden = count === 0;
+      imageQualityWarning.hidden = lowResolutionEntries.length === 0;
+      imageQualityWarning.textContent = lowResolutionEntries.length
+        ? `${lowResolutionEntries.length === 1 ? "One picture is" : `${lowResolutionEntries.length} pictures are`} below 200 PPI at print size. A higher-resolution original is recommended.`
+        : "";
       updateAddToCartState();
     }
 
@@ -1400,14 +1462,18 @@
       overlay.style.display = "none";
       overlay.setAttribute("aria-hidden", "true");
       destroyCropper();
-      unlockCropperPageScroll();
+      const scrollPosition = unlockCropperPageScroll();
       revoke(sourceUrl);
       sourceUrl = null;
       sourceFile = null;
       activeSlotIndex = null;
-      pond.removeFiles();
-      cropperReturnFocus?.focus({ preventScroll:true });
+      const filePondCleanup = pond.removeFiles();
+      if (cropperReturnFocus?.isConnected && !cropperReturnFocus.hidden) {
+        try { cropperReturnFocus.focus({ preventScroll:true }); }
+        catch { cropperReturnFocus.focus(); }
+      }
       cropperReturnFocus = null;
+      restorePageScrollAfterLayout(scrollPosition, filePondCleanup);
     }
 
     pond.on("addfile", (error, fileItem) => {
@@ -1420,10 +1486,14 @@
 
     imageSlots.forEach((slot) => {
       const input = slot.querySelector(".upload-input");
-      slot.querySelector(".slot-picker").addEventListener("click", () => input.click());
+      slot.querySelector(".slot-picker").addEventListener("click", () => {
+        pendingUploadScrollPosition = capturePageScroll();
+        input.click();
+      });
       input.addEventListener("change", () => {
         const file = input.files[0];
         if (!file) return;
+        scrollToPagePosition(pendingUploadScrollPosition);
         activeSlotIndex = Number(slot.dataset.slot);
         pond.removeFiles().then(() => pond.addFile(file));
         input.value = "";
@@ -1452,20 +1522,51 @@
       return rotatedCanvas;
     }
 
+    function getEffectivePrintPpi(cropData, rotation) {
+      const outputWidth = rotation === 90 ? cropData.height : cropData.width;
+      const outputHeight = rotation === 90 ? cropData.width : cropData.height;
+      return Math.min(outputWidth / (54 / 25.4), outputHeight / (86 / 25.4));
+    }
+
     document.getElementById("saveCrop").addEventListener("click", () => {
       if (!cropper || activeSlotIndex === null) return;
-      const croppedCanvas = cropper.getCroppedCanvas({ imageSmoothingEnabled:true, imageSmoothingQuality:"high" });
+      const cropData = cropper.getData(true);
+      const imageData = cropper.getImageData();
+      const rotation = cropFrameIsPortrait ? 0 : 90;
+      const crop = {
+        x:cropData.x,
+        y:cropData.y,
+        width:cropData.width,
+        height:cropData.height,
+        sourceWidth:imageData.naturalWidth,
+        sourceHeight:imageData.naturalHeight,
+        rotation
+      };
+      // This reduced canvas is only a browser preview. Printing always uses the
+      // untouched original file plus the crop coordinates saved above.
+      const croppedCanvas = cropper.getCroppedCanvas({
+        maxWidth:1200,
+        maxHeight:1200,
+        imageSmoothingEnabled:true,
+        imageSmoothingQuality:"high"
+      });
       const outputCanvas = cropFrameIsPortrait ? croppedCanvas : rotateCanvasClockwise(croppedCanvas);
       outputCanvas.toBlob((blob) => {
         if (!blob) return;
         const index = activeSlotIndex;
         revoke(uploadedImages[index]?.url);
-        const entry = { original:sourceFile, blob, url:URL.createObjectURL(blob) };
+        const entry = {
+          original:sourceFile,
+          crop,
+          effectivePpi:getEffectivePrintPpi(crop, rotation),
+          previewBlob:blob,
+          url:URL.createObjectURL(blob)
+        };
         uploadedImages[index] = entry;
         renderSlot(imageSlots[index], entry);
         updateUploadProgress();
         window.croppedImageBlob = blob;
-        window.dispatchEvent(new CustomEvent("image-cropped", { detail:{ blob, slotIndex:index, aspectRatio:frameAspectRatio } }));
+        window.dispatchEvent(new CustomEvent("image-cropped", { detail:{ previewBlob:blob, crop, slotIndex:index, aspectRatio:frameAspectRatio } }));
         activeSlotIndex = null;
         closeCropper();
       }, "image/jpeg", .95);
@@ -1501,8 +1602,79 @@
     const cartItemsElement = document.getElementById("cart-items");
     const cartLink = document.getElementById("cart-link");
     const purchaseError = document.getElementById("purchase-error");
+    const cartCurrencySelect = document.getElementById("cart-currency");
+    const cartCurrencyNote = document.getElementById("cart-currency-note");
+    const CART_CURRENCIES = Object.freeze(["AUD", "USD", "GBP", "EUR", "NZD", "CAD"]);
+    const CART_CURRENCY_SYMBOLS = Object.freeze({ AUD:"$", USD:"US$", GBP:"£", EUR:"€", NZD:"NZ$", CAD:"CA$" });
+    let cartDisplayCurrency = "AUD";
+    let cartExchangeRates = Object.freeze({ AUD:1 });
+    let cartExchangeRatesPromise = null;
 
-    function money(value) { return `$${value.toFixed(0)}`; }
+    function money(value, currency = cartDisplayCurrency) {
+      const rate = currency === "AUD" ? 1 : cartExchangeRates[currency];
+      if (!Number.isFinite(rate)) return "—";
+      const converted = Number(value) * rate;
+      return `${CART_CURRENCY_SYMBOLS[currency]}${converted.toLocaleString("en-AU", { minimumFractionDigits:2, maximumFractionDigits:2 })}`;
+    }
+    async function loadCartExchangeRates() {
+      if (CART_CURRENCIES.slice(1).every((currency) => Number.isFinite(cartExchangeRates[currency]))) return cartExchangeRates;
+      if (cartExchangeRatesPromise) return cartExchangeRatesPromise;
+      cartExchangeRatesPromise = (async () => {
+        const response = await fetch("https://api.frankfurter.dev/v2/rates?base=AUD&quotes=USD,GBP,EUR,NZD,CAD", { cache:"no-store" });
+        if (!response.ok) throw new Error("Exchange rates could not be loaded.");
+        const rows = await response.json();
+        if (!Array.isArray(rows)) throw new Error("The exchange-rate response was invalid.");
+        const rates = { AUD:1 };
+        rows.forEach((row) => {
+          const currency = String(row?.quote || "").toUpperCase();
+          const rate = Number(row?.rate);
+          if (CART_CURRENCIES.includes(currency) && Number.isFinite(rate) && rate > 0) rates[currency] = rate;
+        });
+        if (!CART_CURRENCIES.slice(1).every((currency) => Number.isFinite(rates[currency]))) {
+          throw new Error("One or more exchange rates were unavailable.");
+        }
+        cartExchangeRates = Object.freeze(rates);
+        return cartExchangeRates;
+      })().catch((error) => {
+        cartExchangeRatesPromise = null;
+        throw error;
+      });
+      return cartExchangeRatesPromise;
+    }
+    function updateCartPriceDisplay() {
+      document.querySelectorAll("#cart-dialog [data-aud-price]").forEach((element) => {
+        element.textContent = money(Number(element.dataset.audPrice));
+      });
+    }
+    async function selectCartCurrency(currency) {
+      if (!CART_CURRENCIES.includes(currency)) return;
+      if (currency === "AUD") {
+        cartDisplayCurrency = "AUD";
+        cartCurrencySelect.value = "AUD";
+        cartCurrencyNote.hidden = true;
+        cartCurrencyNote.textContent = "";
+        updateCartPriceDisplay();
+        return;
+      }
+      cartCurrencySelect.disabled = true;
+      cartCurrencyNote.hidden = false;
+      cartCurrencyNote.textContent = "Updating exchange rate…";
+      try {
+        await loadCartExchangeRates();
+        cartDisplayCurrency = currency;
+        cartCurrencySelect.value = currency;
+        updateCartPriceDisplay();
+        cartCurrencyNote.textContent = "Estimated conversion · Checkout charged in AUD.";
+      } catch (error) {
+        console.error("Currency conversion failed", error);
+        cartDisplayCurrency = "AUD";
+        cartCurrencySelect.value = "AUD";
+        updateCartPriceDisplay();
+        cartCurrencyNote.textContent = "Live rates unavailable · Prices remain in AUD.";
+      } finally {
+        cartCurrencySelect.disabled = false;
+      }
+    }
     function saveCart() {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems.slice(0, 10)));
     }
@@ -1518,27 +1690,19 @@
     function createUploadReference() {
       return `tf_${crypto.randomUUID().replaceAll("-", "")}`;
     }
-    async function createPrintSheet(entries) {
-      if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.blob instanceof Blob))) {
-        throw new Error("All 8 cropped pictures are required.");
-      }
-      if (!window.GoodFramePrintSheet?.createA4PrintSheetPdf) {
-        throw new Error("The print-sheet generator is unavailable.");
-      }
-      return window.GoodFramePrintSheet.createA4PrintSheetPdf(entries.map((entry) => entry.blob), {
-        includeCutMarks:true
-      });
-    }
-    async function uploadPrintSheet(pdfBlob, frameColour) {
-      if (!(pdfBlob instanceof Blob) || pdfBlob.type !== "application/pdf" || !pdfBlob.size) {
-        throw new Error("The A4 print sheet could not be generated.");
+    async function uploadPrintSheet(entries, frameColour) {
+      if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.original instanceof File) || !entry?.crop)) {
+        throw new Error("All 8 original pictures and crop settings are required.");
       }
       const uploadSessionId = createUploadReference();
       const form = new FormData();
       form.append("upload_session_id", uploadSessionId);
       form.append("frame_colour", frameColour);
       form.append("image_count", "8");
-      form.append("print_sheet", pdfBlob, "print-sheet-a4.pdf");
+      form.append("crop_metadata", JSON.stringify(entries.map((entry) => entry.crop)));
+      entries.forEach((entry, index) => {
+        form.append(`original_${index + 1}`, entry.original, entry.original.name);
+      });
       let response;
       try {
         response = await fetch(`${checkoutApiBaseUrl}/upload-print-sheet`, {
@@ -1670,7 +1834,7 @@
         aside.className = "cart-item-aside";
         const price = document.createElement("span");
         price.className = "cart-item-price";
-        price.textContent = money(item.price);
+        price.dataset.audPrice = String(item.price);
         const remove = document.createElement("button");
         remove.className = "cart-item-remove";
         remove.type = "button";
@@ -1687,9 +1851,10 @@
         row.append(details, aside);
         cartItemsElement.append(row);
       });
-      document.getElementById("cart-subtotal").textContent = money(subtotal);
-      document.getElementById("cart-shipping").textContent = money(shipping);
-      document.getElementById("cart-total").textContent = money(subtotal + shipping);
+      document.getElementById("cart-subtotal").dataset.audPrice = String(subtotal);
+      document.getElementById("cart-shipping").dataset.audPrice = String(shipping);
+      document.getElementById("cart-total").dataset.audPrice = String(subtotal + shipping);
+      updateCartPriceDisplay();
       document.getElementById("checkout-button").disabled = !cartItems.length;
       cartLink.querySelector(".cart-count").textContent = String(cartItems.length);
       cartLink.setAttribute("aria-label", `Open cart, ${cartItems.length} ${cartItems.length === 1 ? "item" : "items"}`);
@@ -1706,9 +1871,8 @@
       try {
         let uploadSession = null;
         if (withPictures) {
-          const printSheet = await createPrintSheet(uploadedImages);
           document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
-          uploadSession = await uploadPrintSheet(printSheet, selections.colour);
+          uploadSession = await uploadPrintSheet(uploadedImages, selections.colour);
         }
         const cartItem = {
           id:Date.now(),
@@ -1788,6 +1952,7 @@
 
     function openCart() {
       renderCart();
+      void loadCartExchangeRates().catch(() => {});
       if (cart.open) return;
       lockPageForCart();
       try {
@@ -1834,6 +1999,7 @@
     cart.addEventListener("close", unlockPageForCart);
     cart.addEventListener("click", (event) => { if (event.target === cart) cart.close(); });
     cartLink.addEventListener("click", (event) => { event.preventDefault(); openCart(); });
+    cartCurrencySelect.addEventListener("change", () => { void selectCartCurrency(cartCurrencySelect.value); });
     document.getElementById("continue-shopping").addEventListener("click", () => { cart.close(); history.replaceState(null, "", location.pathname); });
     document.getElementById("checkout-button").addEventListener("click", startCheckout);
     renderCart();

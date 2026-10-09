@@ -5,6 +5,9 @@
   const PHOTO_WIDTH_MM = 54;
   const PHOTO_HEIGHT_MM = 86;
   const GAP_MM = 5;
+  const GUIDE_WIDTH_POINTS = 0.25;
+  const CROP_MARK_GAP_MM = 2.5;
+  const CROP_MARK_LENGTH_MM = 2;
   const PAGE_WIDTH_POINTS = PAGE_WIDTH_MM * MM_TO_POINTS;
   const PAGE_HEIGHT_POINTS = PAGE_HEIGHT_MM * MM_TO_POINTS;
   const PHOTO_WIDTH_POINTS = PHOTO_WIDTH_MM * MM_TO_POINTS;
@@ -91,13 +94,14 @@
     const y = placement.yMm * MM_TO_POINTS;
     const width = placement.widthMm * MM_TO_POINTS;
     const height = placement.heightMm * MM_TO_POINTS;
-    const offset = 0.75 * MM_TO_POINTS;
-    const length = 1.5 * MM_TO_POINTS;
+    const offset = CROP_MARK_GAP_MM * MM_TO_POINTS;
+    const length = CROP_MARK_LENGTH_MM * MM_TO_POINTS;
     const left = x;
     const right = x + width;
     const bottom = y;
     const top = y + height;
     return [
+      `${number(left)} ${number(bottom)} ${number(width)} ${number(height)} re S`,
       `${number(left - offset - length)} ${number(bottom)} m ${number(left - offset)} ${number(bottom)} l S`,
       `${number(left)} ${number(bottom - offset - length)} m ${number(left)} ${number(bottom - offset)} l S`,
       `${number(right + offset)} ${number(bottom)} m ${number(right + offset + length)} ${number(bottom)} l S`,
@@ -135,7 +139,7 @@
       return `q ${number(PHOTO_WIDTH_POINTS)} 0 0 ${number(PHOTO_HEIGHT_POINTS)} ${number(x)} ${number(y)} cm /Im${index + 1} Do Q`;
     });
     const cutMarkCommands = includeCutMarks
-      ? ["0.78 G", "0.2 w", ...placements.map(createCutMarkCommands)]
+      ? ["0.72 G", `${number(GUIDE_WIDTH_POINTS)} w`, ...placements.map(createCutMarkCommands)]
       : [];
     const contentBytes = bytesFromText([...imageCommands, ...cutMarkCommands].join("\n"));
 
@@ -206,7 +210,10 @@
       pageHeightMm:PAGE_HEIGHT_MM,
       photoWidthMm:PHOTO_WIDTH_MM,
       photoHeightMm:PHOTO_HEIGHT_MM,
-      gapMm:GAP_MM
+      gapMm:GAP_MM,
+      guideWidthPt:GUIDE_WIDTH_POINTS,
+      cropMarkGapMm:CROP_MARK_GAP_MM,
+      cropMarkLengthMm:CROP_MARK_LENGTH_MM
     })
   });
 })();

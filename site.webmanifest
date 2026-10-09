@@ -1,0 +1,21 @@
+{
+  "name": "Good Frame",
+  "short_name": "Good Frame",
+  "icons": [
+    {
+      "src": "/favicon-192x192.png?v=tree-ring-20261009",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-512x512.png?v=tree-ring-20261009",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#ffdec3",
+  "background_color": "#ffdec3",
+  "display": "standalone"
+}

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import worker, {
   buildLineItems,
   claimWebhookEvent,
@@ -11,6 +12,15 @@ await import('../../../print-sheet.js');
 
 const uploadReference = 'tf_0123456789abcdef0123456789abcdef';
 
+test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', async () => {
+  const html = await readFile(new URL('../../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /const frameAspectRatio = 54 \/ 86;/);
+  assert.equal((html.match(/class="image-slot"/g) || []).length, 8);
+  assert.equal((html.match(/aspect-ratio:54 \/ 86/g) || []).length, 3);
+  assert.match(html, /\.slot-preview[^}]+object-fit:cover;/);
+  assert.match(html, /photos measuring 54 × 86 mm/);
+});
+
 test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () => {
   const api = globalThis.GoodFramePrintSheet;
   assert.deepEqual(api.specification, {
@@ -18,7 +28,10 @@ test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () =
     pageHeightMm:297,
     photoWidthMm:54,
     photoHeightMm:86,
-    gapMm:5
+    gapMm:5,
+    guideWidthPt:0.25,
+    cropMarkGapMm:2.5,
+    cropMarkLengthMm:2
   });
   const placements = api.getA4PrintLayout();
   assert.equal(placements.length, 8);
@@ -35,12 +48,17 @@ class MemoryR2Bucket {
     this.objects = new Map();
   }
   async head(key) {
-    return this.objects.has(key) ? { key } : null;
+    const stored = this.objects.get(key);
+    return stored ? { key, customMetadata:stored.customMetadata } : null;
   }
   async put(key, body, options = {}) {
     if (options.onlyIf?.etagDoesNotMatch === '*' && this.objects.has(key)) return null;
     const bytes = await new Response(body).arrayBuffer();
-    this.objects.set(key, { bytes, contentType:options.httpMetadata?.contentType || 'application/octet-stream' });
+    this.objects.set(key, {
+      bytes,
+      contentType:options.httpMetadata?.contentType || 'application/octet-stream',
+      customMetadata:{ ...(options.customMetadata || {}) }
+    });
     return { key };
   }
   async get(key) {
@@ -48,6 +66,7 @@ class MemoryR2Bucket {
     if (!stored) return null;
     return {
       body:stored.bytes,
+      customMetadata:{ ...stored.customMetadata },
       text:async () => new TextDecoder().decode(stored.bytes),
       json:async () => JSON.parse(new TextDecoder().decode(stored.bytes))
     };
@@ -63,19 +82,78 @@ class MemoryR2Bucket {
   }
 }
 
-function testPrintSheetPdf({ imageCount = 8, width = '595.275591', height = '841.889764' } = {}) {
-  const images = Array.from({ length:imageCount }, () => '<< /Type /XObject /Subtype /Image >>').join('\n');
-  return new Blob([
-    `%PDF-1.4\n1 0 obj\n<< /Type /Page /MediaBox [0 0 ${width} ${height}] >>\nendobj\n${images}\n%%EOF`
-  ], { type:'application/pdf' });
+function fakeJpeg(width = 1080, height = 1720) {
+  return new Uint8Array([
+    0xff, 0xd8,
+    0xff, 0xc0, 0x00, 0x11, 0x08,
+    (height >> 8) & 0xff, height & 0xff,
+    (width >> 8) & 0xff, width & 0xff,
+    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00,
+    0xff, 0xd9
+  ]);
 }
 
-function uploadPrintSheetRequest({ imageCount = 8, sessionId = uploadReference, frameColour = 'Oak', pdfOptions = {} } = {}) {
+function jpegDimensions(bytes) {
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  return { height:(view[7] << 8) | view[8], width:(view[9] << 8) | view[10] };
+}
+
+class MockImagesBinding {
+  async info(bytes) {
+    return jpegDimensions(bytes);
+  }
+  input(bytes) {
+    const source = jpegDimensions(bytes);
+    const state = { width:source.width, height:source.height };
+    const handle = {
+      transform(options = {}) {
+        if (options.trim) {
+          state.width = Number(options.trim.width);
+          state.height = Number(options.trim.height);
+        }
+        if (options.rotate === 90 || options.rotate === 270) {
+          [state.width, state.height] = [state.height, state.width];
+        }
+        return handle;
+      },
+      async output() {
+        return {
+          response:() => new Response(fakeJpeg(state.width, state.height), {
+            status:200,
+            headers:{ 'Content-Type':'image/jpeg' }
+          })
+        };
+      }
+    };
+    return handle;
+  }
+}
+
+function uploadPrintSheetRequest({
+  imageCount = 8,
+  sessionId = uploadReference,
+  frameColour = 'Oak',
+  width = 1080,
+  height = 1720,
+  crops
+} = {}) {
   const form = new FormData();
   form.append('upload_session_id', sessionId);
   form.append('frame_colour', frameColour);
   form.append('image_count', String(imageCount));
-  form.append('print_sheet', testPrintSheetPdf(pdfOptions), 'print-sheet-a4.pdf');
+  const cropMetadata = crops || Array.from({ length:8 }, () => ({
+    x:0,
+    y:0,
+    width,
+    height,
+    sourceWidth:width,
+    sourceHeight:height,
+    rotation:0
+  }));
+  form.append('crop_metadata', JSON.stringify(cropMetadata));
+  for (let index = 0; index < imageCount; index += 1) {
+    form.append(`original_${index + 1}`, new File([fakeJpeg(width, height)], `original-${index + 1}.jpg`, { type:'image/jpeg' }));
+  }
   return new Request('https://worker.example/upload-print-sheet', {
     method:'POST',
     headers: { Origin:'https://goodframe.com.au' },
@@ -199,7 +277,7 @@ test('webhook event claims are idempotent', async () => {
 
 test('upload-print-sheet stores one A4 PDF and a pending manifest', async () => {
   const bucket = new MemoryR2Bucket();
-  const env = { ARTWORK_BUCKET:bucket, ALLOWED_ORIGINS:'https://goodframe.com.au' };
+  const env = { ARTWORK_BUCKET:bucket, IMAGES:new MockImagesBinding(), ALLOWED_ORIGINS:'https://goodframe.com.au' };
   const response = await worker.fetch(uploadPrintSheetRequest(), env);
   assert.equal(response.status, 200);
   const result = await response.json();
@@ -207,8 +285,23 @@ test('upload-print-sheet stores one A4 PDF and a pending manifest', async () => 
   assert.equal(result.upload_session_id, uploadReference);
   assert.equal(result.print_sheet.filename, 'print-sheet-a4.pdf');
   assert.equal(result.print_sheet.objectKey, `tinyframes/${uploadReference}/print-sheet-a4.pdf`);
+  assert.equal(result.image_quality.length, 8);
+  assert.equal(result.image_quality.every(item => item.effective_ppi >= 300), true);
+  assert.deepEqual(result.warnings, []);
+  const storedPrintSheet = bucket.objects.get(result.print_sheet.objectKey);
+  assert.deepEqual(storedPrintSheet.customMetadata, {
+    upload_session_id:uploadReference,
+    product_type:'frame_8_pictures',
+    frame_colour:'oak',
+    image_count:'8',
+    photo_width_mm:'54',
+    photo_height_mm:'86',
+    status:'pending',
+    created_at:storedPrintSheet.customMetadata.created_at
+  });
+  assert.match(storedPrintSheet.customMetadata.created_at, /^\d{4}-\d{2}-\d{2}T/);
   const manifestKey = `tinyframes/${uploadReference}/manifest.json`;
-  assert.equal(bucket.objects.size, 2);
+  assert.equal(bucket.objects.size, 10);
   const manifest = await (await bucket.get(manifestKey)).json();
   assert.equal(manifest.status, 'pending');
   assert.equal(manifest.frame_colour, 'Oak');
@@ -217,33 +310,89 @@ test('upload-print-sheet stores one A4 PDF and a pending manifest', async () => 
   assert.equal(manifest.print_sheet_filename, 'print-sheet-a4.pdf');
   assert.equal(manifest.print_sheet_object_key, `tinyframes/${uploadReference}/print-sheet-a4.pdf`);
   assert.deepEqual(manifest.page_size_mm, { width:210, height:297 });
+  assert.equal(manifest.photo_width_mm, 54);
+  assert.equal(manifest.photo_height_mm, 86);
   assert.deepEqual(manifest.photo_size_mm, { width:54, height:86 });
+  assert.deepEqual(manifest.cutting_guides, {
+    line_width_pt:0.25,
+    colour:'light-grey',
+    crop_mark_gap_mm:2.5,
+    crop_mark_length_mm:2
+  });
+  assert.equal(manifest.originals.length, 8);
+  assert.equal(manifest.originals.every(file => file.size === fakeJpeg().length), true);
+  assert.equal(manifest.quality_warning_count, 0);
+  const pdfText = new TextDecoder('latin1').decode(bucket.objects.get(result.print_sheet.objectKey).bytes);
+  assert.match(pdfText, /\/MediaBox \[0 0 595\.275591 841\.889764\]/);
+  assert.equal((pdfText.match(/\/Subtype \/Image/g) || []).length, 8);
+  assert.equal((pdfText.match(/153\.070866 243\.779528/g) || []).length, 8);
+  assert.equal((pdfText.match(/153\.070866 243\.779528 re S/g) || []).length, 8);
+  assert.match(pdfText, /0\.25 w/);
 });
 
 test('upload-print-sheet rejects a sheet that does not represent eight crops', async () => {
   const bucket = new MemoryR2Bucket();
-  const response = await worker.fetch(uploadPrintSheetRequest({ imageCount:7, pdfOptions:{ imageCount:7 } }), {
+  const response = await worker.fetch(uploadPrintSheetRequest({ imageCount:7 }), {
     ARTWORK_BUCKET:bucket,
+    IMAGES:new MockImagesBinding(),
     ALLOWED_ORIGINS:'https://goodframe.com.au'
   });
   assert.equal(response.status, 400);
   assert.equal(bucket.objects.size, 0);
 });
 
-test('upload-print-sheet rejects a PDF with non-A4 page dimensions', async () => {
+test('upload-print-sheet rejects crop data that does not match the original dimensions', async () => {
   const bucket = new MemoryR2Bucket();
-  const response = await worker.fetch(uploadPrintSheetRequest({ pdfOptions:{ width:'612', height:'792' } }), {
+  const crops = Array.from({ length:8 }, () => ({
+    x:0, y:0, width:1080, height:1720, sourceWidth:1200, sourceHeight:1720, rotation:0
+  }));
+  const response = await worker.fetch(uploadPrintSheetRequest({ crops }), {
     ARTWORK_BUCKET:bucket,
+    IMAGES:new MockImagesBinding(),
     ALLOWED_ORIGINS:'https://goodframe.com.au'
   });
   assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /exact portrait A4/);
+  assert.match((await response.json()).error, /does not match its saved crop information/);
   assert.equal(bucket.objects.size, 0);
+});
+
+test('upload-print-sheet rejects a crop with the wrong print ratio', async () => {
+  const bucket = new MemoryR2Bucket();
+  const crops = Array.from({ length:8 }, () => ({
+    x:0, y:0, width:1000, height:1000, sourceWidth:1080, sourceHeight:1720, rotation:0
+  }));
+  const response = await worker.fetch(uploadPrintSheetRequest({
+    crops
+  }), {
+    ARTWORK_BUCKET:bucket,
+    IMAGES:new MockImagesBinding(),
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /54 x 86 mm print ratio/);
+  assert.equal(bucket.objects.size, 0);
+});
+
+test('upload-print-sheet reports cropped images below 200 PPI without upscaling them', async () => {
+  const bucket = new MemoryR2Bucket();
+  const response = await worker.fetch(uploadPrintSheetRequest({ width:270, height:430 }), {
+    ARTWORK_BUCKET:bucket,
+    IMAGES:new MockImagesBinding(),
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  });
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.image_quality.every(item => item.below_200_ppi), true);
+  assert.equal(result.warnings.length, 8);
+  const manifest = await (await bucket.get(`tinyframes/${uploadReference}/manifest.json`)).json();
+  assert.equal(manifest.quality_warning_count, 8);
+  assert.equal(manifest.originals[0].cropped_width_px, 270);
+  assert.equal(manifest.originals[0].cropped_height_px, 430);
 });
 
 test('paid Stripe sessions promote pending upload manifests', async () => {
   const bucket = new MemoryR2Bucket();
-  const env = { ARTWORK_BUCKET:bucket, ALLOWED_ORIGINS:'https://goodframe.com.au' };
+  const env = { ARTWORK_BUCKET:bucket, IMAGES:new MockImagesBinding(), ALLOWED_ORIGINS:'https://goodframe.com.au' };
   assert.equal((await worker.fetch(uploadPrintSheetRequest(), env)).status, 200);
   assert.equal(await markUploadSessionsPaid({
     id:'cs_test_tiny_frame_paid',
@@ -253,6 +402,15 @@ test('paid Stripe sessions promote pending upload manifests', async () => {
   assert.equal(manifest.status, 'paid');
   assert.equal(manifest.stripe_checkout_session_id, 'cs_test_tiny_frame_paid');
   assert.match(manifest.paid_at, /^\d{4}-\d{2}-\d{2}T/);
+  const printSheet = bucket.objects.get(`tinyframes/${uploadReference}/print-sheet-a4.pdf`);
+  assert.equal(printSheet.customMetadata.status, 'paid');
+  assert.equal(printSheet.customMetadata.stripe_checkout_session_id, 'cs_test_tiny_frame_paid');
+  assert.equal(printSheet.customMetadata.paid_at, manifest.paid_at);
+  for (let index = 1; index <= 8; index += 1) {
+    const original = bucket.objects.get(`tinyframes/${uploadReference}/originals/${String(index).padStart(2, '0')}.jpg`);
+    assert.equal(original.customMetadata.status, 'paid');
+    assert.equal(original.customMetadata.stripe_checkout_session_id, 'cs_test_tiny_frame_paid');
+  }
 });
 
 test('cleanup removes stale pending sessions but preserves paid uploads', async () => {

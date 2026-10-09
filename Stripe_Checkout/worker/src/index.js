@@ -4,6 +4,11 @@ import {
   isValidArtworkObjectKey,
   sanitizeUploadId
 } from './r2-keys.js';
+import {
+  PRINT_SHEET_SPECIFICATION,
+  createA4PrintSheetPdf,
+  readJpegDimensions
+} from './print-sheet-pdf.js';
 
 const PRICE_BY_SIZE = Object.freeze({
   '80x80mm': 7000,
@@ -29,10 +34,20 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
 const SHIPPING_AMOUNT = 1000;
 const TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
 const TINY_FRAME_UPLOAD_IMAGE_COUNT = 8;
-const MAX_TINY_FRAME_PDF_BYTES = 80 * 1024 * 1024;
+const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
+const MAX_TINY_FRAME_UPLOAD_BYTES = 96 * 1024 * 1024;
+const MAX_TINY_FRAME_PDF_BYTES = 160 * 1024 * 1024;
 const A4_WIDTH_POINTS = 595.275591;
 const A4_HEIGHT_POINTS = 841.889764;
+const TINY_FRAME_PHOTO_WIDTH_POINTS = 54 * 72 / 25.4;
+const TINY_FRAME_PHOTO_HEIGHT_POINTS = 86 * 72 / 25.4;
+const TINY_FRAME_PHOTO_WIDTH_INCHES = 54 / 25.4;
+const TINY_FRAME_PHOTO_HEIGHT_INCHES = 86 / 25.4;
+const TINY_FRAME_LOW_RESOLUTION_PPI = 200;
+const SUPPORTED_TINY_FRAME_IMAGE_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/gif']);
 const DEFAULT_PENDING_UPLOAD_TTL_DAYS = 10;
+
+class TinyFrameInputError extends Error {}
 const CANONICAL_SIZE_BY_DIMENSIONS = Object.freeze({
   '80x80': '80x80mm',
   '210x297': '210x297mm',
@@ -128,6 +143,10 @@ function getLegacyUploadManifestKey(uploadReference) {
   return `tiny-frame-uploads/${uploadReference}.json`;
 }
 
+function isValidTinyFramePrintSheetKey(value) {
+  return /^tinyframes\/tf_[a-f0-9]{32}\/print-sheet-a4\.pdf$/.test(String(value || ''));
+}
+
 async function deleteObjectKeys(bucket, keys) {
   await Promise.allSettled(keys.map(key => bucket.delete(key)));
 }
@@ -146,12 +165,93 @@ function inspectPrintSheetPdf(bytes) {
   if (embeddedImageCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
     return { valid:false, error:'The print sheet must contain exactly 8 embedded pictures' };
   }
+  const placementPattern = /q\s+([\d.]+)\s+0\s+0\s+([\d.]+)\s+[\d.]+\s+[\d.]+\s+cm\s+\/Im\d+\s+Do\s+Q/g;
+  const placements = [...text.matchAll(placementPattern)];
+  if (placements.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+    return { valid:false, error:'The print-sheet picture placements could not be verified' };
+  }
+  if (placements.some(match => (
+    Math.abs(Number(match[1]) - TINY_FRAME_PHOTO_WIDTH_POINTS) > 0.01 ||
+    Math.abs(Number(match[2]) - TINY_FRAME_PHOTO_HEIGHT_POINTS) > 0.01
+  ))) {
+    return { valid:false, error:'Every print-sheet picture must be exactly 54 x 86 mm' };
+  }
   return { valid:true };
+}
+
+function getOriginalExtension(contentType) {
+  if (contentType === 'image/png') return 'png';
+  if (contentType === 'image/gif') return 'gif';
+  return 'jpg';
+}
+
+function normalizeTinyFrameCrop(value, index) {
+  if (!value || typeof value !== 'object') {
+    throw new Error(`Crop information for picture ${index + 1} is missing`);
+  }
+  const crop = {
+    x:Number(value.x),
+    y:Number(value.y),
+    width:Number(value.width),
+    height:Number(value.height),
+    sourceWidth:Number(value.sourceWidth),
+    sourceHeight:Number(value.sourceHeight),
+    rotation:Number(value.rotation || 0)
+  };
+  if (
+    !Object.values(crop).every(Number.isFinite) ||
+    crop.x < 0 || crop.y < 0 || crop.width <= 0 || crop.height <= 0 ||
+    crop.sourceWidth <= 0 || crop.sourceHeight <= 0 ||
+    ![0, 90].includes(crop.rotation)
+  ) {
+    throw new Error(`Crop information for picture ${index + 1} is invalid`);
+  }
+
+  const left = Math.max(0, Math.floor(crop.x));
+  const top = Math.max(0, Math.floor(crop.y));
+  const right = Math.min(Math.round(crop.sourceWidth), Math.ceil(crop.x + crop.width));
+  const bottom = Math.min(Math.round(crop.sourceHeight), Math.ceil(crop.y + crop.height));
+  const width = right - left;
+  const height = bottom - top;
+  const outputWidth = crop.rotation === 90 ? height : width;
+  const outputHeight = crop.rotation === 90 ? width : height;
+  if (width < 1 || height < 1 || right > crop.sourceWidth + 1 || bottom > crop.sourceHeight + 1) {
+    throw new Error(`Crop information for picture ${index + 1} is outside the original image`);
+  }
+  if (Math.abs((outputWidth / outputHeight) - (54 / 86)) > 0.01) {
+    throw new Error(`Crop information for picture ${index + 1} does not match the 54 x 86 mm print ratio`);
+  }
+  return { ...crop, left, top, width, height, outputWidth, outputHeight };
+}
+
+function calculateEffectivePpi(width, height) {
+  return Math.min(width / TINY_FRAME_PHOTO_WIDTH_INCHES, height / TINY_FRAME_PHOTO_HEIGHT_INCHES);
+}
+
+async function transformOriginalForPrint(env, sourceBytes, crop) {
+  let transform = env.IMAGES
+    .input(sourceBytes)
+    .transform({
+      trim:{ top:crop.top, left:crop.left, width:crop.width, height:crop.height },
+      metadata:'keep'
+    });
+  if (crop.rotation === 90) {
+    transform = transform.transform({ rotate:90 });
+  }
+  const output = await transform.output({ format:'image/jpeg', quality:100 });
+  const response = output.response();
+  if (!response.ok) {
+    throw new Error(`Cloudflare Images returned ${response.status} while preparing a print crop`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
 }
 
 async function uploadTinyFramePrintSheet(request, env) {
   if (!env.ARTWORK_BUCKET) {
     return jsonResponse(request, env, { error: 'Artwork storage is not configured' }, 503);
+  }
+  if (!env.IMAGES) {
+    return jsonResponse(request, env, { error: 'Print-quality image processing is not configured' }, 503);
   }
   if (!getAllowedOrigin(request, env)) {
     return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
@@ -168,7 +268,20 @@ async function uploadTinyFramePrintSheet(request, env) {
   const uploadSessionId = requestedSessionId || createUploadSessionId();
   const frameColour = normalizeFrameColour(formData.get('frame_colour'));
   const imageCount = Number(formData.get('image_count'));
-  const printSheet = formData.get('print_sheet');
+  const originals = Array.from(
+    { length:TINY_FRAME_UPLOAD_IMAGE_COUNT },
+    (_, index) => formData.get(`original_${index + 1}`)
+  );
+  let crops;
+  try {
+    const cropValues = JSON.parse(String(formData.get('crop_metadata') || ''));
+    if (!Array.isArray(cropValues) || cropValues.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+      throw new Error('Exactly 8 crops are required');
+    }
+    crops = cropValues.map(normalizeTinyFrameCrop);
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message || 'Crop information is invalid' }, 400);
+  }
   if (!normalizeUploadReference(uploadSessionId)) {
     return jsonResponse(request, env, { error: 'Upload session ID is invalid' }, 400);
   }
@@ -178,17 +291,17 @@ async function uploadTinyFramePrintSheet(request, env) {
   if (imageCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
     return jsonResponse(request, env, { error: 'The print sheet must represent exactly 8 cropped images' }, 400);
   }
-  if (!printSheet || typeof printSheet.arrayBuffer !== 'function' || printSheet.type !== 'application/pdf') {
-    return jsonResponse(request, env, { error: 'An A4 PDF print sheet is required' }, 400);
+  if (originals.some(file => !file || typeof file.arrayBuffer !== 'function')) {
+    return jsonResponse(request, env, { error: 'All 8 original photographs are required' }, 400);
   }
-  if (!printSheet.size || printSheet.size > MAX_TINY_FRAME_PDF_BYTES) {
-    return jsonResponse(request, env, { error: 'The PDF print sheet exceeds the 80 MB upload limit' }, 413);
+  if (originals.some(file => !SUPPORTED_TINY_FRAME_IMAGE_TYPES.includes(file.type))) {
+    return jsonResponse(request, env, { error: 'Pictures must be JPEG, PNG, or GIF files' }, 400);
   }
-
-  const pdfBytes = new Uint8Array(await printSheet.arrayBuffer());
-  const pdfInspection = inspectPrintSheetPdf(pdfBytes);
-  if (!pdfInspection.valid) {
-    return jsonResponse(request, env, { error:pdfInspection.error }, 400);
+  if (originals.some(file => !file.size || file.size > MAX_TINY_FRAME_ORIGINAL_BYTES)) {
+    return jsonResponse(request, env, { error: 'Each original picture must be 20 MB or smaller' }, 413);
+  }
+  if (originals.reduce((sum, file) => sum + file.size, 0) > MAX_TINY_FRAME_UPLOAD_BYTES) {
+    return jsonResponse(request, env, { error: 'The combined original pictures exceed the 96 MB upload limit' }, 413);
   }
 
   const manifestKey = getUploadManifestKey(uploadSessionId);
@@ -199,15 +312,101 @@ async function uploadTinyFramePrintSheet(request, env) {
   const storedKeys = [];
   const printSheetFilename = 'print-sheet-a4.pdf';
   const printSheetObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}${printSheetFilename}`;
+  const createdAt = new Date().toISOString();
   try {
+    const processedImages = [];
+    const originalFiles = [];
+    const imageQuality = [];
+
+    for (let index = 0; index < originals.length; index += 1) {
+      const file = originals[index];
+      const sourceBuffer = await file.arrayBuffer();
+      const sourceBytes = new Uint8Array(sourceBuffer);
+      const info = await env.IMAGES.info(sourceBuffer);
+      const sourceWidth = Number(info?.width);
+      const sourceHeight = Number(info?.height);
+      if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight)) {
+        throw new Error(`The dimensions of original picture ${index + 1} could not be read`);
+      }
+      const submittedCrop = crops[index];
+      if (
+        Math.abs(sourceWidth - submittedCrop.sourceWidth) > 1 ||
+        Math.abs(sourceHeight - submittedCrop.sourceHeight) > 1
+      ) {
+        throw new TinyFrameInputError(`Original picture ${index + 1} does not match its saved crop information`);
+      }
+
+      const originalObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}originals/${String(index + 1).padStart(2, '0')}.${getOriginalExtension(file.type)}`;
+      const storedOriginal = await env.ARTWORK_BUCKET.put(originalObjectKey, sourceBytes, {
+        httpMetadata:{ contentType:file.type },
+        customMetadata:{
+          upload_session_id:uploadSessionId,
+          picture_number:String(index + 1),
+          original_filename:String(file.name || `picture-${index + 1}`).slice(0, 512),
+          source_width_px:String(sourceWidth),
+          source_height_px:String(sourceHeight),
+          status:'pending',
+          created_at:createdAt
+        },
+        onlyIf:{ etagDoesNotMatch:'*' }
+      });
+      if (storedOriginal === null) throw new Error('Upload session already exists');
+      storedKeys.push(originalObjectKey);
+
+      const processedBytes = await transformOriginalForPrint(env, sourceBuffer, submittedCrop);
+      const processedDimensions = readJpegDimensions(processedBytes);
+      const effectivePpi = calculateEffectivePpi(processedDimensions.width, processedDimensions.height);
+      const quality = {
+        picture_number:index + 1,
+        cropped_width_px:processedDimensions.width,
+        cropped_height_px:processedDimensions.height,
+        effective_ppi:Number(effectivePpi.toFixed(1)),
+        below_200_ppi:effectivePpi < TINY_FRAME_LOW_RESOLUTION_PPI
+      };
+      imageQuality.push(quality);
+      processedImages.push({ bytes:processedBytes });
+      originalFiles.push({
+        filename:String(file.name || `picture-${index + 1}`).slice(0, 512),
+        objectKey:originalObjectKey,
+        contentType:file.type,
+        size:file.size,
+        width_px:sourceWidth,
+        height_px:sourceHeight,
+        crop:{
+          x:submittedCrop.left,
+          y:submittedCrop.top,
+          width:submittedCrop.width,
+          height:submittedCrop.height,
+          rotation:submittedCrop.rotation
+        },
+        ...quality
+      });
+    }
+
+    const pdfBytes = createA4PrintSheetPdf(processedImages);
+    if (pdfBytes.length > MAX_TINY_FRAME_PDF_BYTES) {
+      throw new Error('The generated PDF exceeds the 160 MB storage limit');
+    }
+    const pdfInspection = inspectPrintSheetPdf(pdfBytes);
+    if (!pdfInspection.valid) throw new Error(pdfInspection.error);
+
     const storedPrintSheet = await env.ARTWORK_BUCKET.put(printSheetObjectKey, pdfBytes, {
       httpMetadata: { contentType:'application/pdf' },
+      customMetadata: {
+        upload_session_id:uploadSessionId,
+        product_type:'frame_8_pictures',
+        frame_colour:frameColour.toLowerCase(),
+        image_count:String(TINY_FRAME_UPLOAD_IMAGE_COUNT),
+        photo_width_mm:'54',
+        photo_height_mm:'86',
+        status:'pending',
+        created_at:createdAt
+      },
       onlyIf: { etagDoesNotMatch:'*' }
     });
     if (storedPrintSheet === null) throw new Error('Upload session already exists');
     storedKeys.push(printSheetObjectKey);
 
-    const uploadedAt = new Date().toISOString();
     const manifest = {
       upload_session_id:uploadSessionId,
       frame_colour:frameColour,
@@ -216,16 +415,28 @@ async function uploadTinyFramePrintSheet(request, env) {
       print_sheet_filename:printSheetFilename,
       print_sheet_object_key:printSheetObjectKey,
       page_size_mm:{ width:210, height:297 },
+      photo_width_mm:54,
+      photo_height_mm:86,
       photo_size_mm:{ width:54, height:86 },
+      cutting_guides:{
+        line_width_pt:PRINT_SHEET_SPECIFICATION.guideWidthPt,
+        colour:'light-grey',
+        crop_mark_gap_mm:PRINT_SHEET_SPECIFICATION.cropMarkGapMm,
+        crop_mark_length_mm:PRINT_SHEET_SPECIFICATION.cropMarkLengthMm
+      },
+      image_quality:imageQuality,
+      quality_warning_count:imageQuality.filter(item => item.below_200_ppi).length,
+      originals:originalFiles,
       files:[{
         filename:printSheetFilename,
         objectKey:printSheetObjectKey,
         contentType:'application/pdf',
-        size:printSheet.size
-      }],
+        size:pdfBytes.length
+      }, ...originalFiles],
       status:'pending',
-      generated_at:uploadedAt,
-      uploaded_at:uploadedAt
+      created_at:createdAt,
+      generated_at:createdAt,
+      uploaded_at:createdAt
     };
     const storedManifest = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(manifest), {
       httpMetadata: { contentType:'application/json' },
@@ -243,11 +454,19 @@ async function uploadTinyFramePrintSheet(request, env) {
         filename:printSheetFilename,
         objectKey:printSheetObjectKey,
         contentType:'application/pdf',
-        size:printSheet.size
-      }
+        size:pdfBytes.length,
+        downloadUrl:getArtworkUrl(request, printSheetObjectKey)
+      },
+      image_quality:imageQuality,
+      warnings:imageQuality
+        .filter(item => item.below_200_ppi)
+        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
     });
   } catch (error) {
     await deleteObjectKeys(env.ARTWORK_BUCKET, storedKeys);
+    if (error instanceof TinyFrameInputError) {
+      return jsonResponse(request, env, { error:error.message }, 400);
+    }
     console.error('Tiny Frame print-sheet upload failed:', error);
     return jsonResponse(request, env, { error:'The print sheet could not be stored. Please try again.' }, 500);
   }
@@ -360,7 +579,7 @@ async function createArtworkManifest(request, env) {
 }
 
 async function getArtwork(request, env, objectKey) {
-  if (!env.ARTWORK_BUCKET || !isValidArtworkObjectKey(objectKey)) {
+  if (!env.ARTWORK_BUCKET || (!isValidArtworkObjectKey(objectKey) && !isValidTinyFramePrintSheetKey(objectKey))) {
     return new Response('Not found', { status: 404 });
   }
   const object = await env.ARTWORK_BUCKET.get(objectKey);
@@ -985,11 +1204,41 @@ async function markUploadSessionsPaid(session, env) {
     const manifest = await readR2Json(object);
     if (!manifest) throw new Error(`Upload session ${uploadSessionId} has an invalid manifest`);
     if (manifest.status === 'paid') continue;
+    const paidAt = new Date().toISOString();
+    const printSheetObjectKey = String(manifest.print_sheet_object_key || '');
+    if (printSheetObjectKey) {
+      const printSheet = await env.ARTWORK_BUCKET.get(printSheetObjectKey);
+      if (!printSheet) throw new Error(`Print sheet for ${uploadSessionId} could not be found`);
+      await env.ARTWORK_BUCKET.put(printSheetObjectKey, printSheet.body, {
+        httpMetadata: { contentType:'application/pdf' },
+        customMetadata: {
+          ...(printSheet.customMetadata || {}),
+          status:'paid',
+          paid_at:paidAt,
+          ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
+        }
+      });
+    }
+    for (const original of Array.isArray(manifest.originals) ? manifest.originals : []) {
+      const originalObjectKey = String(original?.objectKey || '');
+      if (!originalObjectKey.startsWith(`${getTinyFrameUploadPrefix(uploadSessionId)}originals/`)) continue;
+      const originalObject = await env.ARTWORK_BUCKET.get(originalObjectKey);
+      if (!originalObject) throw new Error(`Original picture for ${uploadSessionId} could not be found`);
+      await env.ARTWORK_BUCKET.put(originalObjectKey, originalObject.body, {
+        httpMetadata:{ contentType:String(original.contentType || 'application/octet-stream') },
+        customMetadata:{
+          ...(originalObject.customMetadata || {}),
+          status:'paid',
+          paid_at:paidAt,
+          ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
+        }
+      });
+    }
     await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
       ...manifest,
       status:'paid',
       ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {}),
-      paid_at:new Date().toISOString()
+      paid_at:paidAt
     }), {
       httpMetadata: { contentType:'application/json' }
     });
