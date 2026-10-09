@@ -360,9 +360,26 @@
     .cart-action:not(.cart-action--primary) { margin-top:5px; padding:8px 12px !important; border:0 !important; color:var(--muted); font-size:9px; font-weight:500; }
     .cart-action:hover { opacity:.72; }
     .cart-action:disabled { cursor:not-allowed; opacity:.42; }
+    .checkout-result-dialog { width:min(680px,calc(100% - 56px)); max-width:none; height:min(600px,calc(100vh - 48px)); height:min(600px,calc(100dvh - 48px)); max-height:calc(100vh - 48px); max-height:calc(100dvh - 48px); margin:auto; padding:0; overflow:hidden; border:1px solid var(--divider); border-radius:22px; background:var(--cream); color:var(--brown); }
+    .checkout-result-dialog::backdrop { background:rgba(60,42,33,.27); }
+    .checkout-result-shell { display:flex; flex-direction:column; width:100%; min-width:0; height:100%; min-height:0; padding:44px; overflow:hidden; overscroll-behavior:contain; }
+    .checkout-result-header { display:flex; flex:none; justify-content:flex-end; align-items:center; min-width:0; min-height:30px; padding-bottom:22px; border-bottom:1px solid var(--divider); }
+    .checkout-result-close { display:grid; place-items:center; width:32px; height:32px; margin:-6px -6px -6px 0; padding:0 !important; border:0 !important; font-size:21px; font-weight:300; line-height:1; }
+    .checkout-result-close:focus { outline:none; }
+    .checkout-result-close:focus-visible { border-radius:50%; box-shadow:0 0 0 1px var(--divider); }
+    .checkout-result-layout { display:flex; flex:1; min-width:0; min-height:0; flex-direction:column; }
+    .checkout-result-content { display:flex; flex:1; min-width:0; min-height:0; flex-direction:column; align-items:center; justify-content:center; padding:30px 0; text-align:center; }
+    .checkout-result-icon { display:grid; place-items:center; width:38px; height:38px; margin-bottom:22px; border:1px solid var(--divider); border-radius:50%; color:var(--brown); }
+    .checkout-result-icon svg { display:block; width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+    .checkout-result-title { max-width:100%; margin:0 0 16px; font-family:var(--font-heading); font-size:21px; font-synthesis:none; font-weight:400; letter-spacing:.06em; line-height:1.15; overflow-wrap:anywhere; text-transform:uppercase; }
+    .checkout-result-message { max-width:38ch; margin:0; color:var(--muted); font-size:11px; letter-spacing:.025em; line-height:1.65; }
+    .checkout-result-actions { flex:none; width:100%; min-width:0; padding-top:20px; }
+    .checkout-result-actions[hidden] { display:none; }
     @media (max-width:1100px) {
       #cart-dialog { width:min(540px,91vw); height:min(560px,calc(100vh - 28px)); height:min(560px,calc(100dvh - 28px)); max-height:calc(100vh - 28px); max-height:calc(100dvh - 28px); border-radius:16px; }
+      .checkout-result-dialog { width:min(540px,91vw); height:min(560px,calc(100vh - 28px)); height:min(560px,calc(100dvh - 28px)); max-height:calc(100vh - 28px); max-height:calc(100dvh - 28px); border-radius:16px; }
       .cart-dialog-shell { padding:30px 28px max(26px,env(safe-area-inset-bottom)); }
+      .checkout-result-shell { padding:30px 28px max(26px,env(safe-area-inset-bottom)); }
       .cart-dialog-header { padding-bottom:19px; }
       .cart-items { min-height:0; }
       .cart-item { grid-template-columns:minmax(0,1fr) max-content; gap:16px; padding:24px 0; }
@@ -383,7 +400,11 @@
     }
     @media (max-width:480px) {
       #cart-dialog { width:calc(100% - 20px); }
+      .checkout-result-dialog { width:calc(100% - 20px); }
       .cart-dialog-shell { padding-top:24px; padding-right:max(20px,env(safe-area-inset-right)); padding-bottom:max(22px,env(safe-area-inset-bottom)); padding-left:max(20px,env(safe-area-inset-left)); }
+      .checkout-result-shell { padding-top:24px; padding-right:max(20px,env(safe-area-inset-right)); padding-bottom:max(22px,env(safe-area-inset-bottom)); padding-left:max(20px,env(safe-area-inset-left)); }
+      .checkout-result-content { padding:24px 0; }
+      .checkout-result-message { font-size:10px; }
       .cart-dialog-header { gap:12px; }
       .cart-item { gap:12px; }
       .cart-item-aside { min-width:44px; }
@@ -807,6 +828,32 @@
           <button class="cart-action cart-action--primary" id="checkout-button" type="button">Checkout</button>
           <button class="cart-action" id="continue-shopping" type="button">Continue Shopping</button>
         </aside>
+      </div>
+    </div>
+  </dialog>
+  <dialog class="checkout-result-dialog" id="checkout-confirmed-dialog" aria-labelledby="checkout-confirmed-title">
+    <div class="checkout-result-shell">
+      <header class="checkout-result-header"><form method="dialog"><button class="checkout-result-close" aria-label="Close order confirmation">×</button></form></header>
+      <div class="checkout-result-layout">
+        <div class="checkout-result-content" aria-live="polite">
+          <span class="checkout-result-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.4 3.4 7.6-8"/></svg></span>
+          <h2 class="checkout-result-title" id="checkout-confirmed-title">Confirming Order</h2>
+          <p class="checkout-result-message" id="checkout-confirmed-message">We’re securely confirming your payment.</p>
+        </div>
+        <div class="checkout-result-actions" id="checkout-confirmed-actions" hidden><button class="cart-action cart-action--primary" id="checkout-confirmed-continue" type="button">Continue Shopping</button></div>
+      </div>
+    </div>
+  </dialog>
+  <dialog class="checkout-result-dialog" id="checkout-unsuccessful-dialog" aria-labelledby="checkout-unsuccessful-title">
+    <div class="checkout-result-shell">
+      <header class="checkout-result-header"><form method="dialog"><button class="checkout-result-close" aria-label="Close checkout message">×</button></form></header>
+      <div class="checkout-result-layout">
+        <div class="checkout-result-content">
+          <span class="checkout-result-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 7.5v6"/><path d="M12 17h.01"/></svg></span>
+          <h2 class="checkout-result-title" id="checkout-unsuccessful-title">Checkout Unsuccessful</h2>
+          <p class="checkout-result-message">Your payment wasn't completed. Your items are still waiting in your cart.</p>
+        </div>
+        <div class="checkout-result-actions"><button class="cart-action cart-action--primary" id="checkout-try-again" type="button">Try Again</button><button class="cart-action" id="checkout-unsuccessful-continue" type="button">Continue Shopping</button></div>
       </div>
     </div>
   </dialog>
@@ -1771,6 +1818,19 @@
         }))
       });
     }
+    function getStoredCheckoutContext() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(CHECKOUT_REQUEST_STORAGE_KEY) || "null");
+        if (!/^co_[a-f0-9]{32}$/.test(String(stored?.id || "")) || typeof stored?.fingerprint !== "string") return null;
+        const fingerprintItems = JSON.parse(stored.fingerprint);
+        const cartItemIds = Array.isArray(fingerprintItems)
+          ? fingerprintItems.map((item) => String(item?.cartItemId || "")).filter((id) => /^ci_[a-f0-9]{32}$/.test(id))
+          : [];
+        return { ...stored, cartItemIds };
+      } catch {
+        return null;
+      }
+    }
     function getCheckoutRequestId() {
       const fingerprint = JSON.stringify(cartItems.map((item) => ({
         cartItemId:item.cartItemId,
@@ -1779,14 +1839,14 @@
         quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
         uploadReference:item.uploadSessionId || item.uploadReference || ""
       })));
-      try {
-        const stored = JSON.parse(localStorage.getItem(CHECKOUT_REQUEST_STORAGE_KEY) || "null");
-        if (stored?.fingerprint === fingerprint && /^co_[a-f0-9]{32}$/.test(String(stored?.id || ""))) {
-          return stored.id;
-        }
-      } catch {}
+      const stored = getStoredCheckoutContext();
+      if (stored?.fingerprint === fingerprint) return stored.id;
       const id = createCheckoutRequestId();
-      localStorage.setItem(CHECKOUT_REQUEST_STORAGE_KEY, JSON.stringify({ id, fingerprint }));
+      localStorage.setItem(CHECKOUT_REQUEST_STORAGE_KEY, JSON.stringify({
+        id,
+        fingerprint,
+        cartItemIds:cartItems.map((item) => item.cartItemId)
+      }));
       return id;
     }
     async function createFullResolutionPrintCrop(entry, pictureNumber) {
@@ -2140,6 +2200,11 @@
     });
 
     const cart = document.getElementById("cart-dialog");
+    const checkoutConfirmedDialog = document.getElementById("checkout-confirmed-dialog");
+    const checkoutUnsuccessfulDialog = document.getElementById("checkout-unsuccessful-dialog");
+    const checkoutConfirmedTitle = document.getElementById("checkout-confirmed-title");
+    const checkoutConfirmedMessage = document.getElementById("checkout-confirmed-message");
+    const checkoutConfirmedActions = document.getElementById("checkout-confirmed-actions");
     let cartPageScrollState = null;
 
     function lockPageForCart() {
@@ -2200,6 +2265,60 @@
       }
     }
 
+    function openCheckoutResultDialog(dialog) {
+      if (dialog.open) return;
+      lockPageForCart();
+      try {
+        dialog.showModal();
+      } catch (error) {
+        unlockPageForCart();
+        throw error;
+      }
+    }
+
+    function setCheckoutConfirmationState(state) {
+      if (state === "confirmed") {
+        checkoutConfirmedTitle.textContent = "Order Confirmed";
+        checkoutConfirmedMessage.textContent = "Thank you for your order. Your tiny frames are on their way to becoming something special.";
+        checkoutConfirmedActions.hidden = false;
+        return;
+      }
+      if (state === "pending") {
+        checkoutConfirmedTitle.textContent = "Confirmation Pending";
+        checkoutConfirmedMessage.textContent = "Your payment is still being confirmed. Your cart will stay safely in place until confirmation is complete.";
+        checkoutConfirmedActions.hidden = false;
+        return;
+      }
+      checkoutConfirmedTitle.textContent = "Confirming Order";
+      checkoutConfirmedMessage.textContent = "We’re securely confirming your payment.";
+      checkoutConfirmedActions.hidden = true;
+    }
+
+    function clearPurchasedCartItems(checkoutContext) {
+      const purchasedIds = new Set(checkoutContext?.cartItemIds || []);
+      if (!purchasedIds.size) return;
+      const remainingItems = cartItems.filter((item) => !purchasedIds.has(item.cartItemId));
+      cartItems.splice(0, cartItems.length, ...remainingItems);
+      saveCart();
+      localStorage.removeItem(CHECKOUT_REQUEST_STORAGE_KEY);
+      renderCart();
+    }
+
+    async function showUnsuccessfulCheckout() {
+      if (checkoutConfirmedDialog.open) {
+        checkoutConfirmedDialog.close();
+        await new Promise((resolve) => window.setTimeout(resolve, 0));
+      }
+      openCheckoutResultDialog(checkoutUnsuccessfulDialog);
+    }
+
+    function cleanCheckoutReturnUrl(url) {
+      url.searchParams.delete("checkout");
+      url.searchParams.delete("session_id");
+      url.hash = "";
+      history.replaceState(null, "", `${url.pathname}${url.search}`);
+    }
+
     async function handleCheckoutReturn() {
       const url = new URL(window.location.href);
       const checkoutState = url.searchParams.get("checkout");
@@ -2207,38 +2326,58 @@
         if (location.hash === "#cart") openCart();
         return;
       }
+      const sessionId = url.searchParams.get("session_id") || "";
+      const checkoutContext = getStoredCheckoutContext();
+      cleanCheckoutReturnUrl(url);
       if (checkoutState === "cancelled") {
-        cartNotice = "Checkout was cancelled. Your cart has been kept for you.";
-        openCart();
+        await showUnsuccessfulCheckout();
       } else if (checkoutState === "success") {
-        const sessionId = url.searchParams.get("session_id") || "";
+        setCheckoutConfirmationState("confirming");
+        openCheckoutResultDialog(checkoutConfirmedDialog);
         try {
-          const response = await fetch(`${checkoutApiBaseUrl}/checkout-session-status?session_id=${encodeURIComponent(sessionId)}`);
-          const result = await response.json().catch(() => ({}));
-          if (!response.ok || result.paymentStatus !== "paid") {
-            throw new Error(result.error || "Payment confirmation is still pending.");
+          if (!checkoutContext?.id) throw new Error("Checkout details are unavailable.");
+          let result = null;
+          for (let attempt = 0; attempt < 6; attempt += 1) {
+            const parameters = new URLSearchParams({
+              session_id:sessionId,
+              checkout_request_id:checkoutContext.id
+            });
+            const response = await fetch(`${checkoutApiBaseUrl}/checkout-session-status?${parameters}`);
+            result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || "Payment confirmation could not be verified.");
+            if (result.outcome === "confirmed") {
+              clearPurchasedCartItems(checkoutContext);
+              setCheckoutConfirmationState("confirmed");
+              return;
+            }
+            if (result.outcome === "failed") {
+              await showUnsuccessfulCheckout();
+              return;
+            }
+            if (attempt < 5) await new Promise((resolve) => window.setTimeout(resolve, 1500));
           }
-          cartItems.splice(0, cartItems.length);
-          saveCart();
-          localStorage.removeItem(CHECKOUT_REQUEST_STORAGE_KEY);
-          cartNotice = `Thank you — your order is confirmed${result.orderReference ? ` (${result.orderReference})` : ""}.`;
         } catch (error) {
           console.error("Checkout confirmation failed", error);
-          cartNotice = `${error.message} Your cart has not been cleared.`;
         }
-        openCart();
+        setCheckoutConfirmationState("pending");
       }
-      url.searchParams.delete("checkout");
-      url.searchParams.delete("session_id");
-      url.hash = "";
-      history.replaceState(null, "", `${url.pathname}${url.search}`);
     }
 
     cart.addEventListener("close", unlockPageForCart);
+    checkoutConfirmedDialog.addEventListener("close", unlockPageForCart);
+    checkoutUnsuccessfulDialog.addEventListener("close", unlockPageForCart);
     cart.addEventListener("click", (event) => { if (event.target === cart) cart.close(); });
+    checkoutConfirmedDialog.addEventListener("click", (event) => { if (event.target === checkoutConfirmedDialog) checkoutConfirmedDialog.close(); });
+    checkoutUnsuccessfulDialog.addEventListener("click", (event) => { if (event.target === checkoutUnsuccessfulDialog) checkoutUnsuccessfulDialog.close(); });
     cartLink.addEventListener("click", (event) => { event.preventDefault(); openCart(); });
     cartCurrencySelect.addEventListener("change", () => { void selectCartCurrency(cartCurrencySelect.value); });
     document.getElementById("continue-shopping").addEventListener("click", () => { cart.close(); history.replaceState(null, "", location.pathname); });
+    document.getElementById("checkout-confirmed-continue").addEventListener("click", () => checkoutConfirmedDialog.close());
+    document.getElementById("checkout-unsuccessful-continue").addEventListener("click", () => checkoutUnsuccessfulDialog.close());
+    document.getElementById("checkout-try-again").addEventListener("click", () => {
+      checkoutUnsuccessfulDialog.close();
+      window.setTimeout(openCart, 0);
+    });
     document.getElementById("checkout-button").addEventListener("click", startCheckout);
     renderCart();
     handleCheckoutReturn();

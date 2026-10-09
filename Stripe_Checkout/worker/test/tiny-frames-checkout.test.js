@@ -40,6 +40,14 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /productCode:attempt\.productCode/);
   assert.match(html, /\.image-remove-button \{[^}]*top:4px; right:4px;[^}]*transform:none;/);
   assert.doesNotMatch(html, /\.image-remove-button \{[^}]*translate\(50%,-50%\)/);
+  assert.match(html, /id="checkout-confirmed-dialog"/);
+  assert.match(html, /id="checkout-unsuccessful-dialog"/);
+  assert.match(html, /Thank you for your order\. Your tiny frames are on their way to becoming something special\./);
+  assert.match(html, /Your payment wasn't completed\. Your items are still waiting in your cart\./);
+  assert.match(html, /result\.outcome === "confirmed"/);
+  assert.match(html, /result\.outcome === "failed"/);
+  assert.match(html, /clearPurchasedCartItems\(checkoutContext\)/);
+  assert.match(html, /checkout_request_id:checkoutContext\.id/);
   assert.match(html, /title\.textContent = `\$\{item\.colour\} · \$\{normalizeOrderType\(item\.order\) === "frame-plus-pictures" \? "Frame \+ 8 Pictures" : "Frame Only"\}`;/);
   assert.doesNotMatch(html, /title\.textContent[^;]+item\.productCode/);
   assert.doesNotMatch(html, /product identification code could not be verified/i);

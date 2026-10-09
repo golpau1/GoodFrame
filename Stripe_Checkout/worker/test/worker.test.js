@@ -211,6 +211,65 @@ test('test mode rejects live Checkout session IDs before contacting Stripe', asy
   }
 });
 
+test('checkout return status securely distinguishes confirmed, processing, and failed payments', async () => {
+  const originalFetch = globalThis.fetch;
+  const checkoutRequestId = 'co_0123456789abcdef0123456789abcdef';
+  const cases = [
+    { paymentStatus:'paid', paymentIntentStatus:'succeeded', sessionStatus:'complete', outcome:'confirmed' },
+    { paymentStatus:'unpaid', paymentIntentStatus:'processing', sessionStatus:'complete', outcome:'processing' },
+    { paymentStatus:'unpaid', paymentIntentStatus:'requires_payment_method', sessionStatus:'complete', outcome:'failed' }
+  ];
+  try {
+    for (const [index, checkoutCase] of cases.entries()) {
+      globalThis.fetch = async url => {
+        assert.equal(new URL(url).searchParams.get('expand[]'), 'payment_intent');
+        return Response.json({
+          id:`cs_test_status${index}`,
+          status:checkoutCase.sessionStatus,
+          payment_status:checkoutCase.paymentStatus,
+          payment_intent:{ status:checkoutCase.paymentIntentStatus },
+          metadata:{ checkout_request_id:checkoutRequestId }
+        });
+      };
+      const parameters = new URLSearchParams({
+        session_id:`cs_test_status${index}`,
+        checkout_request_id:checkoutRequestId
+      });
+      const response = await worker.fetch(new Request(
+        `https://worker.example/checkout-session-status?${parameters}`,
+        { headers:{ Origin:ORIGIN } }
+      ), env());
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.outcome, checkoutCase.outcome);
+      assert.equal(result.checkoutRequestId, checkoutRequestId);
+      assert.equal(result.paymentIntentStatus, checkoutCase.paymentIntentStatus);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('checkout return status rejects a session belonging to another cart', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    id:'cs_test_wrongcart',
+    status:'complete',
+    payment_status:'paid',
+    payment_intent:{ status:'succeeded' },
+    metadata:{ checkout_request_id:'co_ffffffffffffffffffffffffffffffff' }
+  });
+  try {
+    const response = await worker.fetch(new Request(
+      'https://worker.example/checkout-session-status?session_id=cs_test_wrongcart&checkout_request_id=co_0123456789abcdef0123456789abcdef',
+      { headers:{ Origin:ORIGIN } }
+    ), env());
+    assert.equal(response.status, 403);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 function createStripeSignature(body, secret, timestamp = Math.floor(Date.now() / 1000)) {
   const signature = createHmac('sha256', secret)
     .update(`${timestamp}.${body}`)

@@ -1864,13 +1864,20 @@ async function getCheckoutSessionStatus(request, env) {
   if (!getAllowedOrigin(request, env)) {
     return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
   }
-  const sessionId = new URL(request.url).searchParams.get('session_id') || '';
+  const statusRequestUrl = new URL(request.url);
+  const sessionId = statusRequestUrl.searchParams.get('session_id') || '';
+  const checkoutRequestId = normalizeCheckoutRequestId(statusRequestUrl.searchParams.get('checkout_request_id'));
   const expectedSessionPrefix = stripeConfiguration.mode === 'live' ? 'cs_live_' : 'cs_test_';
   if (!sessionId.startsWith(expectedSessionPrefix) || !/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(sessionId)) {
     return jsonResponse(request, env, { error: 'Checkout session is invalid' }, 400);
   }
+  if (!checkoutRequestId) {
+    return jsonResponse(request, env, { error: 'Checkout request identity is invalid' }, 400);
+  }
 
-  const stripeResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+  const stripeStatusUrl = new URL(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`);
+  stripeStatusUrl.searchParams.set('expand[]', 'payment_intent');
+  const stripeResponse = await fetch(stripeStatusUrl, {
     headers: { Authorization: `Bearer ${stripeConfiguration.secretKey}` }
   });
   const stripeResult = await stripeResponse.json().catch(() => ({}));
@@ -1882,10 +1889,28 @@ async function getCheckoutSessionStatus(request, env) {
     });
     return jsonResponse(request, env, { error: 'Checkout confirmation could not be verified' }, 502);
   }
+  if (stripeResult?.metadata?.checkout_request_id !== checkoutRequestId) {
+    return jsonResponse(request, env, { error:'Checkout session does not match this cart' }, 403);
+  }
+
+  const paymentIntent = stripeResult?.payment_intent && typeof stripeResult.payment_intent === 'object'
+    ? stripeResult.payment_intent
+    : null;
+  const paymentIntentStatus = cleanText(paymentIntent?.status, '');
+  const paymentStatus = cleanText(stripeResult.payment_status, '');
+  const sessionStatus = cleanText(stripeResult.status, '');
+  const outcome = paymentStatus === 'paid' || paymentStatus === 'no_payment_required'
+    ? 'confirmed'
+    : sessionStatus === 'expired' || ['canceled', 'requires_payment_method'].includes(paymentIntentStatus)
+      ? 'failed'
+      : 'processing';
 
   return jsonResponse(request, env, {
-    status: stripeResult.status,
-    paymentStatus: stripeResult.payment_status,
+    status:sessionStatus,
+    paymentStatus,
+    paymentIntentStatus,
+    outcome,
+    checkoutRequestId,
     orderReference: stripeResult.client_reference_id
       ? `#GF-${stripeResult.client_reference_id}`
       : `#GF-${sessionId.slice(-8).toUpperCase()}`
