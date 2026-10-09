@@ -2049,7 +2049,7 @@
         details.className = "cart-item-details";
         const title = document.createElement("h3");
         title.className = "cart-item-title";
-        title.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}${item.productCode ? ` · ${item.productCode}` : ""}`;
+        title.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}`;
         details.append(title);
         const aside = document.createElement("div");
         aside.className = "cart-item-aside";
