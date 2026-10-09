@@ -1610,6 +1610,13 @@
     function createCheckoutRequestId() {
       return createClientIdentity("co");
     }
+    function createProductCode() {
+      const range = 90000;
+      const maximumUnbiasedValue = Math.floor(0x100000000 / range) * range;
+      const values = new Uint32Array(1);
+      do { crypto.getRandomValues(values); } while (values[0] >= maximumUnbiasedValue);
+      return String(10000 + (values[0] % range));
+    }
     let cartIdentityWasMigrated = false;
     const cartItems = (() => {
       try {
@@ -1814,7 +1821,7 @@
         printUploadAttempt = {
           fingerprint,
           cartItemId:createCartItemId(),
-          reservation:null,
+          productCode:createProductCode(),
           pdfBlob:null,
           promise:null,
           result:null
@@ -1877,42 +1884,47 @@
           return result;
         };
         try {
-          if (!attempt.reservation) {
-            attempt.reservation = await requestUploadStage("/tiny-frame-pdf/reserve", {
-              method:"POST",
-              headers:{ "Content-Type":"application/json" },
-              body:JSON.stringify({ cartItemId:attempt.cartItemId, frameColour })
-            }, "reserving_product_code");
-          }
-          const { productCode, filename, objectKey } = attempt.reservation;
-          if (!/^[1-9][0-9]{4}$/.test(String(productCode || "")) || filename !== `${productCode}-print-sheet.pdf`) {
-            throw new Error("The product identification code could not be verified.");
-          }
-          if (!attempt.pdfBlob) {
-            const printCrops = [];
-            for (let index = 0; index < entries.length; index += 1) {
-              printCrops.push(await createFullResolutionPrintCrop(entries[index], index + 1));
+          for (let codeAttempt = 0; codeAttempt < 5; codeAttempt += 1) {
+            if (!attempt.pdfBlob) {
+              const printCrops = [];
+              for (let index = 0; index < entries.length; index += 1) {
+                printCrops.push(await createFullResolutionPrintCrop(entries[index], index + 1));
+              }
+              attempt.pdfBlob = await globalThis.GoodFramePrintSheet.createA4PrintSheetPdf(printCrops, {
+                productCode:attempt.productCode
+              });
+              if (attempt.pdfBlob.size > 95 * 1024 * 1024) {
+                attempt.pdfBlob = null;
+                throw new Error("The full-quality print sheet exceeds the upload limit. Please contact us for help with this order.");
+              }
             }
-            attempt.pdfBlob = await globalThis.GoodFramePrintSheet.createA4PrintSheetPdf(printCrops, { productCode });
-            if (attempt.pdfBlob.size > 95 * 1024 * 1024) {
+            const form = new FormData();
+            form.append("cart_item_id", attempt.cartItemId);
+            form.append("product_code", attempt.productCode);
+            form.append("frame_colour", frameColour);
+            form.append("pdf", attempt.pdfBlob, `${attempt.productCode}-print-sheet.pdf`);
+            let result;
+            try {
+              result = await requestUploadStage("/tiny-frame-pdf/upload", { method:"POST", body:form }, "uploading_pdf");
+            } catch (error) {
+              if (error?.code !== "PRODUCT_CODE_COLLISION" || codeAttempt === 4) throw error;
+              attempt.productCode = createProductCode();
               attempt.pdfBlob = null;
-              throw new Error("The full-quality print sheet exceeds the upload limit. Please contact us for help with this order.");
+              continue;
             }
+            const productCode = String(result.productCode || "");
+            const objectKey = String(result.pdf?.objectKey || "");
+            if (productCode !== attempt.productCode || objectKey !== `${productCode}/${productCode}-print-sheet.pdf`) {
+              throw new Error("The print sheet was uploaded but its product reference was missing. Please try again.");
+            }
+            return {
+              uploadSessionId:objectKey,
+              printSheetReference:objectKey,
+              cartItemId:attempt.cartItemId,
+              productCode
+            };
           }
-          const form = new FormData();
-          form.append("cart_item_id", attempt.cartItemId);
-          form.append("product_code", productCode);
-          form.append("pdf", attempt.pdfBlob, filename);
-          const result = await requestUploadStage("/tiny-frame-pdf/upload", { method:"POST", body:form }, "uploading_pdf");
-          if (result.productCode !== productCode || result.pdf?.objectKey !== objectKey) {
-            throw new Error("The uploaded print sheet could not be verified.");
-          }
-          return {
-            uploadSessionId:objectKey,
-            printSheetReference:objectKey,
-            cartItemId:attempt.cartItemId,
-            productCode
-          };
+          throw new Error("A unique product reference could not be assigned. Please try again.");
         } finally {
           window.clearTimeout(timeout);
         }
@@ -1923,6 +1935,28 @@
       } finally {
         attempt.promise = null;
       }
+    }
+    async function assignProductCode(cartItemId, frameColour, productType) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const productCode = createProductCode();
+        let response;
+        try {
+          response = await fetch(`${checkoutApiBaseUrl}/product-code/assign`, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ cartItemId, frameColour, productType, productCode })
+          });
+        } catch {
+          throw new Error("The product service could not be reached. Please try again.");
+        }
+        const result = await response.json().catch(() => ({}));
+        if (response.status === 409 && result.code === "PRODUCT_CODE_COLLISION") continue;
+        if (!response.ok || result.productCode !== productCode) {
+          throw new Error(result.error || "A product reference could not be assigned. Please try again.");
+        }
+        return productCode;
+      }
+      throw new Error("A unique product reference could not be assigned. Please try again.");
     }
     async function registerArtworkManifest(uploadReference, artworkObjectKeys) {
       if (!/^tf_[a-f0-9]{32}$/.test(uploadReference) || artworkObjectKeys.length !== 8) {
@@ -1987,6 +2021,7 @@
               size:"80x80mm",
               frameColour:item.colour,
               quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
+              productCode:item.productCode || "",
               uploadReference:item.uploadSessionId || item.uploadReference || ""
             }))
           })
@@ -2028,7 +2063,7 @@
         details.className = "cart-item-details";
         const title = document.createElement("h3");
         title.className = "cart-item-title";
-        title.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}`;
+        title.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}${item.productCode ? ` · ${item.productCode}` : ""}`;
         details.append(title);
         const aside = document.createElement("div");
         aside.className = "cart-item-aside";
@@ -2067,9 +2102,10 @@
       purchaseButton.disabled = true;
       const withPictures = orderType === "frame-plus-pictures";
       document.getElementById("purchase-label").textContent = withPictures ? "PREPARING PRINTS…" : "ADDING…";
-      if (!withPictures) openCart();
       try {
         let uploadSession = null;
+        let cartItemId = createCartItemId();
+        let productCode = "";
         if (withPictures) {
           document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
           uploadSession = await uploadPrintSheet(uploadedImages, selections.colour);
@@ -2077,10 +2113,15 @@
             openCart();
             return;
           }
+          cartItemId = uploadSession.cartItemId;
+          productCode = uploadSession.productCode;
+        } else {
+          productCode = await assignProductCode(cartItemId, selections.colour, "tiny_frame_only");
         }
         const cartItem = {
           id:Date.now(),
-          cartItemId:uploadSession?.cartItemId || createCartItemId(),
+          cartItemId,
+          productCode,
           colour:selections.colour,
           order:selections.order,
           price:orderPrice,
@@ -2089,15 +2130,14 @@
             productType:"frame_8_pictures",
             frameColour:selections.colour.toLowerCase(),
             uploadSessionId:uploadSession.uploadSessionId,
-            printSheetReference:uploadSession.printSheetReference,
-            productCode:uploadSession.productCode
+            printSheetReference:uploadSession.printSheetReference
           } : {})
         };
         cartItems.push(cartItem);
         saveCart();
         window.goodFrameCartItem = cartItem;
         renderCart();
-        if (withPictures) openCart();
+        openCart();
       } catch (error) {
         console.error("Add to cart failed", {
           stage:withPictures ? "picture_upload" : "cart_update",

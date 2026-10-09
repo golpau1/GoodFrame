@@ -120,8 +120,8 @@
       throw new Error("Exactly 8 saved crops are required to prepare the print sheet.");
     }
     productCode = String(productCode || "");
-    if (!/^[1-9][0-9]{4}$/.test(productCode)) {
-      throw new Error("A valid five-digit product code is required to prepare the print sheet.");
+    if (productCode && !/^[1-9][0-9]{4}$/.test(productCode)) {
+      throw new Error("Product code must contain exactly five digits.");
     }
 
     const images = [];
@@ -148,20 +148,21 @@
     const cutMarkCommands = includeCutMarks
       ? ["0.72 G", `${number(GUIDE_WIDTH_POINTS)} w`, ...placements.map(createCutMarkCommands)]
       : [];
-    const labelCommands = [
+    const labelCommands = productCode ? [
       "0 G",
       `BT /F1 ${number(PRODUCT_CODE_LABEL_FONT_SIZE_POINTS)} Tf 1 0 0 1 ${number(82 * MM_TO_POINTS)} ${number(PRODUCT_CODE_LABEL_BASELINE_MM * MM_TO_POINTS)} Tm (PRODUCT ${productCode}) Tj ET`
-    ];
+    ] : [];
     const contentBytes = bytesFromText([...imageCommands, ...cutMarkCommands, ...labelCommands].join("\n"));
 
     const objects = [];
     objects[1] = bytesFromText("<< /Type /Catalog /Pages 2 0 R >>");
     objects[2] = bytesFromText("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
     const imageObjectNumbers = images.map((_, index) => index + 5);
-    const fontObjectNumber = 5 + images.length;
+    const fontObjectNumber = productCode ? 5 + images.length : null;
     const xObjects = images.map((_, index) => `/Im${index + 1} ${imageObjectNumbers[index]} 0 R`).join(" ");
+    const fontResources = fontObjectNumber ? ` /Font << /F1 ${fontObjectNumber} 0 R >>` : "";
     objects[3] = bytesFromText(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /Text /ImageC] /XObject << ${xObjects} >> /Font << /F1 ${fontObjectNumber} 0 R >> >> /Contents 4 0 R >>`
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /Text /ImageC] /XObject << ${xObjects} >>${fontResources} >> /Contents 4 0 R >>`
     );
     objects[4] = concatenate([
       bytesFromText(`<< /Length ${contentBytes.length} >>\nstream\n`),
@@ -177,7 +178,9 @@
         bytesFromText("\nendstream")
       ];
     });
-    objects[fontObjectNumber] = bytesFromText("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+    if (fontObjectNumber) {
+      objects[fontObjectNumber] = bytesFromText("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+    }
 
     const header = new Uint8Array([
       ...bytesFromText("%PDF-1.4\n%"),

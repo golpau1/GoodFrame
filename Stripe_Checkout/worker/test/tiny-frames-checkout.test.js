@@ -26,13 +26,14 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /if \(printUploadAttempt\.promise\) return printUploadAttempt\.promise;/);
   assert.match(html, /cartItems\.some\(\(item\) => item\.uploadSessionId === uploadSession\.uploadSessionId\)/);
   assert.match(html, /controller\.abort\(\), 600000/);
-  assert.match(html, /\/tiny-frame-pdf\/reserve/);
+  assert.doesNotMatch(html, /requestUploadStage\("\/tiny-frame-pdf\/reserve/);
   assert.match(html, /\/tiny-frame-pdf\/upload/);
+  assert.match(html, /\/product-code\/assign/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);
   assert.match(html, /createFullResolutionPrintCrop/);
-  assert.match(html, /createA4PrintSheetPdf\(printCrops, \{ productCode \}\)/);
-  assert.match(html, /filename !== `\$\{productCode\}-print-sheet\.pdf`/);
+  assert.match(html, /productCode:attempt\.productCode/);
+  assert.doesNotMatch(html, /product identification code could not be verified/i);
 });
 
 test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () => {
@@ -131,6 +132,14 @@ function reserveProductPdfRequest(cartItemId = pictureCartItemId) {
   });
 }
 
+function assignProductCodeRequest(cartItemId, productType = 'tiny_frame_only', productCode = '58321') {
+  return new Request('https://worker.example/product-code/assign', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ cartItemId, frameColour:'Oak', productType, productCode })
+  });
+}
+
 function uploadProductPdfRequest(productCode, cartItemId = pictureCartItemId, pdfBytes = null) {
   const filename = `${productCode}-print-sheet.pdf`;
   const bytes = pdfBytes || createA4PrintSheetPdf(
@@ -148,12 +157,27 @@ function uploadProductPdfRequest(productCode, cartItemId = pictureCartItemId, pd
   });
 }
 
-async function reserveAndUploadProductPdf(env, cartItemId = pictureCartItemId) {
-  const reservedResponse = await worker.fetch(reserveProductPdfRequest(cartItemId), env);
-  assert.equal(reservedResponse.status, 200);
-  const reservation = await reservedResponse.json();
-  const uploadResponse = await worker.fetch(uploadProductPdfRequest(reservation.productCode, cartItemId), env);
-  return { reservation, uploadResponse };
+function oneStepProductPdfRequest(cartItemId = pictureCartItemId, productCode = '58321', pdfBytes = null) {
+  const bytes = pdfBytes || createA4PrintSheetPdf(
+    Array.from({ length:8 }, () => ({ bytes:fakeJpeg() })),
+    { productCode }
+  );
+  const form = new FormData();
+  form.append('cart_item_id', cartItemId);
+  form.append('product_code', productCode);
+  form.append('frame_colour', 'Oak');
+  form.append('pdf', new File([bytes], `${productCode}-print-sheet.pdf`, { type:'application/pdf' }));
+  return new Request('https://worker.example/tiny-frame-pdf/upload', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au' },
+    body:form
+  });
+}
+
+async function uploadAndAssignProductPdf(env, cartItemId = pictureCartItemId, productCode = '58321') {
+  const uploadResponse = await worker.fetch(oneStepProductPdfRequest(cartItemId, productCode), env);
+  const result = await uploadResponse.clone().json();
+  return { result, uploadResponse };
 }
 
 function frameOnly(overrides = {}) {
@@ -299,29 +323,28 @@ test('PDF-only upload stores exactly one code-named A4 print sheet', async () =>
     PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:'https://goodframe.com.au'
   };
-  const { reservation, uploadResponse } = await reserveAndUploadProductPdf(env);
+  const { result, uploadResponse } = await uploadAndAssignProductPdf(env);
   assert.equal(uploadResponse.status, 200);
-  const result = await uploadResponse.json();
   assert.equal(result.success, true);
-  assert.equal(result.productCode, reservation.productCode);
-  assert.equal(result.pdf.filename, `${reservation.productCode}-print-sheet.pdf`);
-  assert.equal(result.pdf.objectKey, `${reservation.productCode}/${reservation.productCode}-print-sheet.pdf`);
+  assert.match(result.productCode, /^[1-9][0-9]{4}$/);
+  assert.equal(result.pdf.filename, `${result.productCode}-print-sheet.pdf`);
+  assert.equal(result.pdf.objectKey, `${result.productCode}/${result.productCode}-print-sheet.pdf`);
   assert.equal(bucket.objects.size, 1);
   assert.deepEqual([...bucket.objects.keys()], [result.pdf.objectKey]);
   const stored = bucket.objects.get(result.pdf.objectKey);
   assert.equal(stored.contentType, 'application/pdf');
-  assert.equal(stored.customMetadata.product_code, reservation.productCode);
+  assert.equal(stored.customMetadata.product_code, result.productCode);
   assert.equal(stored.customMetadata.cart_item_id, pictureCartItemId);
   assert.equal(stored.customMetadata.image_count, '8');
   assert.equal(stored.customMetadata.status, 'pending');
   const text = new TextDecoder('latin1').decode(stored.bytes);
-  assert.match(text, new RegExp(`\\(PRODUCT ${reservation.productCode}\\) Tj`));
+  assert.match(text, new RegExp(`\\(PRODUCT ${result.productCode}\\) Tj`));
   assert.equal((text.match(/\/Subtype \/Image/g) || []).length, 8);
   assert.equal((text.match(/153\.070866 243\.779528 re S/g) || []).length, 8);
   database.close();
 });
 
-test('reserving and uploading retries preserve one code and one R2 object', async () => {
+test('single-request upload retries preserve one code and one R2 object', async () => {
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
   const env = {
@@ -329,14 +352,14 @@ test('reserving and uploading retries preserve one code and one R2 object', asyn
     PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:'https://goodframe.com.au'
   };
-  const firstReservation = await (await worker.fetch(reserveProductPdfRequest(), env)).json();
-  const secondReservation = await (await worker.fetch(reserveProductPdfRequest(), env)).json();
-  assert.equal(secondReservation.productCode, firstReservation.productCode);
-  const firstUpload = await worker.fetch(uploadProductPdfRequest(firstReservation.productCode), env);
+  const firstUpload = await worker.fetch(oneStepProductPdfRequest(), env);
   assert.equal(firstUpload.status, 200);
-  const retryUpload = await worker.fetch(uploadProductPdfRequest(firstReservation.productCode), env);
+  const firstResult = await firstUpload.json();
+  const retryUpload = await worker.fetch(oneStepProductPdfRequest(), env);
   assert.equal(retryUpload.status, 200);
-  assert.equal((await retryUpload.json()).retry_recovered, true);
+  const retryResult = await retryUpload.json();
+  assert.equal(retryResult.retry_recovered, true);
+  assert.equal(retryResult.productCode, firstResult.productCode);
   assert.equal(bucket.objects.size, 1);
   database.close();
 });
@@ -351,15 +374,32 @@ test('two products receive different five-digit R2 folders and code-named PDFs',
   };
   const firstCartItemId = 'ci_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   const secondCartItemId = 'ci_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-  const first = await reserveAndUploadProductPdf(env, firstCartItemId);
-  const second = await reserveAndUploadProductPdf(env, secondCartItemId);
+  const first = await uploadAndAssignProductPdf(env, firstCartItemId, '58321');
+  const second = await uploadAndAssignProductPdf(env, secondCartItemId, '19472');
   assert.equal(first.uploadResponse.status, 200);
   assert.equal(second.uploadResponse.status, 200);
-  assert.notEqual(first.reservation.productCode, second.reservation.productCode);
+  assert.notEqual(first.result.productCode, second.result.productCode);
   assert.deepEqual(new Set(bucket.objects.keys()), new Set([
-    `${first.reservation.productCode}/${first.reservation.productCode}-print-sheet.pdf`,
-    `${second.reservation.productCode}/${second.reservation.productCode}-print-sheet.pdf`
+    `${first.result.productCode}/${first.result.productCode}-print-sheet.pdf`,
+    `${second.result.productCode}/${second.result.productCode}-print-sheet.pdf`
   ]));
+  database.close();
+});
+
+test('frame-only products receive unique persistent codes in one assignment request', async () => {
+  const database = createProductCodeDatabase();
+  const env = {
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  };
+  const firstId = 'ci_cccccccccccccccccccccccccccccccc';
+  const secondId = 'ci_dddddddddddddddddddddddddddddddd';
+  const first = await (await worker.fetch(assignProductCodeRequest(firstId, 'tiny_frame_only', '58321'), env)).json();
+  const firstRetry = await (await worker.fetch(assignProductCodeRequest(firstId, 'tiny_frame_only', '58321'), env)).json();
+  const second = await (await worker.fetch(assignProductCodeRequest(secondId, 'tiny_frame_only', '19472'), env)).json();
+  assert.match(first.productCode, /^[1-9][0-9]{4}$/);
+  assert.equal(firstRetry.productCode, first.productCode);
+  assert.notEqual(second.productCode, first.productCode);
   database.close();
 });
 
@@ -405,13 +445,13 @@ test('paid Stripe sessions promote only the code-named product PDF', async () =>
     PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:'https://goodframe.com.au'
   };
-  const { reservation, uploadResponse } = await reserveAndUploadProductPdf(env);
+  const { result, uploadResponse } = await uploadAndAssignProductPdf(env);
   assert.equal(uploadResponse.status, 200);
   assert.equal(await markProductPdfFilesPaid({
     id:'cs_live_tiny_frame_paid',
-    metadata:{ product_codes:reservation.productCode }
+    metadata:{ product_codes:result.productCode }
   }, env), 1);
-  const key = `${reservation.productCode}/${reservation.productCode}-print-sheet.pdf`;
+  const key = `${result.productCode}/${result.productCode}-print-sheet.pdf`;
   const stored = bucket.objects.get(key);
   assert.equal(stored.customMetadata.status, 'paid');
   assert.equal(stored.customMetadata.stripe_checkout_session_id, 'cs_live_tiny_frame_paid');

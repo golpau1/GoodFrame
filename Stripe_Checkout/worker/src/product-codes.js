@@ -226,6 +226,42 @@ async function reserveCartProductCode(database, rawUnit, options = {}) {
     return { productCode:String(existing.code), capacity:await getProductCodeCapacity(database) };
   }
   const provisionalRequestId = `co_${unit.cartItemId.slice(3)}`;
+  const preferredCode = options.preferredCode === undefined
+    ? ''
+    : normalizeProductCode(options.preferredCode);
+  if (options.preferredCode !== undefined && !preferredCode) {
+    throw new ProductCodeError('Product code must contain exactly five digits');
+  }
+  if (preferredCode) {
+    const result = await run(
+      database,
+      `INSERT OR IGNORE INTO product_codes
+        (code, cart_item_id, unit_index, product_type, upload_session_id, checkout_request_id, status, created_at)
+       VALUES (?, ?, 0, ?, NULL, ?, 'reserved', ?)`,
+      preferredCode,
+      unit.cartItemId,
+      unit.productType,
+      provisionalRequestId,
+      new Date().toISOString()
+    );
+    if (changes(result) > 0) {
+      return { productCode:preferredCode, capacity:await getProductCodeCapacity(database) };
+    }
+    const raced = await first(
+      database,
+      'SELECT * FROM product_codes WHERE cart_item_id = ? AND unit_index = 0',
+      unit.cartItemId
+    );
+    if (raced) {
+      if (String(raced.product_type) !== unit.productType) {
+        throw new ProductCodeError('A cart product identity was reused for a different product');
+      }
+      return { productCode:String(raced.code), capacity:await getProductCodeCapacity(database) };
+    }
+    const collision = new ProductCodeError('That product code was just assigned; generating another code is required');
+    collision.code = 'PRODUCT_CODE_COLLISION';
+    throw collision;
+  }
   const allocation = await reserveProductCodes(database, [{
     ...rawUnit,
     cartItemId:unit.cartItemId,

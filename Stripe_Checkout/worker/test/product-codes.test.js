@@ -111,6 +111,23 @@ test('previous code-based PDF paths remain attached to their original products',
   database.close();
 });
 
+test('preferred cart codes use the database uniqueness constraint and report collisions', async () => {
+  const database = createProductCodeDatabase();
+  const first = await reserveCartProductCode(database, {
+    cartItemId:'ci_dddddddddddddddddddddddddddddddd',
+    productType:'tiny_frame_only'
+  }, { preferredCode:'58321' });
+  assert.equal(first.productCode, '58321');
+  await assert.rejects(
+    reserveCartProductCode(database, {
+      cartItemId:'ci_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      productType:'tiny_frame_only'
+    }, { preferredCode:'58321' }),
+    error => error instanceof ProductCodeError && error.code === 'PRODUCT_CODE_COLLISION'
+  );
+  database.close();
+});
+
 test('checkout retries preserve codes and paid Stripe relationships are searchable', async () => {
   const database = createProductCodeDatabase();
   const allocation = await reserveProductCodes(database, units(1), requestId);
