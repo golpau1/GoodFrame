@@ -209,7 +209,6 @@
     .mobile-hero-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
     .showcase-gallery { display:none; }
     .showcase-track { display:contents; }
-    .showcase-mobile-slider { display:none; }
     .showcase-item-label { display:none; }
     .brand-statement-strip { display:none; }
     .brand-statement-marquee { display:none; }
@@ -498,7 +497,7 @@
       .hero-intro-copy-mobile, .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
       .mobile-hero-cta { position:absolute; right:auto; bottom:calc(32px + env(safe-area-inset-bottom)); left:50%; z-index:3; display:grid; place-items:center; width:48px; height:48px; margin:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--light); transform:translateX(-50%); }
       .mobile-hero-cta svg { display:block; width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
-      .palette-spread { grid-template-columns:1fr; height:auto; min-height:0; overflow:visible; }
+      .palette-spread { grid-template-columns:1fr; height:auto; min-height:0; overflow-x:clip; overflow-y:visible; }
       .palette-panel { overflow:visible; }
       .palette { width:100%; max-width:340px; min-width:0; transform:scale(.95); transform-origin:center top; }
       .palette-heading-row { gap:12px; }
@@ -605,12 +604,12 @@
       .showcase-gallery::before, .showcase-gallery::after { display:none; }
       .showcase-gallery > * { position:relative; z-index:1; }
       .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
-      .showcase-sticky { position:relative; top:auto; display:block; width:100%; height:auto; min-height:0; padding:0; overflow:visible; }
+      .showcase-sticky { position:relative; top:auto; display:block; width:100%; height:auto; min-height:0; padding:0; overflow-x:clip; overflow-y:visible; }
       .showcase-collage { --stack-step:clamp(64px,9vw,92px); position:relative; display:block; width:min(calc(100% - 48px),940px); height:clamp(360px,42vw,440px); margin:0 auto; padding:0; overflow:visible; border:0; border-radius:0; cursor:default; touch-action:pan-y; }
-      .showcase-track { --swipe-offset:0px; position:relative; width:100%; height:100%; margin:0; padding:0; }
-      .showcase-photo { --card-x:0px; --card-y:0px; --card-scale:.5; position:absolute; top:50%; left:50%; z-index:1; display:flex; width:clamp(320px,45vw,430px); aspect-ratio:1; margin:0; padding:0; border:0; border-radius:0; outline:0; overflow:hidden; background:transparent; cursor:default; opacity:0; pointer-events:none; transform:translate3d(calc(-50% + var(--card-x) + var(--swipe-offset)), calc(-50% + var(--card-y)), 0) scale(var(--card-scale)); transition:transform 480ms cubic-bezier(.22,.7,.25,1), opacity 320ms ease; }
+      .showcase-track { position:relative; width:100%; height:100%; margin:0; padding:0; }
+      .showcase-photo { --card-x:0px; --card-y:0px; --card-scale:.5; position:absolute; top:50%; left:50%; z-index:1; display:flex; width:clamp(320px,45vw,430px); aspect-ratio:1; margin:0; padding:0; border:0; border-radius:0; outline:0; overflow:hidden; background:transparent; cursor:default; opacity:0; pointer-events:none; backface-visibility:hidden; transform:translate3d(calc(-50% + var(--card-x)), calc(-50% + var(--card-y)), 0) scale(var(--card-scale)); transform-origin:center; transition:transform 480ms cubic-bezier(.22,.7,.25,1), opacity 320ms ease; }
       .showcase-photo.is-recycling { transition:none; }
-      .showcase-collage.is-dragging .showcase-photo { transition:none; }
+      .showcase-collage.is-interacting .showcase-photo { transition:none; will-change:transform,opacity; }
       .showcase-photo[data-carousel-position="0"] { --card-scale:1; z-index:10; opacity:1; }
       .showcase-photo[data-carousel-position="-1"] { --card-x:calc(var(--stack-step) * -1); --card-y:10px; --card-scale:.89; z-index:8; opacity:1; }
       .showcase-photo[data-carousel-position="1"] { --card-x:var(--stack-step); --card-y:10px; --card-scale:.89; z-index:8; opacity:1; }
@@ -658,12 +657,6 @@
       /* Tablet/mobile carousel breakpoint: stacked cards with horizontal swipe navigation. */
       .showcase-gallery { width:100%; margin:0; padding:32px 0 40px; }
       .showcase-collage { display:block; }
-      .showcase-mobile-slider { --mobile-slide-width:min(76vw,360px); display:none; width:100%; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scroll-behavior:smooth; scroll-snap-type:x mandatory; scrollbar-width:none; touch-action:pan-x pan-y; -webkit-overflow-scrolling:touch; }
-      .showcase-mobile-slider::-webkit-scrollbar { display:none; width:0; height:0; }
-      .showcase-mobile-slider-track { display:flex; align-items:center; width:max-content; gap:14px; padding:8px calc((100vw - var(--mobile-slide-width))/2) 14px; }
-      .showcase-mobile-slide { position:relative; flex:0 0 var(--mobile-slide-width); width:var(--mobile-slide-width); aspect-ratio:1; overflow:hidden; border-radius:6px; background:transparent; opacity:.72; scroll-snap-align:center; scroll-snap-stop:always; transform:scale(.92); transform-origin:center; transition:opacity 180ms ease, transform 180ms ease; }
-      .showcase-mobile-slide.is-active { z-index:2; opacity:1; transform:scale(1); }
-      .showcase-mobile-slide img { display:block; width:100%; height:100%; border:0; border-radius:6px; object-fit:cover; box-shadow:none; user-select:none; -webkit-user-drag:none; }
       .showcase-control { display:none; }
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
     }
@@ -848,9 +841,6 @@
       <div class="showcase-photo showcase-photo--six" data-showcase-image="Assets/coffee/coffee-beans-scoop.jpg" aria-label="Material detail photograph"><img src="Assets/coffee/coffee-beans-scoop.jpg" alt="Warm close-up detail photograph"><span class="showcase-item-label">#06</span></div>
        </div>
        <button class="showcase-control showcase-control--next" type="button" aria-label="Next gallery image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
-      </div>
-      <div class="showcase-mobile-slider" role="region" aria-label="Swipe through gallery images" tabindex="0">
-        <div class="showcase-mobile-slider-track"></div>
       </div>
     </div>
   </section>
@@ -1142,139 +1132,14 @@
         label:photo.getAttribute("aria-label")
       }));
       const modulo = (value, length) => ((value % length) + length) % length;
-      const mobileViewport = gallery.querySelector(".showcase-mobile-slider");
-      const mobileTrack = gallery.querySelector(".showcase-mobile-slider-track");
       const mobileBreakpoint = window.matchMedia("(max-width: 1100px)");
-      let mobileSlides = [];
-      let mobileActiveIndex = sources.length * 2;
-      if (mobileViewport && mobileTrack) {
-        const repeatedSources = Array.from({ length:5 }, () => sources).flat();
-        mobileSlides = repeatedSources.map((source, index) => {
-          const slide = document.createElement("div");
-          const image = document.createElement("img");
-          slide.className = "showcase-mobile-slide";
-          slide.dataset.mobileSlideIndex = String(index);
-          slide.dataset.sourceIndex = String(index % sources.length);
-          slide.setAttribute("aria-label", source.label);
-          image.src = source.src;
-          image.alt = source.alt;
-          image.loading = index >= sources.length && index < sources.length * 4 ? "eager" : "lazy";
-          image.draggable = false;
-          slide.append(image);
-          return slide;
-        });
-        mobileTrack.replaceChildren(...mobileSlides);
-        const slideCentre = (slide) => slide.offsetLeft - (mobileViewport.clientWidth - slide.offsetWidth) / 2;
-        const nearestMobileSlideIndex = () => {
-          const viewportCentre = mobileViewport.scrollLeft + mobileViewport.clientWidth / 2;
-          let nearestIndex = mobileActiveIndex;
-          let nearestDistance = Infinity;
-          mobileSlides.forEach((slide, index) => {
-            const distance = Math.abs(slide.offsetLeft + slide.offsetWidth / 2 - viewportCentre);
-            if (distance < nearestDistance) {
-              nearestDistance = distance;
-              nearestIndex = index;
-            }
-          });
-          return nearestIndex;
-        };
-        const syncMobileAccessibility = (index) => {
-          mobileActiveIndex = index;
-          mobileSlides.forEach((slide, slideIndex) => {
-            const active = slideIndex === index;
-            slide.classList.toggle("is-active", active);
-            if (active) slide.setAttribute("aria-current", "true");
-            else slide.removeAttribute("aria-current");
-            slide.setAttribute("aria-hidden", active ? "false" : "true");
-          });
-        };
-        const jumpToMobileSlide = (index) => {
-          const slide = mobileSlides[index];
-          if (!slide) return;
-          const previousScrollBehavior = mobileViewport.style.scrollBehavior;
-          mobileViewport.style.scrollBehavior = "auto";
-          mobileViewport.scrollLeft = slideCentre(slide);
-          mobileViewport.style.scrollBehavior = previousScrollBehavior;
-          syncMobileAccessibility(index);
-        };
-        const recenterMobileLoop = () => {
-          const nearestIndex = nearestMobileSlideIndex();
-          syncMobileAccessibility(nearestIndex);
-          const centralStart = sources.length * 2;
-          const centralEnd = sources.length * 3;
-          if (nearestIndex >= centralStart && nearestIndex < centralEnd) return;
-          jumpToMobileSlide(centralStart + modulo(nearestIndex, sources.length));
-        };
-        let mobileScrollFrame = 0;
-        let mobileScrollTimer = 0;
-        let mobileMouseDrag = null;
-        mobileViewport.addEventListener("scroll", () => {
-          if (!mobileBreakpoint.matches) return;
-          if (!mobileScrollFrame) {
-            mobileScrollFrame = requestAnimationFrame(() => {
-              mobileScrollFrame = 0;
-              syncMobileAccessibility(nearestMobileSlideIndex());
-            });
-          }
-          window.clearTimeout(mobileScrollTimer);
-          mobileScrollTimer = window.setTimeout(recenterMobileLoop, 180);
-        }, { passive:true });
-        const finishMobileMouseDrag = (event) => {
-          if (!mobileMouseDrag || event.pointerId !== mobileMouseDrag.pointerId) return;
-          if (mobileViewport.hasPointerCapture(event.pointerId)) mobileViewport.releasePointerCapture(event.pointerId);
-          const nearestIndex = nearestMobileSlideIndex();
-          mobileViewport.style.scrollBehavior = mobileMouseDrag.scrollBehavior;
-          mobileViewport.style.scrollSnapType = mobileMouseDrag.scrollSnapType;
-          mobileMouseDrag = null;
-          syncMobileAccessibility(nearestIndex);
-          mobileViewport.scrollTo({ left:slideCentre(mobileSlides[nearestIndex]), behavior:"smooth" });
-          window.clearTimeout(mobileScrollTimer);
-          mobileScrollTimer = window.setTimeout(recenterMobileLoop, 300);
-        };
-        mobileViewport.addEventListener("pointerdown", (event) => {
-          if (!mobileBreakpoint.matches || event.pointerType !== "mouse" || event.button !== 0) return;
-          mobileMouseDrag = {
-            pointerId:event.pointerId,
-            startX:event.clientX,
-            startScrollLeft:mobileViewport.scrollLeft,
-            scrollBehavior:mobileViewport.style.scrollBehavior,
-            scrollSnapType:mobileViewport.style.scrollSnapType
-          };
-          mobileViewport.style.scrollBehavior = "auto";
-          mobileViewport.style.scrollSnapType = "none";
-          mobileViewport.setPointerCapture(event.pointerId);
-          window.clearTimeout(mobileScrollTimer);
-        });
-        mobileViewport.addEventListener("pointermove", (event) => {
-          if (!mobileMouseDrag || event.pointerId !== mobileMouseDrag.pointerId) return;
-          const distance = mobileMouseDrag.startX - event.clientX;
-          if (Math.abs(distance) < 2) return;
-          event.preventDefault();
-          mobileViewport.scrollLeft = mobileMouseDrag.startScrollLeft + distance;
-        });
-        mobileViewport.addEventListener("pointerup", finishMobileMouseDrag);
-        mobileViewport.addEventListener("pointercancel", finishMobileMouseDrag);
-        const prepareMobileSlider = () => {
-          if (!mobileBreakpoint.matches) return;
-          requestAnimationFrame(() => requestAnimationFrame(() => jumpToMobileSlide(sources.length * 2)));
-        };
-        mobileBreakpoint.addEventListener?.("change", prepareMobileSlider);
-        if ("ResizeObserver" in window) {
-          let mobileResizeTimer = 0;
-          new ResizeObserver(() => {
-            if (!mobileBreakpoint.matches) return;
-            window.clearTimeout(mobileResizeTimer);
-            mobileResizeTimer = window.setTimeout(() => jumpToMobileSlide(mobileActiveIndex), 80);
-          }).observe(mobileViewport);
-        }
-        prepareMobileSlider();
-      }
       const slots = Array.from({ length:9 }, (_, index) => {
         const position = index - 4;
         const slot = document.createElement("div");
         const image = document.createElement("img");
         slot.className = "showcase-photo";
         slot.dataset.carouselPosition = String(position);
+        image.draggable = false;
         slot.append(image);
         return slot;
       });
@@ -1339,27 +1204,122 @@
         });
       };
       const collage = gallery.querySelector(".showcase-collage");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
       let swipeGesture = null;
-      const finishSwipe = (event, allowNavigation) => {
+      let mobileOffset = 0;
+      let motionFrame = 0;
+      let motionTarget = 0;
+      let motionStep = 1;
+      const slotCentre = (slot) => {
+        const bounds = slot.getBoundingClientRect();
+        return bounds.left + bounds.width / 2;
+      };
+      const measureStackStep = () => {
+        const activeSlot = slots.find((slot) => slot.dataset.carouselPosition === "0");
+        const nextSlot = slots.find((slot) => slot.dataset.carouselPosition === "1");
+        return Math.max(1, Math.abs(slotCentre(nextSlot) - slotCentre(activeSlot)));
+      };
+      const layoutAt = (position, step) => {
+        const distance = Math.abs(position);
+        const scale = distance <= 1
+          ? 1 - distance * .11
+          : Math.max(.5, .89 - (distance - 1) * .1);
+        return {
+          x:position * step,
+          y:Math.min(distance, 5) * 10,
+          scale,
+          opacity:distance <= 4 ? 1 : Math.max(0, 5 - distance),
+          zIndex:Math.max(1, 10 - Math.round(distance) * 2)
+        };
+      };
+      const renderMobileOffset = (offset, step) => {
+        mobileOffset = offset;
+        slots.forEach((slot) => {
+          const layout = layoutAt(Number(slot.dataset.carouselPosition) + offset, step);
+          slot.style.transform = `translate3d(calc(-50% + ${layout.x}px), calc(-50% + ${layout.y}px), 0) scale(${layout.scale})`;
+          slot.style.opacity = String(layout.opacity);
+          slot.style.zIndex = String(layout.zIndex);
+        });
+      };
+      const resetMobileStack = (keepInteraction = false) => {
+        slots.forEach((slot, index) => {
+          const position = index - 4;
+          slot.dataset.carouselPosition = String(position);
+          setSlotSource(slot, activeIndex + position);
+          slot.style.removeProperty("transform");
+          slot.style.removeProperty("opacity");
+          slot.style.removeProperty("z-index");
+        });
+        mobileOffset = 0;
+        if (!keepInteraction) collage.classList.remove("is-interacting");
+        syncAccessibility();
+      };
+      const commitMobileTarget = (target) => {
+        activeIndex = modulo(activeIndex - Math.round(target), sources.length);
+        resetMobileStack();
+      };
+      const completeMotionImmediately = () => {
+        if (!motionFrame) return;
+        cancelAnimationFrame(motionFrame);
+        motionFrame = 0;
+        renderMobileOffset(motionTarget, motionStep);
+        commitMobileTarget(motionTarget);
+      };
+      const animateMobileTo = (target, step, releaseVelocity = 0) => {
+        if (motionFrame) cancelAnimationFrame(motionFrame);
+        motionTarget = target;
+        motionStep = step;
+        const startOffset = mobileOffset;
+        const distance = target - startOffset;
+        if (reducedMotion.matches || Math.abs(distance) < .001) {
+          renderMobileOffset(target, step);
+          commitMobileTarget(target);
+          return;
+        }
+        collage.classList.add("is-interacting");
+        const duration = Math.max(180, Math.min(340, 250 + Math.abs(distance) * 70 - Math.min(Math.abs(releaseVelocity) * 45, 70)));
+        const startedAt = performance.now();
+        const animate = (now) => {
+          const progress = Math.min(1, (now - startedAt) / duration);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          renderMobileOffset(startOffset + distance * eased, step);
+          if (progress < 1) {
+            motionFrame = requestAnimationFrame(animate);
+            return;
+          }
+          motionFrame = 0;
+          commitMobileTarget(target);
+        };
+        motionFrame = requestAnimationFrame(animate);
+      };
+      const finishSwipe = (event, allowMomentum) => {
         if (!swipeGesture || event.pointerId !== swipeGesture.pointerId) return;
         if (collage.hasPointerCapture(event.pointerId)) collage.releasePointerCapture(event.pointerId);
         const completedGesture = swipeGesture;
         swipeGesture = null;
-        collage.classList.remove("is-dragging");
-        track.style.setProperty("--swipe-offset", "0px");
-        const threshold = Math.min(72, Math.max(42, collage.clientWidth * .12));
-        if (allowNavigation && completedGesture.horizontal && Math.abs(completedGesture.distanceX) >= threshold) {
-          moveCarousel(completedGesture.distanceX < 0 ? 1 : -1);
-        }
+        if (!completedGesture.horizontal) return;
+        const projectedOffset = mobileOffset + completedGesture.velocity * 170 / completedGesture.step;
+        const hasIntent = allowMomentum && (
+          Math.abs(completedGesture.distanceX) >= Math.max(14, completedGesture.step * .18)
+          || Math.abs(completedGesture.velocity) >= .18
+        );
+        const target = hasIntent ? (projectedOffset < 0 ? -1 : 1) : 0;
+        animateMobileTo(target, completedGesture.step, completedGesture.velocity);
       };
       collage.addEventListener("pointerdown", (event) => {
         if (!mobileBreakpoint.matches || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+        completeMotionImmediately();
+        const now = performance.now();
         swipeGesture = {
           pointerId:event.pointerId,
           startX:event.clientX,
           startY:event.clientY,
           distanceX:0,
-          horizontal:null
+          horizontal:null,
+          step:measureStackStep(),
+          lastX:event.clientX,
+          lastTime:now,
+          velocity:0
         };
         try { collage.setPointerCapture(event.pointerId); } catch {}
       });
@@ -1372,17 +1332,27 @@
         }
         if (!swipeGesture.horizontal) return;
         event.preventDefault();
+        const now = performance.now();
+        const elapsed = Math.max(1, now - swipeGesture.lastTime);
+        const instantaneousVelocity = (event.clientX - swipeGesture.lastX) / elapsed;
+        swipeGesture.velocity = swipeGesture.velocity * .65 + instantaneousVelocity * .35;
+        swipeGesture.lastX = event.clientX;
+        swipeGesture.lastTime = now;
         swipeGesture.distanceX = distanceX;
-        collage.classList.add("is-dragging");
-        const visualOffset = Math.max(-70, Math.min(70, distanceX * .35));
-        track.style.setProperty("--swipe-offset", `${visualOffset}px`);
+        collage.classList.add("is-interacting");
+        renderMobileOffset(Math.max(-1.15, Math.min(1.15, distanceX / swipeGesture.step)), swipeGesture.step);
       }, { passive:false });
       collage.addEventListener("pointerup", (event) => finishSwipe(event, true));
       collage.addEventListener("pointercancel", (event) => finishSwipe(event, false));
+      mobileBreakpoint.addEventListener?.("change", () => {
+        completeMotionImmediately();
+        collage.classList.add("is-interacting");
+        resetMobileStack(true);
+        requestAnimationFrame(() => requestAnimationFrame(() => collage.classList.remove("is-interacting")));
+      });
       previousButton.addEventListener("click", () => moveCarousel(-1));
       nextButton.addEventListener("click", () => moveCarousel(1));
       gallery.addEventListener("keydown", (event) => {
-        if (mobileBreakpoint.matches && event.target.closest(".showcase-mobile-slider")) return;
         if (event.key === "ArrowLeft") {
           event.preventDefault();
           moveCarousel(-1);
