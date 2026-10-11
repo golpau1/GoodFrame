@@ -3,12 +3,7 @@
   "name": "good-frame-checkout",
   "main": "src/index.js",
   "compatibility_date": "2026-06-08",
-  "routes": [
-    {
-      "pattern": "goodframe.com.au/api/*",
-      "zone_name": "goodframe.com.au"
-    }
-  ],
+  "workers_dev": true,
   "vars": {
     "STRIPE_MODE": "live",
     "SITE_BASE_URL": "https://goodframe.com.au",

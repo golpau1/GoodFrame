@@ -26,8 +26,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /if \(printUploadAttempt\.promise\) return printUploadAttempt\.promise;/);
   assert.match(html, /cartItems\.some\(\(item\) => item\.uploadSessionId === uploadSession\.uploadSessionId\)/);
   assert.match(html, /controller\.abort\(\), 600000/);
-  assert.match(html, /`\$\{window\.location\.origin\}\/api`/);
-  assert.doesNotMatch(html, /good-frame-checkout\.loganwallace049\.workers\.dev/);
+  assert.match(html, /good-frame-checkout\.loganwallace049\.workers\.dev/);
   assert.doesNotMatch(html, /requestUploadStage\("\/tiny-frame-pdf\/reserve/);
   assert.match(html, /\/tiny-frame-pdf\/upload/);
   assert.match(html, /\/product-code\/assign/);
