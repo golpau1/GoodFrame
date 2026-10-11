@@ -31,6 +31,15 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /\/tiny-frame-pdf\/upload/);
   assert.match(html, /\/tiny-frame-pdf\/status/);
   assert.match(html, /recoverCompletedUpload/);
+  assert.match(html, /id="upload-progress-dialog"/);
+  assert.match(html, /Uploading your pictures\.\.\./);
+  assert.match(html, /request\.upload\.addEventListener\("progress"/);
+  assert.match(html, /event\.lengthComputable/);
+  assert.match(html, /Math\.min\(99, Math\.floor/);
+  assert.match(html, /phase:"complete", percent:100/);
+  assert.match(html, /id="upload-progress-retry"/);
+  assert.match(html, /if \(addToCartInFlight \|\| !canAddToCart\(\)\) return;/);
+  assert.match(html, /phase === "preparing" \|\| phase === "uploading-indeterminate" \|\| phase === "confirming"/);
   assert.match(html, /\/product-code\/assign/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);

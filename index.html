@@ -442,11 +442,26 @@
     .checkout-result-message { max-width:38ch; margin:0; color:var(--muted); font-size:11px; letter-spacing:.025em; line-height:1.65; }
     .checkout-result-actions { flex:none; width:100%; min-width:0; padding-top:20px; }
     .checkout-result-actions[hidden] { display:none; }
+    #upload-progress-dialog { width:min(520px,calc(100% - 40px)); max-width:none; margin:auto; padding:0; overflow:hidden; border:1px solid var(--divider); border-radius:20px; background:var(--cream); color:var(--brown); }
+    #upload-progress-dialog::backdrop { background:rgba(60,42,33,.3); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+    .upload-progress-shell { display:flex; min-height:286px; flex-direction:column; justify-content:center; padding:48px 44px; text-align:center; }
+    .upload-progress-title { margin:0 0 30px; font-family:var(--font-heading); font-size:20px; font-synthesis:none; font-weight:400; letter-spacing:.055em; line-height:1.2; }
+    .upload-progress-track { position:relative; width:100%; height:3px; overflow:hidden; background:rgba(91,61,46,.18); }
+    .upload-progress-bar { width:0; height:100%; background:var(--brown); transform-origin:left center; transition:width 160ms ease-out; }
+    .upload-progress-track.is-indeterminate .upload-progress-bar { width:34%; animation:upload-progress-indeterminate 1.25s ease-in-out infinite; transition:none; }
+    .upload-progress-detail { min-height:16px; margin:13px 0 0; color:var(--muted); font-size:10px; font-weight:500; letter-spacing:.08em; line-height:1.4; }
+    .upload-progress-error { max-width:38ch; margin:18px auto 0; color:var(--muted); font-size:11px; letter-spacing:.02em; line-height:1.55; }
+    .upload-progress-actions { display:grid; gap:2px; margin-top:25px; }
+    .upload-progress-actions[hidden], .upload-progress-error[hidden] { display:none; }
+    @keyframes upload-progress-indeterminate { 0% { transform:translateX(-110%); } 50% { transform:translateX(95%); } 100% { transform:translateX(295%); } }
+    @media (prefers-reduced-motion:reduce) { .upload-progress-bar { transition:none; } .upload-progress-track.is-indeterminate .upload-progress-bar { animation:upload-progress-pulse 1.2s ease-in-out infinite; transform:translateX(95%); } @keyframes upload-progress-pulse { 0%,100% { opacity:.35; } 50% { opacity:1; } } }
     @media (max-width:1100px) {
       #cart-dialog { width:min(540px,91vw); height:min(560px,calc(100vh - 28px)); height:min(560px,calc(100dvh - 28px)); max-height:calc(100vh - 28px); max-height:calc(100dvh - 28px); border-radius:16px; }
       .checkout-result-dialog { width:min(540px,91vw); height:min(560px,calc(100vh - 28px)); height:min(560px,calc(100dvh - 28px)); max-height:calc(100vh - 28px); max-height:calc(100dvh - 28px); border-radius:16px; }
       .cart-dialog-shell { padding:30px 28px max(26px,env(safe-area-inset-bottom)); }
       .checkout-result-shell { padding:30px 28px max(26px,env(safe-area-inset-bottom)); }
+      #upload-progress-dialog { width:min(500px,calc(100% - 28px)); border-radius:16px; }
+      .upload-progress-shell { min-height:260px; padding:42px 34px; }
       .cart-dialog-header { padding-bottom:19px; }
       .cart-items { min-height:0; }
       .cart-item { grid-template-columns:minmax(0,1fr) max-content; gap:16px; padding:24px 0; }
@@ -472,6 +487,9 @@
       .checkout-result-shell { padding-top:24px; padding-right:max(20px,env(safe-area-inset-right)); padding-bottom:max(22px,env(safe-area-inset-bottom)); padding-left:max(20px,env(safe-area-inset-left)); }
       .checkout-result-content { padding:24px 0; }
       .checkout-result-message { font-size:10px; }
+      #upload-progress-dialog { width:calc(100% - 20px); }
+      .upload-progress-shell { min-height:240px; padding:38px max(24px,env(safe-area-inset-right)) 34px max(24px,env(safe-area-inset-left)); }
+      .upload-progress-title { margin-bottom:26px; font-size:18px; }
       .cart-dialog-header { gap:12px; }
       .cart-item { gap:12px; }
       .cart-item-aside { min-width:44px; }
@@ -877,6 +895,20 @@
     <div class="footer-meta"><span>© Good Frame</span></div>
   </footer>
 
+  <dialog id="upload-progress-dialog" aria-labelledby="upload-progress-title" aria-describedby="upload-progress-detail">
+    <div class="upload-progress-shell">
+      <h2 class="upload-progress-title" id="upload-progress-title">Uploading your pictures...</h2>
+      <div class="upload-progress-track is-indeterminate" id="upload-progress-track" role="progressbar" aria-label="Picture upload progress">
+        <div class="upload-progress-bar" id="upload-progress-bar"></div>
+      </div>
+      <p class="upload-progress-detail" id="upload-progress-detail" aria-live="polite">Preparing print sheet…</p>
+      <p class="upload-progress-error" id="upload-progress-error" role="alert" hidden></p>
+      <div class="upload-progress-actions" id="upload-progress-actions" hidden>
+        <button class="cart-action cart-action--primary" id="upload-progress-retry" type="button">Retry</button>
+        <button class="cart-action" id="upload-progress-close" type="button">Close</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="cart-dialog" aria-labelledby="cart-title">
     <div class="cart-dialog-shell">
       <header class="cart-dialog-header"><h2 class="cart-dialog-title" id="cart-title">Your Cart</h2><form method="dialog"><button class="cart-close" aria-label="Close cart">×</button></form></header>
@@ -1851,6 +1883,15 @@
     const cartItemsElement = document.getElementById("cart-items");
     const cartLink = document.getElementById("cart-link");
     const purchaseError = document.getElementById("purchase-error");
+    const uploadProgressDialog = document.getElementById("upload-progress-dialog");
+    const uploadProgressTitle = document.getElementById("upload-progress-title");
+    const uploadProgressTrack = document.getElementById("upload-progress-track");
+    const uploadProgressBar = document.getElementById("upload-progress-bar");
+    const uploadProgressDetail = document.getElementById("upload-progress-detail");
+    const uploadProgressError = document.getElementById("upload-progress-error");
+    const uploadProgressActions = document.getElementById("upload-progress-actions");
+    const uploadProgressRetry = document.getElementById("upload-progress-retry");
+    const uploadProgressClose = document.getElementById("upload-progress-close");
     const cartCurrencySelect = document.getElementById("cart-currency");
     const cartCurrencyNote = document.getElementById("cart-currency-note");
     const CART_CURRENCIES = Object.freeze(["AUD", "USD", "GBP", "EUR", "NZD", "CAD"]);
@@ -1985,7 +2026,7 @@
       }
       return entry.printBlob;
     }
-    async function uploadPrintSheet(entries, frameColour) {
+    async function uploadPrintSheet(entries, frameColour, reportProgress = () => {}) {
       if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.original instanceof File) || !entry?.crop)) {
         throw new Error("All 8 original pictures and crop settings are required.");
       }
@@ -2003,18 +2044,56 @@
           result:null
         };
       }
-      if (printUploadAttempt.result) return printUploadAttempt.result;
+      if (printUploadAttempt.result) {
+        reportProgress({ phase:"complete", percent:100 });
+        return printUploadAttempt.result;
+      }
       if (printUploadAttempt.promise) return printUploadAttempt.promise;
 
       const attempt = printUploadAttempt;
       attempt.promise = (async () => {
         const controller = new AbortController();
         const timeout = window.setTimeout(() => controller.abort(), 600000);
+        const uploadPdfWithProgress = (form) => new Promise((resolve, reject) => {
+          const request = new XMLHttpRequest();
+          const handleAbort = () => request.abort();
+          request.open("POST", `${checkoutApiBaseUrl}/tiny-frame-pdf/upload`);
+          request.upload.addEventListener("loadstart", () => reportProgress({ phase:"uploading", percent:0 }));
+          request.upload.addEventListener("progress", (event) => {
+            if (!event.lengthComputable || !event.total) {
+              reportProgress({ phase:"uploading-indeterminate" });
+              return;
+            }
+            const percent = Math.min(99, Math.floor((event.loaded / event.total) * 100));
+            reportProgress({ phase:"uploading", percent });
+          });
+          request.addEventListener("load", () => {
+            controller.signal.removeEventListener("abort", handleAbort);
+            resolve({
+              ok:request.status >= 200 && request.status < 300,
+              status:request.status,
+              text:async () => request.responseText,
+              headers:{ get:(name) => request.getResponseHeader(name) }
+            });
+          });
+          const rejectRequest = (name) => {
+            controller.signal.removeEventListener("abort", handleAbort);
+            const error = new Error(name === "AbortError" ? "Upload aborted" : "Upload network error");
+            error.name = name;
+            reject(error);
+          };
+          request.addEventListener("error", () => rejectRequest("NetworkError"));
+          request.addEventListener("abort", () => rejectRequest("AbortError"));
+          controller.signal.addEventListener("abort", handleAbort, { once:true });
+          request.send(form);
+        });
         const requestUploadStage = async (endpoint, options, stage) => {
           let response;
           let responseText;
           try {
-            response = await fetch(`${checkoutApiBaseUrl}${endpoint}`, { ...options, signal:controller.signal });
+            response = endpoint === "/tiny-frame-pdf/upload"
+              ? await uploadPdfWithProgress(options.body)
+              : await fetch(`${checkoutApiBaseUrl}${endpoint}`, { ...options, signal:controller.signal });
             responseText = await response.text();
           } catch (error) {
             const timedOut = error?.name === "AbortError";
@@ -2061,6 +2140,7 @@
           return result;
         };
         const recoverCompletedUpload = async () => {
+          reportProgress({ phase:"confirming" });
           const parameters = new URLSearchParams({
             cart_item_id:attempt.cartItemId,
             product_code:attempt.productCode
@@ -2085,6 +2165,7 @@
         try {
           for (let codeAttempt = 0; codeAttempt < 5; codeAttempt += 1) {
             if (!attempt.pdfBlob) {
+              reportProgress({ phase:"preparing" });
               const printCrops = [];
               for (let index = 0; index < entries.length; index += 1) {
                 printCrops.push(await createFullResolutionPrintCrop(entries[index], index + 1));
@@ -2122,6 +2203,7 @@
             if (productCode !== attempt.productCode || objectKey !== `${productCode}/${productCode}-print-sheet.pdf`) {
               throw new Error("The print sheet was uploaded but its product reference was missing. Please try again.");
             }
+            reportProgress({ phase:"complete", percent:100 });
             return {
               uploadSessionId:objectKey,
               printSheetReference:objectKey,
@@ -2300,12 +2382,80 @@
       cartLink.setAttribute("aria-label", `Open cart, ${cartItems.length} ${cartItems.length === 1 ? "item" : "items"}`);
     }
 
-    purchaseButton.addEventListener("click", async () => {
-      if (!canAddToCart()) return;
+    let addToCartInFlight = false;
+    let uploadOverlayBusy = false;
+
+    function updateUploadProgressOverlay({ phase, percent = 0 }) {
+      const indeterminate = phase === "preparing" || phase === "uploading-indeterminate" || phase === "confirming";
+      uploadProgressTrack.classList.toggle("is-indeterminate", indeterminate);
+      uploadProgressTrack.toggleAttribute("aria-valuemin", !indeterminate);
+      uploadProgressTrack.toggleAttribute("aria-valuemax", !indeterminate);
+      if (indeterminate) {
+        uploadProgressTrack.removeAttribute("aria-valuenow");
+        uploadProgressBar.style.width = "";
+        uploadProgressDetail.textContent = phase === "preparing"
+          ? "Preparing print sheet…"
+          : phase === "confirming"
+            ? "Confirming upload…"
+            : "Uploading securely…";
+        return;
+      }
+      const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+      uploadProgressTrack.setAttribute("aria-valuemin", "0");
+      uploadProgressTrack.setAttribute("aria-valuemax", "100");
+      uploadProgressTrack.setAttribute("aria-valuenow", String(safePercent));
+      uploadProgressBar.style.width = `${safePercent}%`;
+      uploadProgressDetail.textContent = `${safePercent}%`;
+    }
+
+    function openUploadProgressOverlay() {
+      uploadOverlayBusy = true;
+      uploadProgressTitle.textContent = "Uploading your pictures...";
+      uploadProgressError.hidden = true;
+      uploadProgressError.textContent = "";
+      uploadProgressActions.hidden = true;
+      updateUploadProgressOverlay({ phase:"preparing" });
+      if (uploadProgressDialog.open) return;
+      lockPageForCart();
+      try {
+        uploadProgressDialog.showModal();
+      } catch (error) {
+        unlockPageForCart();
+        throw error;
+      }
+    }
+
+    function showUploadProgressError(message) {
+      uploadOverlayBusy = false;
+      uploadProgressTitle.textContent = "Upload couldn’t finish";
+      uploadProgressTrack.classList.remove("is-indeterminate");
+      uploadProgressTrack.removeAttribute("aria-valuemin");
+      uploadProgressTrack.removeAttribute("aria-valuemax");
+      uploadProgressTrack.removeAttribute("aria-valuenow");
+      uploadProgressBar.style.width = "0%";
+      uploadProgressDetail.textContent = "Your pictures are still selected.";
+      uploadProgressError.textContent = message;
+      uploadProgressError.hidden = false;
+      uploadProgressActions.hidden = false;
+      uploadProgressRetry.focus({ preventScroll:true });
+    }
+
+    function closeUploadProgressOverlay() {
+      if (!uploadProgressDialog.open) return Promise.resolve();
+      return new Promise((resolve) => {
+        uploadProgressDialog.addEventListener("close", resolve, { once:true });
+        uploadProgressDialog.close();
+      });
+    }
+
+    async function addSelectedProductToCart() {
+      if (addToCartInFlight || !canAddToCart()) return;
+      addToCartInFlight = true;
       cartNotice = "";
       showPurchaseError();
       purchaseButton.disabled = true;
       const withPictures = orderType === "frame-plus-pictures";
+      if (withPictures) openUploadProgressOverlay();
       document.getElementById("purchase-label").textContent = withPictures ? "PREPARING PRINTS…" : "ADDING…";
       try {
         let uploadSession = null;
@@ -2313,8 +2463,10 @@
         let productCode = "";
         if (withPictures) {
           document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
-          uploadSession = await uploadPrintSheet(uploadedImages, selections.colour);
+          uploadSession = await uploadPrintSheet(uploadedImages, selections.colour, updateUploadProgressOverlay);
           if (cartItems.some((item) => item.uploadSessionId === uploadSession.uploadSessionId)) {
+            await new Promise((resolve) => window.setTimeout(resolve, 180));
+            await closeUploadProgressOverlay();
             openCart();
             return;
           }
@@ -2342,6 +2494,10 @@
         saveCart();
         window.goodFrameCartItem = cartItem;
         renderCart();
+        if (withPictures) {
+          await new Promise((resolve) => window.setTimeout(resolve, 180));
+          await closeUploadProgressOverlay();
+        }
         openCart();
       } catch (error) {
         console.error("Add to cart failed", {
@@ -2349,14 +2505,20 @@
           code:String(error?.code || "ADD_TO_CART_FAILED"),
           errorName:String(error?.name || "Error")
         });
-        showPurchaseError(withPictures
-          ? String(error?.message || "Upload failed — please try again.")
-          : `${error.message} Please try again.`);
+        if (withPictures) {
+          showUploadProgressError(String(error?.message || "Upload failed — please try again."));
+        } else {
+          showPurchaseError(`${error.message} Please try again.`);
+        }
       } finally {
+        addToCartInFlight = false;
+        if (!uploadProgressDialog.open) uploadOverlayBusy = false;
         document.getElementById("purchase-label").textContent = "Add to cart";
         updateAddToCartState();
       }
-    });
+    }
+
+    purchaseButton.addEventListener("click", addSelectedProductToCart);
 
     const cart = document.getElementById("cart-dialog");
     const checkoutConfirmedDialog = document.getElementById("checkout-confirmed-dialog");
@@ -2523,9 +2685,15 @@
     }
 
     cart.addEventListener("close", unlockPageForCart);
+    uploadProgressDialog.addEventListener("close", unlockPageForCart);
+    uploadProgressDialog.addEventListener("cancel", (event) => {
+      if (uploadOverlayBusy) event.preventDefault();
+    });
     checkoutConfirmedDialog.addEventListener("close", unlockPageForCart);
     checkoutUnsuccessfulDialog.addEventListener("close", unlockPageForCart);
     cart.addEventListener("click", (event) => { if (event.target === cart) cart.close(); });
+    uploadProgressRetry.addEventListener("click", addSelectedProductToCart);
+    uploadProgressClose.addEventListener("click", () => uploadProgressDialog.close());
     checkoutConfirmedDialog.addEventListener("click", (event) => { if (event.target === checkoutConfirmedDialog) checkoutConfirmedDialog.close(); });
     checkoutUnsuccessfulDialog.addEventListener("click", (event) => { if (event.target === checkoutUnsuccessfulDialog) checkoutUnsuccessfulDialog.close(); });
     cartLink.addEventListener("click", (event) => { event.preventDefault(); openCart(); });
