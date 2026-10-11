@@ -19,7 +19,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   const html = await readFile(new URL('../../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const frameAspectRatio = 54 \/ 86;/);
   assert.equal((html.match(/class="image-slot"/g) || []).length, 8);
-  assert.equal((html.match(/aspect-ratio:54 \/ 86/g) || []).length, 3);
+  assert.equal((html.match(/aspect-ratio:54 \/ 86/g) || []).length, 4);
   assert.match(html, /\.slot-preview[^}]+object-fit:cover;/);
   assert.match(html, /photos measuring 54 × 86 mm/);
   assert.match(html, /let printUploadAttempt = null;/);
@@ -40,6 +40,16 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /id="upload-progress-retry"/);
   assert.match(html, /if \(addToCartInFlight \|\| !canAddToCart\(\)\) return;/);
   assert.match(html, /phase === "preparing" \|\| phase === "uploading-indeterminate" \|\| phase === "confirming"/);
+  assert.match(html, /id="photo-preview-dialog"/);
+  assert.match(html, /Your Pictures/);
+  assert.match(html, /className = "cart-photo-preview-button"/);
+  assert.match(html, /normalizeOrderType\(item\.order\) === "frame-plus-pictures"/);
+  assert.match(html, /saveCartPhotoPreviews\(uploadSession\.cartItemId, uploadedImages\)/);
+  assert.match(html, /entry\?\.previewBlob instanceof Blob \? entry\.previewBlob : entry\?\.printBlob/);
+  assert.match(html, /bytes:await blob\.arrayBuffer\(\)/);
+  assert.match(html, /getCartPhotoPreviews\(item\.cartItemId\)/);
+  assert.match(html, /database\.createObjectStore\(CART_PREVIEW_STORE_NAME, \{ keyPath:"cartItemId" \}\)/);
+  assert.match(html, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(html, /\/product-code\/assign/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);

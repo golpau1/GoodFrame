@@ -403,6 +403,13 @@
     .cart-item { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,max-content); width:100%; min-width:0; align-items:start; gap:24px; padding:28px 0; border-bottom:1px solid var(--divider); }
     .cart-item-details { min-width:0; }
     .cart-item-title { margin:1px 0 7px; font-size:15px; letter-spacing:.045em; line-height:1.2; text-transform:uppercase; }
+    .cart-item-title-row { display:flex; min-width:0; align-items:flex-start; gap:9px; }
+    .cart-item-title-row .cart-item-title { min-width:0; }
+    .cart-photo-preview-button { display:grid; flex:0 0 auto; width:22px; height:22px; margin:-3px 0 0; padding:3px !important; place-items:center; border:0 !important; border-radius:50%; color:var(--brown); opacity:.72; transition:opacity 160ms ease,box-shadow 160ms ease; }
+    .cart-photo-preview-button:hover { opacity:1; }
+    .cart-photo-preview-button:focus { outline:none; }
+    .cart-photo-preview-button:focus-visible { box-shadow:0 0 0 1px var(--divider); opacity:1; }
+    .cart-photo-preview-button svg { display:block; width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.35; stroke-linecap:round; stroke-linejoin:round; }
     .cart-item-option, .cart-item-quantity { margin:0; color:var(--muted); font-size:9px; font-weight:400; letter-spacing:.075em; line-height:1.55; text-transform:uppercase; }
     .cart-item-aside { display:flex; min-width:58px; max-width:100%; flex-direction:column; align-items:flex-end; gap:14px; padding-top:1px; }
     .cart-item-price { font-size:12px; font-weight:600; white-space:nowrap; }
@@ -427,6 +434,19 @@
     .cart-action:not(.cart-action--primary) { margin-top:5px; padding:8px 12px !important; border:0 !important; color:var(--muted); font-size:9px; font-weight:500; }
     .cart-action:hover { opacity:.72; }
     .cart-action:disabled { cursor:not-allowed; opacity:.42; }
+    #photo-preview-dialog { width:min(660px,calc(100% - 56px)); max-width:none; margin:auto; padding:0; overflow:hidden; border:1px solid var(--divider); border-radius:22px; background:var(--cream); color:var(--brown); }
+    #photo-preview-dialog::backdrop { background:rgba(60,42,33,.3); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); }
+    #photo-preview-dialog[open] { animation:photo-preview-in 180ms ease-out; }
+    .photo-preview-shell { width:100%; min-width:0; padding:36px 38px 40px; }
+    .photo-preview-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:20px; border-bottom:1px solid var(--divider); }
+    .photo-preview-title { margin:0; font-family:var(--font-heading); font-size:18px; font-synthesis:none; font-weight:400; letter-spacing:.06em; line-height:1.1; text-transform:uppercase; }
+    .photo-preview-close { display:grid; place-items:center; width:32px; height:32px; margin:-6px -6px -6px 0; padding:0 !important; border:0 !important; font-size:21px; font-weight:300; line-height:1; }
+    .photo-preview-close:focus { outline:none; }
+    .photo-preview-close:focus-visible { border-radius:50%; box-shadow:0 0 0 1px var(--divider); }
+    .photo-preview-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:24px; }
+    .photo-preview-picture { display:block; width:100%; min-width:0; aspect-ratio:54 / 86; border-radius:9px; object-fit:cover; }
+    .photo-preview-message { grid-column:1 / -1; margin:38px 0; color:var(--muted); font-size:10px; letter-spacing:.08em; line-height:1.5; text-align:center; text-transform:uppercase; }
+    @keyframes photo-preview-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
     .checkout-result-dialog { width:min(680px,calc(100% - 56px)); max-width:none; height:min(600px,calc(100vh - 48px)); height:min(600px,calc(100dvh - 48px)); max-height:calc(100vh - 48px); max-height:calc(100dvh - 48px); margin:auto; padding:0; overflow:hidden; border:1px solid var(--divider); border-radius:22px; background:var(--cream); color:var(--brown); }
     .checkout-result-dialog::backdrop { background:rgba(60,42,33,.27); }
     .checkout-result-shell { display:flex; flex-direction:column; width:100%; min-width:0; height:100%; min-height:0; padding:44px; overflow:hidden; overscroll-behavior:contain; }
@@ -460,6 +480,9 @@
       .checkout-result-dialog { width:min(540px,91vw); height:min(560px,calc(100vh - 28px)); height:min(560px,calc(100dvh - 28px)); max-height:calc(100vh - 28px); max-height:calc(100dvh - 28px); border-radius:16px; }
       .cart-dialog-shell { padding:30px 28px max(26px,env(safe-area-inset-bottom)); }
       .checkout-result-shell { padding:30px 28px max(26px,env(safe-area-inset-bottom)); }
+      #photo-preview-dialog { width:min(600px,calc(100% - 28px)); border-radius:16px; }
+      .photo-preview-shell { padding:30px 28px 32px; }
+      .photo-preview-grid { gap:10px; margin-top:20px; }
       #upload-progress-dialog { width:min(500px,calc(100% - 28px)); border-radius:16px; }
       .upload-progress-shell { min-height:260px; padding:42px 34px; }
       .cart-dialog-header { padding-bottom:19px; }
@@ -487,6 +510,10 @@
       .checkout-result-shell { padding-top:24px; padding-right:max(20px,env(safe-area-inset-right)); padding-bottom:max(22px,env(safe-area-inset-bottom)); padding-left:max(20px,env(safe-area-inset-left)); }
       .checkout-result-content { padding:24px 0; }
       .checkout-result-message { font-size:10px; }
+      #photo-preview-dialog { width:calc(100% - 20px); }
+      .photo-preview-shell { padding:24px max(20px,env(safe-area-inset-right)) 26px max(20px,env(safe-area-inset-left)); }
+      .photo-preview-grid { gap:7px; margin-top:18px; }
+      .photo-preview-picture { border-radius:6px; }
       #upload-progress-dialog { width:calc(100% - 20px); }
       .upload-progress-shell { min-height:240px; padding:38px max(24px,env(safe-area-inset-right)) 34px max(24px,env(safe-area-inset-left)); }
       .upload-progress-title { margin-bottom:26px; font-size:18px; }
@@ -768,7 +795,7 @@
       .purchase-button #purchase-label { justify-self:end; }
     }
     @keyframes brand-statement-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
-    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a { transition:none; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a { transition:none; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } #photo-preview-dialog[open] { animation:none; } }
   </style>
 </head>
 <body>
@@ -924,6 +951,12 @@
           <button class="cart-action" id="continue-shopping" type="button">Continue Shopping</button>
         </aside>
       </div>
+    </div>
+  </dialog>
+  <dialog id="photo-preview-dialog" aria-labelledby="photo-preview-title">
+    <div class="photo-preview-shell">
+      <header class="photo-preview-header"><h2 class="photo-preview-title" id="photo-preview-title">Your Pictures</h2><form method="dialog"><button class="photo-preview-close" aria-label="Close picture preview">×</button></form></header>
+      <div class="photo-preview-grid" id="photo-preview-grid" aria-live="polite"></div>
     </div>
   </dialog>
   <dialog class="checkout-result-dialog" id="checkout-confirmed-dialog" aria-labelledby="checkout-confirmed-title">
@@ -1892,6 +1925,8 @@
     const uploadProgressActions = document.getElementById("upload-progress-actions");
     const uploadProgressRetry = document.getElementById("upload-progress-retry");
     const uploadProgressClose = document.getElementById("upload-progress-close");
+    const photoPreviewDialog = document.getElementById("photo-preview-dialog");
+    const photoPreviewGrid = document.getElementById("photo-preview-grid");
     const cartCurrencySelect = document.getElementById("cart-currency");
     const cartCurrencyNote = document.getElementById("cart-currency-note");
     const CART_CURRENCIES = Object.freeze(["AUD", "USD", "GBP", "EUR", "NZD", "CAD"]);
@@ -1967,6 +2002,122 @@
     }
     function saveCart() {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems.slice(0, 10)));
+    }
+    const CART_PREVIEW_DB_NAME = "goodFrameCartPhotoPreviews";
+    const CART_PREVIEW_STORE_NAME = "previews";
+    const cartPhotoPreviewMemory = new Map();
+    let cartPreviewDatabasePromise = null;
+    let photoPreviewReturnFocus = null;
+    let photoPreviewUrls = [];
+
+    function openCartPreviewDatabase() {
+      if (cartPreviewDatabasePromise) return cartPreviewDatabasePromise;
+      cartPreviewDatabasePromise = new Promise((resolve, reject) => {
+        if (!globalThis.indexedDB) {
+          reject(new Error("Picture preview storage is unavailable."));
+          return;
+        }
+        const request = indexedDB.open(CART_PREVIEW_DB_NAME, 1);
+        request.addEventListener("upgradeneeded", () => {
+          const database = request.result;
+          if (!database.objectStoreNames.contains(CART_PREVIEW_STORE_NAME)) {
+            database.createObjectStore(CART_PREVIEW_STORE_NAME, { keyPath:"cartItemId" });
+          }
+        });
+        request.addEventListener("success", () => resolve(request.result));
+        request.addEventListener("error", () => reject(request.error || new Error("Picture preview storage could not be opened.")));
+      });
+      return cartPreviewDatabasePromise;
+    }
+
+    function runCartPreviewTransaction(mode, operation) {
+      return openCartPreviewDatabase().then((database) => new Promise((resolve, reject) => {
+        const transaction = database.transaction(CART_PREVIEW_STORE_NAME, mode);
+        const store = transaction.objectStore(CART_PREVIEW_STORE_NAME);
+        const request = operation(store);
+        let result;
+        request.addEventListener("success", () => { result = request.result; });
+        request.addEventListener("error", () => reject(request.error || new Error("Picture preview storage failed.")));
+        transaction.addEventListener("complete", () => resolve(result));
+        transaction.addEventListener("abort", () => reject(transaction.error || new Error("Picture preview storage was interrupted.")));
+      }));
+    }
+
+    async function saveCartPhotoPreviews(cartItemId, entries) {
+      const previewBlobs = entries.map((entry) => entry?.previewBlob instanceof Blob ? entry.previewBlob : entry?.printBlob);
+      if (!/^ci_[a-f0-9]{32}$/.test(cartItemId) || previewBlobs.length !== 8 || previewBlobs.some((blob) => !(blob instanceof Blob))) {
+        console.error("Cart picture previews could not be associated with the product.");
+        return false;
+      }
+      const pictures = await Promise.all(previewBlobs.map(async (blob, index) => ({
+        bytes:await blob.arrayBuffer(),
+        type:blob.type || "image/jpeg",
+        name:String(entries[index]?.original?.name || `Picture ${index + 1}`)
+      })));
+      const record = { cartItemId, pictures, savedAt:Date.now() };
+      cartPhotoPreviewMemory.set(cartItemId, record);
+      try {
+        await runCartPreviewTransaction("readwrite", (store) => store.put(record));
+        return true;
+      } catch (error) {
+        console.warn("Cart picture previews will only remain available on this page.", { errorName:String(error?.name || "Error") });
+        return false;
+      }
+    }
+
+    async function getCartPhotoPreviews(cartItemId) {
+      if (cartPhotoPreviewMemory.has(cartItemId)) return cartPhotoPreviewMemory.get(cartItemId);
+      try {
+        const record = await runCartPreviewTransaction("readonly", (store) => store.get(cartItemId));
+        if (record) cartPhotoPreviewMemory.set(cartItemId, record);
+        return record || null;
+      } catch (error) {
+        console.warn("Cart picture previews could not be loaded.", { errorName:String(error?.name || "Error") });
+        return null;
+      }
+    }
+
+    function deleteCartPhotoPreviews(cartItemId) {
+      cartPhotoPreviewMemory.delete(cartItemId);
+      void runCartPreviewTransaction("readwrite", (store) => store.delete(cartItemId)).catch(() => {});
+    }
+
+    function clearPhotoPreviewUrls() {
+      photoPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+      photoPreviewUrls = [];
+      photoPreviewGrid.replaceChildren();
+    }
+
+    async function openCartPhotoPreview(item, trigger) {
+      photoPreviewReturnFocus = trigger;
+      clearPhotoPreviewUrls();
+      const loading = document.createElement("p");
+      loading.className = "photo-preview-message";
+      loading.textContent = "Loading your pictures…";
+      photoPreviewGrid.append(loading);
+      if (!photoPreviewDialog.open) photoPreviewDialog.showModal();
+      const record = await getCartPhotoPreviews(item.cartItemId);
+      if (!photoPreviewDialog.open) return;
+      photoPreviewGrid.replaceChildren();
+      if (!record?.pictures || record.pictures.length !== 8) {
+        const unavailable = document.createElement("p");
+        unavailable.className = "photo-preview-message";
+        unavailable.textContent = "Picture previews are unavailable for this item.";
+        photoPreviewGrid.append(unavailable);
+        return;
+      }
+      record.pictures.forEach((picture, index) => {
+        const blob = picture.blob instanceof Blob
+          ? picture.blob
+          : new Blob([picture.bytes], { type:picture.type || "image/jpeg" });
+        const url = URL.createObjectURL(blob);
+        photoPreviewUrls.push(url);
+        const image = document.createElement("img");
+        image.className = "photo-preview-picture";
+        image.src = url;
+        image.alt = `Your picture ${index + 1}`;
+        photoPreviewGrid.append(image);
+      });
     }
     function showPurchaseError(message = "") {
       purchaseError.textContent = message;
@@ -2351,7 +2502,19 @@
         const title = document.createElement("h3");
         title.className = "cart-item-title";
         title.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}`;
-        details.append(title);
+        const titleRow = document.createElement("div");
+        titleRow.className = "cart-item-title-row";
+        titleRow.append(title);
+        if (normalizeOrderType(item.order) === "frame-plus-pictures") {
+          const previewButton = document.createElement("button");
+          previewButton.className = "cart-photo-preview-button";
+          previewButton.type = "button";
+          previewButton.setAttribute("aria-label", `Preview pictures for ${item.colour} Frame + 8 Pictures`);
+          previewButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.2-4 3 2.7 2.2-2 3.6 3.3"/></svg>';
+          previewButton.addEventListener("click", () => { void openCartPhotoPreview(item, previewButton); });
+          titleRow.append(previewButton);
+        }
+        details.append(titleRow);
         const aside = document.createElement("div");
         aside.className = "cart-item-aside";
         const price = document.createElement("span");
@@ -2366,6 +2529,7 @@
           cartNotice = "";
           const index = cartItems.indexOf(item);
           if (index !== -1) cartItems.splice(index, 1);
+          deleteCartPhotoPreviews(item.cartItemId);
           saveCart();
           renderCart();
         });
@@ -2464,6 +2628,7 @@
         if (withPictures) {
           document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
           uploadSession = await uploadPrintSheet(uploadedImages, selections.colour, updateUploadProgressOverlay);
+          await saveCartPhotoPreviews(uploadSession.cartItemId, uploadedImages);
           if (cartItems.some((item) => item.uploadSessionId === uploadSession.uploadSessionId)) {
             await new Promise((resolve) => window.setTimeout(resolve, 180));
             await closeUploadProgressOverlay();
@@ -2618,6 +2783,7 @@
     function clearPurchasedCartItems(checkoutContext) {
       const purchasedIds = new Set(checkoutContext?.cartItemIds || []);
       if (!purchasedIds.size) return;
+      purchasedIds.forEach(deleteCartPhotoPreviews);
       const remainingItems = cartItems.filter((item) => !purchasedIds.has(item.cartItemId));
       cartItems.splice(0, cartItems.length, ...remainingItems);
       saveCart();
@@ -2685,6 +2851,14 @@
     }
 
     cart.addEventListener("close", unlockPageForCart);
+    photoPreviewDialog.addEventListener("close", () => {
+      clearPhotoPreviewUrls();
+      if (photoPreviewReturnFocus?.isConnected) photoPreviewReturnFocus.focus({ preventScroll:true });
+      photoPreviewReturnFocus = null;
+    });
+    photoPreviewDialog.addEventListener("click", (event) => {
+      if (event.target === photoPreviewDialog) photoPreviewDialog.close();
+    });
     uploadProgressDialog.addEventListener("close", unlockPageForCart);
     uploadProgressDialog.addEventListener("cancel", (event) => {
       if (uploadOverlayBusy) event.preventDefault();
