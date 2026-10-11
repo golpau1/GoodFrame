@@ -797,9 +797,45 @@
     }
     @keyframes brand-statement-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
     @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a { transition:none; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } #photo-preview-dialog[open] { animation:none; } }
+    html.preloader-active, html.preloader-active body { overflow:hidden; }
+    .page-preloader { position:fixed; inset:0; z-index:2147483647; display:grid; place-items:center; background:var(--cream); color:var(--brown); opacity:0; visibility:hidden; pointer-events:none; transition:opacity 420ms ease, visibility 0s linear 420ms; }
+    html.preloader-active .page-preloader { opacity:1; visibility:visible; pointer-events:auto; transition:opacity 420ms ease; }
+    .page-preloader-content { display:grid; justify-items:center; gap:24px; }
+    .page-preloader-logo { color:var(--brown); font-family:var(--font-display); font-size:clamp(28px,5vw,44px); font-weight:400; letter-spacing:.08em; line-height:1; text-align:center; text-transform:uppercase; white-space:nowrap; animation:preloader-logo-in 700ms cubic-bezier(.2,.65,.3,1) both; }
+    .page-preloader-track { width:112px; height:1px; overflow:hidden; background:rgba(60,42,33,.2); }
+    .page-preloader-progress { width:100%; height:100%; background:var(--brown); transform:scaleX(0); transform-origin:left center; animation:preloader-progress 1.4s cubic-bezier(.55,.05,.3,1) infinite; }
+    @keyframes preloader-logo-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes preloader-progress { 0% { transform:scaleX(0); } 85%,100% { transform:scaleX(1); } }
+    @media (prefers-reduced-motion:reduce) {
+      .page-preloader, html.preloader-active .page-preloader { transition:none; }
+      .page-preloader-logo, .page-preloader-progress { animation:none; }
+      .page-preloader-logo { opacity:1; transform:none; }
+      .page-preloader-progress { transform:scaleX(1); }
+    }
   </style>
+  <script>document.documentElement.classList.add("preloader-active");</script>
 </head>
 <body>
+  <div class="page-preloader" id="page-preloader" role="status" aria-label="Loading Good Frame">
+    <div class="page-preloader-content">
+      <div class="page-preloader-logo" aria-hidden="true">Good Frame</div>
+      <div class="page-preloader-track" role="progressbar" aria-label="Page loading" aria-valuetext="Loading">
+        <div class="page-preloader-progress"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (() => {
+      const dismissPreloader = () => {
+        document.documentElement.classList.remove("preloader-active");
+        document.body.removeAttribute("aria-busy");
+      };
+
+      document.body.setAttribute("aria-busy", "true");
+      if (document.readyState === "complete") dismissPreloader();
+      else window.addEventListener("load", dismissPreloader, { once:true });
+    })();
+  </script>
   <div class="announcement-bar">Handmade Tasmanian Oak Frames</div>
   <header class="header">
     <nav class="header-left-nav" aria-label="Primary navigation">
