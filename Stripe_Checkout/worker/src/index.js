@@ -161,8 +161,7 @@ function jsonResponse(request, env, payload, status = 200) {
 
 function getWorkerBaseUrl(request) {
   const url = new URL(request.url);
-  const routePrefix = url.pathname === '/api' || url.pathname.startsWith('/api/') ? '/api' : '';
-  return `${url.protocol}//${url.host}${routePrefix}`;
+  return `${url.protocol}//${url.host}`;
 }
 
 function getArtworkUrl(request, objectKey) {
@@ -1126,6 +1125,58 @@ async function uploadTinyFrameProductPdf(request, env) {
       stage:expected ? 'pdf_validation' : 'pdf_storage',
       diagnostic_id:diagnosticId
     }, expected ? 400 : 500);
+  }
+}
+
+async function getTinyFrameProductPdfStatus(request, env) {
+  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+  const url = new URL(request.url);
+  const cartItemId = normalizeCartItemId(url.searchParams.get('cart_item_id'));
+  const productCode = normalizeProductCode(url.searchParams.get('product_code'));
+  if (!cartItemId || !productCode) {
+    return jsonResponse(request, env, { error:'Cart identity and product code are required' }, 400);
+  }
+  try {
+    const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
+    const objectKey = getProductPdfKey(productCode);
+    if (
+      !record ||
+      record.cart_item_id !== cartItemId ||
+      record.product_type !== 'tiny_frame_8_pictures' ||
+      record.upload_session_id !== objectKey
+    ) {
+      return jsonResponse(request, env, { error:'The print sheet has not finished uploading', code:'PDF_NOT_READY' }, 404);
+    }
+    const stored = await env.ARTWORK_BUCKET.head(objectKey);
+    const size = Number(stored?.size || stored?.contentLength || 0);
+    if (
+      !stored ||
+      size < 1 ||
+      stored.customMetadata?.product_code !== productCode ||
+      stored.customMetadata?.cart_item_id !== cartItemId
+    ) {
+      return jsonResponse(request, env, { error:'The print sheet has not finished uploading', code:'PDF_NOT_READY' }, 404);
+    }
+    return jsonResponse(request, env, {
+      success:true,
+      recovered:true,
+      productCode,
+      pdf:{ filename:`${productCode}-print-sheet.pdf`, objectKey, size }
+    });
+  } catch (error) {
+    console.error('Tiny Frame PDF status check failed', {
+      productCode,
+      errorName:String(error?.name || 'Error')
+    });
+    return jsonResponse(request, env, {
+      error:'The print-sheet upload could not be verified yet',
+      code:'PDF_STATUS_FAILED'
+    }, 503);
   }
 }
 
@@ -2398,11 +2449,6 @@ export {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const pathname = url.pathname === '/api'
-      ? '/'
-      : url.pathname.startsWith('/api/')
-        ? url.pathname.slice(4)
-        : url.pathname;
 
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -2411,7 +2457,7 @@ export default {
       });
     }
 
-    if (request.method === 'GET' && pathname === '/health') {
+    if (request.method === 'GET' && url.pathname === '/health') {
       const stripeConfiguration = getStripeConfiguration(env);
       return jsonResponse(request, env, {
         ok:true,
@@ -2422,52 +2468,56 @@ export default {
       });
     }
 
-    if (request.method === 'GET' && pathname === '/admin/product-code-capacity') {
+    if (request.method === 'GET' && url.pathname === '/admin/product-code-capacity') {
       return getProductCodeCapacityRecord(request, env);
     }
 
-    if (request.method === 'GET' && pathname.startsWith('/admin/product-code/')) {
-      return getProductCodeRecord(request, env, decodeURIComponent(pathname.slice('/admin/product-code/'.length)));
+    if (request.method === 'GET' && url.pathname.startsWith('/admin/product-code/')) {
+      return getProductCodeRecord(request, env, decodeURIComponent(url.pathname.slice('/admin/product-code/'.length)));
     }
 
-    if (request.method === 'POST' && pathname === '/create-checkout-session') {
+    if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
       return createCheckoutSession(request, env);
     }
 
-    if (request.method === 'POST' && pathname === '/tiny-frame-pdf/reserve') {
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/reserve') {
       return reserveTinyFrameProductPdf(request, env);
     }
 
-    if (request.method === 'POST' && pathname === '/product-code/assign') {
+    if (request.method === 'POST' && url.pathname === '/product-code/assign') {
       return reserveTinyFrameProductPdf(request, env);
     }
 
-    if (request.method === 'POST' && pathname === '/tiny-frame-pdf/upload') {
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/upload') {
       return uploadTinyFrameProductPdf(request, env);
     }
 
-    if (request.method === 'GET' && pathname === '/checkout-session-status') {
+    if (request.method === 'GET' && url.pathname === '/tiny-frame-pdf/status') {
+      return getTinyFrameProductPdfStatus(request, env);
+    }
+
+    if (request.method === 'GET' && url.pathname === '/checkout-session-status') {
       return getCheckoutSessionStatus(request, env);
     }
 
-    if (request.method === 'POST' && pathname === '/artwork/upload') {
+    if (request.method === 'POST' && url.pathname === '/artwork/upload') {
       return uploadArtwork(request, env);
     }
 
-    if (request.method === 'POST' && pathname === '/artwork/manifest') {
+    if (request.method === 'POST' && url.pathname === '/artwork/manifest') {
       return createArtworkManifest(request, env);
     }
 
-    if (request.method === 'GET' && pathname.startsWith('/artwork/')) {
+    if (request.method === 'GET' && url.pathname.startsWith('/artwork/')) {
       try {
-        const objectKey = pathname.slice('/artwork/'.length).split('/').map(decodeURIComponent).join('/');
+        const objectKey = url.pathname.slice('/artwork/'.length).split('/').map(decodeURIComponent).join('/');
         return getArtwork(request, env, objectKey);
       } catch {
         return new Response('Not found', { status: 404 });
       }
     }
 
-    if (request.method === 'POST' && pathname === '/stripe-webhook') {
+    if (request.method === 'POST' && url.pathname === '/stripe-webhook') {
       return handleStripeWebhook(request, env);
     }
 

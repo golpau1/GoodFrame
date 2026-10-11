@@ -29,6 +29,8 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /good-frame-checkout\.loganwallace049\.workers\.dev/);
   assert.doesNotMatch(html, /requestUploadStage\("\/tiny-frame-pdf\/reserve/);
   assert.match(html, /\/tiny-frame-pdf\/upload/);
+  assert.match(html, /\/tiny-frame-pdf\/status/);
+  assert.match(html, /recoverCompletedUpload/);
   assert.match(html, /\/product-code\/assign/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);
@@ -375,6 +377,26 @@ test('PDF-only upload stores exactly one code-named A4 print sheet', async () =>
   assert.match(text, new RegExp(`\\(PRODUCT ${result.productCode}\\) Tj`));
   assert.equal((text.match(/\/Subtype \/Image/g) || []).length, 8);
   assert.equal((text.match(/153\.070866 243\.779528 re S/g) || []).length, 8);
+  const statusResponse = await worker.fetch(new Request(
+    `https://worker.example/tiny-frame-pdf/status?cart_item_id=${pictureCartItemId}&product_code=${result.productCode}`,
+    { headers:{ Origin:'https://goodframe.com.au' } }
+  ), env);
+  assert.equal(statusResponse.status, 200);
+  assert.deepEqual(await statusResponse.json(), {
+    success:true,
+    recovered:true,
+    productCode:result.productCode,
+    pdf:{
+      filename:`${result.productCode}-print-sheet.pdf`,
+      objectKey:result.pdf.objectKey,
+      size:stored.bytes.byteLength
+    }
+  });
+  const unrelatedStatus = await worker.fetch(new Request(
+    `https://worker.example/tiny-frame-pdf/status?cart_item_id=ci_ffffffffffffffffffffffffffffffff&product_code=${result.productCode}`,
+    { headers:{ Origin:'https://goodframe.com.au' } }
+  ), env);
+  assert.equal(unrelatedStatus.status, 404);
   database.close();
 });
 

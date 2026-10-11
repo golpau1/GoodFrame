@@ -2012,8 +2012,10 @@
         const timeout = window.setTimeout(() => controller.abort(), 600000);
         const requestUploadStage = async (endpoint, options, stage) => {
           let response;
+          let responseText;
           try {
             response = await fetch(`${checkoutApiBaseUrl}${endpoint}`, { ...options, signal:controller.signal });
+            responseText = await response.text();
           } catch (error) {
             const timedOut = error?.name === "AbortError";
             console.error("Picture upload request failed", {
@@ -2029,7 +2031,6 @@
             customerError.code = timedOut ? "UPLOAD_TIMEOUT" : "UPLOAD_NETWORK_ERROR";
             throw customerError;
           }
-          const responseText = await response.text();
           let result = {};
           try { result = responseText ? JSON.parse(responseText) : {}; }
           catch {
@@ -2059,6 +2060,28 @@
           }
           return result;
         };
+        const recoverCompletedUpload = async () => {
+          const parameters = new URLSearchParams({
+            cart_item_id:attempt.cartItemId,
+            product_code:attempt.productCode
+          });
+          for (const delay of [250, 1000, 2500]) {
+            await new Promise((resolve) => window.setTimeout(resolve, delay));
+            try {
+              const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-pdf/status?${parameters}`, {
+                method:"GET",
+                cache:"no-store",
+                signal:controller.signal
+              });
+              if (!response.ok) continue;
+              const result = await response.json();
+              if (result?.success && result.productCode === attempt.productCode) return result;
+            } catch (error) {
+              if (error?.name === "AbortError") throw error;
+            }
+          }
+          return null;
+        };
         try {
           for (let codeAttempt = 0; codeAttempt < 5; codeAttempt += 1) {
             if (!attempt.pdfBlob) {
@@ -2083,10 +2106,16 @@
             try {
               result = await requestUploadStage("/tiny-frame-pdf/upload", { method:"POST", body:form }, "uploading_pdf");
             } catch (error) {
-              if (error?.code !== "PRODUCT_CODE_COLLISION" || codeAttempt === 4) throw error;
-              attempt.productCode = createProductCode();
-              attempt.pdfBlob = null;
-              continue;
+              if (error?.code === "UPLOAD_NETWORK_ERROR") {
+                const recovered = await recoverCompletedUpload();
+                if (recovered) result = recovered;
+                else throw error;
+              } else {
+                if (error?.code !== "PRODUCT_CODE_COLLISION" || codeAttempt === 4) throw error;
+                attempt.productCode = createProductCode();
+                attempt.pdfBlob = null;
+                continue;
+              }
             }
             const productCode = String(result.productCode || "");
             const objectKey = String(result.pdf?.objectKey || "");
