@@ -19,6 +19,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   const html = await readFile(new URL('../../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const frameAspectRatio = 54 \/ 86;/);
   assert.equal((html.match(/class="image-slot"/g) || []).length, 8);
+  assert.equal((html.match(/class="upload-input"[^>]+multiple/g) || []).length, 8);
   assert.equal((html.match(/aspect-ratio:54 \/ 86/g) || []).length, 4);
   assert.match(html, /\.slot-preview[^}]+object-fit:cover;/);
   assert.match(html, /photos measuring 54 × 86 mm/);
@@ -59,6 +60,16 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /revision:crypto\.randomUUID\(\)/);
   assert.doesNotMatch(html, /no longer matches its saved crop/);
   assert.match(html, /cropFrameIsPortrait \? croppedCanvas : rotateCanvasClockwise\(croppedCanvas\)/);
+  assert.match(html, /id="cropper-progress-label">Photo 1 of 1/);
+  assert.match(html, /id="backCrop"[^>]*>Back</);
+  assert.match(html, /saveCropButton\.textContent = current === total \? "Finish" : "Next Photo"/);
+  assert.match(html, /function startCropBatch\(files, slotIndices, returnFocus\)/);
+  assert.match(html, /selectedFiles\.slice\(0, targetSlots\.length\)/);
+  assert.match(html, /zoomOnTouch:true/);
+  assert.match(html, /item\.draft = \{ crop, entry \}/);
+  assert.match(html, /cropBatch\.items\.forEach\(\(item\) => \{/);
+  assert.doesNotMatch(html, /pond\.removeFiles\(\)\.then\(\(\) => pond\.addFile/);
+  assert.doesNotMatch(html, /FilePond/);
   assert.match(html, /productCode:attempt\.productCode/);
   assert.match(html, /\.image-remove-button \{[^}]*top:4px; right:4px;[^}]*transform:none;/);
   assert.doesNotMatch(html, /\.image-remove-button \{[^}]*translate\(50%,-50%\)/);

@@ -188,8 +188,6 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png?v=tree-ring-round-20261009">
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png?v=tree-ring-round-20261009">
   <link rel="manifest" href="/site.webmanifest?v=tree-ring-round-20261009">
-  <link rel="stylesheet" href="https://unpkg.com/filepond@4.32.12/dist/filepond.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/filepond-plugin-image-preview@4.6.12/dist/filepond-plugin-image-preview.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <style>
     @font-face { font-family:"Item Text Wide Light"; src:url("Assets/ItemsTextTrial-WideLight.otf") format("opentype"); font-style:normal; font-weight:300; font-display:swap; }
@@ -203,7 +201,6 @@
     html { scroll-behavior:smooth; scroll-padding-top:var(--header-height); font-family:var(--font-body); }
     body { margin:0; background:var(--page-gradient); color:var(--brown); font-family:var(--font-body); font-weight:500; letter-spacing:.02em; }
     button, input, select, textarea { font-family:inherit; }
-    .filepond--root, .filepond--root * { font-family:var(--font-body) !important; }
     .hero-intro-title, .hero-intro-title-mobile, .palette-title, .configurator-heading, .showcase-heading, .cart-dialog-title, .cart-item-title, .faq-title, .faq-list summary, .footer-kicker { font-family:var(--font-heading); font-synthesis:none; font-weight:400; }
     .option-label, .header-left-nav a, .navigation a, .cart-action { font-family:var(--font-display); }
     .mobile-hero-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
@@ -306,15 +303,19 @@
     .image-slot:hover .image-remove-button, .image-remove-button:focus-visible { opacity:1; }
     .image-remove-button:hover { background:var(--cream); }
     .upload-input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
-    .filepond--root { display:none !important; }
     #cropperOverlay { display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding:24px; background:rgba(60,42,33,.78); }
     #cropperDialog { display:flex; flex-direction:column; width:min(720px,100%); height:min(760px,calc(100vh - 48px)); gap:18px; padding:22px; border:1px solid rgba(255,247,226,.35); background:var(--cream); color:var(--brown); }
+    .cropper-progress { display:grid; gap:9px; }
+    .cropper-progress-label { margin:0; color:var(--brown); font-size:10px; font-weight:600; letter-spacing:.11em; line-height:1.2; text-align:center; text-transform:uppercase; }
+    .cropper-progress-track { width:100%; height:2px; overflow:hidden; background:rgba(91,61,46,.18); }
+    .cropper-progress-bar { width:0; height:100%; background:var(--brown); transition:width 180ms ease-out; }
     #cropperStage { flex:1; min-height:0; overflow:hidden; background:var(--secondary-cream); }
     #cropperImage { display:block; max-width:100%; }
     .cropper-actions { display:flex; justify-content:flex-end; gap:22px; }
     .cropper-actions .cropper-rotate { margin-right:auto; }
     .cropper-actions button { padding:0; border:0; background:none; color:inherit; font:inherit; font-size:10px; font-weight:600; letter-spacing:.14em; cursor:pointer; text-transform:uppercase; }
     .cropper-actions button:hover { text-decoration:underline; text-underline-offset:5px; }
+    .cropper-actions button:disabled { cursor:not-allowed; opacity:.35; text-decoration:none; }
     @media (max-width:1100px) { #cropperOverlay { padding:12px; } #cropperDialog { height:calc(100vh - 24px); padding:16px; } }
     @media (max-width:1100px) {
       #cropperOverlay { align-items:center; padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); overflow:hidden; }
@@ -325,9 +326,9 @@
       .cropper-actions .cropper-rotate { margin:0; }
       .cropper-actions button { display:grid; place-items:center; min-width:0; min-height:48px; padding:0 10px; border:1px solid var(--divider); background:var(--secondary-cream); font-size:10px; line-height:1.15; }
       .cropper-actions button:hover { text-decoration:none; }
-      .cropper-actions #saveCrop { grid-column:1 / -1; border-color:var(--brown); background:var(--brown); color:var(--light); }
+      .cropper-actions #saveCrop { border-color:var(--brown); background:var(--brown); color:var(--light); }
     }
-    @media (prefers-reduced-motion:reduce) { .image-remove-button { transition:none; } }
+    @media (prefers-reduced-motion:reduce) { .image-remove-button, .cropper-progress-bar { transition:none; } }
     @media (min-width:1101px) {
       :root { --announcement-height:40px; --header-height:48px; }
       .homepage { position:relative; display:block; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
@@ -846,14 +847,14 @@
           <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 8 Added</span></p>
           <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
           <div class="upload-grid" aria-label="Upload up to eight pictures">
-            <div class="image-slot" data-slot="0"><button class="slot-picker" type="button" aria-label="Add image 01">+</button><input class="upload-input" type="file" accept="image/*"></div>
-            <div class="image-slot" data-slot="1"><button class="slot-picker" type="button" aria-label="Add image 02">+</button><input class="upload-input" type="file" accept="image/*"></div>
-            <div class="image-slot" data-slot="2"><button class="slot-picker" type="button" aria-label="Add image 03">+</button><input class="upload-input" type="file" accept="image/*"></div>
-            <div class="image-slot" data-slot="3"><button class="slot-picker" type="button" aria-label="Add image 04">+</button><input class="upload-input" type="file" accept="image/*"></div>
-            <div class="image-slot" data-slot="4"><button class="slot-picker" type="button" aria-label="Add image 05">+</button><input class="upload-input" type="file" accept="image/*"></div>
-            <div class="image-slot" data-slot="5"><button class="slot-picker" type="button" aria-label="Add image 06">+</button><input class="upload-input" type="file" accept="image/*"></div>
-            <div class="image-slot" data-slot="6"><button class="slot-picker" type="button" aria-label="Add image 07">+</button><input class="upload-input" type="file" accept="image/*"></div>
-            <div class="image-slot" data-slot="7"><button class="slot-picker" type="button" aria-label="Add image 08">+</button><input class="upload-input" type="file" accept="image/*"></div>
+            <div class="image-slot" data-slot="0"><button class="slot-picker" type="button" aria-label="Add images starting at photo 01">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
+            <div class="image-slot" data-slot="1"><button class="slot-picker" type="button" aria-label="Add images starting at photo 02">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
+            <div class="image-slot" data-slot="2"><button class="slot-picker" type="button" aria-label="Add images starting at photo 03">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
+            <div class="image-slot" data-slot="3"><button class="slot-picker" type="button" aria-label="Add images starting at photo 04">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
+            <div class="image-slot" data-slot="4"><button class="slot-picker" type="button" aria-label="Add images starting at photo 05">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
+            <div class="image-slot" data-slot="5"><button class="slot-picker" type="button" aria-label="Add images starting at photo 06">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
+            <div class="image-slot" data-slot="6"><button class="slot-picker" type="button" aria-label="Add images starting at photo 07">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
+            <div class="image-slot" data-slot="7"><button class="slot-picker" type="button" aria-label="Add images starting at photo 08">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
           </div>
         </div>
         <div class="purchase-row"><button class="purchase-button" type="button"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">70</span></span><span id="purchase-label">Add to cart</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
@@ -890,11 +891,11 @@
     </div>
   </section>
 
-  <input id="imageUpload" type="file" accept="image/png,image/jpeg,image/gif">
   <div id="cropperOverlay" role="dialog" aria-modal="true" aria-label="Adjust image crop" aria-hidden="true">
     <section id="cropperDialog">
+      <div class="cropper-progress"><p class="cropper-progress-label" id="cropper-progress-label">Photo 1 of 1</p><div class="cropper-progress-track" role="progressbar" aria-labelledby="cropper-progress-label" aria-valuemin="1" aria-valuemax="1" aria-valuenow="1"><div class="cropper-progress-bar" id="cropper-progress-bar"></div></div></div>
       <div id="cropperStage"><img id="cropperImage" alt="Image being cropped"></div>
-      <div class="cropper-actions"><button class="cropper-rotate" id="rotateCrop" type="button" aria-label="Rotate crop frame 90 degrees" aria-pressed="false">Rotate Crop</button><button id="cancelCrop" type="button">Cancel / Back</button><button id="saveCrop" type="button">Save Crop</button></div>
+      <div class="cropper-actions"><button class="cropper-rotate" id="rotateCrop" type="button" aria-label="Rotate crop frame 90 degrees" aria-pressed="false">Rotate Crop</button><button id="cancelCrop" type="button">Cancel</button><button id="backCrop" type="button">Back</button><button id="saveCrop" type="button">Next Photo</button></div>
     </section>
   </div>
 
@@ -997,8 +998,6 @@
       </div>
     </div>
   </dialog>
-  <script src="https://unpkg.com/filepond@4.32.12/dist/filepond.js"></script>
-  <script src="https://unpkg.com/filepond-plugin-image-preview@4.6.12/dist/filepond-plugin-image-preview.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
   <script src="print-sheet.js"></script>
   <script>
@@ -1529,9 +1528,6 @@
     const framePlusPicturesChoice = document.querySelector('[data-order-type="frame-plus-pictures"]');
     frameOnlyChoice.addEventListener("click", () => setOrderType("frame-only", frameOnlyChoice));
     framePlusPicturesChoice.addEventListener("click", () => setOrderType("frame-plus-pictures", framePlusPicturesChoice));
-    FilePond.registerPlugin(FilePondPluginImagePreview);
-    const upload = document.getElementById("imageUpload");
-    const pond = FilePond.create(upload, { allowMultiple:false, credits:false, acceptedFileTypes:["image/png", "image/jpeg", "image/gif"] });
     const overlay = document.getElementById("cropperOverlay");
     const cropImage = document.getElementById("cropperImage");
     const uploadedImages = Array(8).fill(null);
@@ -1541,11 +1537,17 @@
     const resetImagesButton = document.getElementById("reset-images");
     const purchaseButton = document.querySelector(".purchase-button");
     const rotateCropButton = document.getElementById("rotateCrop");
+    const backCropButton = document.getElementById("backCrop");
+    const saveCropButton = document.getElementById("saveCrop");
+    const cancelCropButton = document.getElementById("cancelCrop");
+    const cropperProgressLabel = document.getElementById("cropper-progress-label");
+    const cropperProgressTrack = document.querySelector(".cropper-progress-track");
+    const cropperProgressBar = document.getElementById("cropper-progress-bar");
     let activeSlotIndex = null;
     let cropper = null;
     let cropFrameIsPortrait = true;
     let sourceUrl = null;
-    let sourceFile = null;
+    let cropBatch = null;
     let cropperScrollLock = null;
     let cropperReturnFocus = null;
     let pendingUploadScrollPosition = null;
@@ -1686,57 +1688,102 @@
       slot.append(remove);
     }
 
-    function openCropper() {
-      if (!sourceUrl) return;
+    function updateCropperNavigation() {
+      if (!cropBatch) return;
+      const current = cropBatch.currentIndex + 1;
+      const total = cropBatch.items.length;
+      cropperProgressLabel.textContent = `Photo ${current} of ${total}`;
+      cropperProgressTrack.setAttribute("aria-valuemin", "1");
+      cropperProgressTrack.setAttribute("aria-valuemax", String(total));
+      cropperProgressTrack.setAttribute("aria-valuenow", String(current));
+      cropperProgressBar.style.width = `${(current / total) * 100}%`;
+      backCropButton.disabled = cropBatch.currentIndex === 0;
+      saveCropButton.textContent = current === total ? "Finish" : "Next Photo";
+    }
+
+    function loadCurrentCropPhoto() {
+      const item = cropBatch?.items[cropBatch.currentIndex];
+      if (!item) return;
+      cropBatch.loading = true;
+      setCropperProcessing(true);
       destroyCropper();
-      cropperReturnFocus = activeSlotIndex === null ? document.activeElement : imageSlots[activeSlotIndex]?.querySelector(".slot-picker");
-      overlay.style.display = "flex";
-      overlay.setAttribute("aria-hidden", "false");
-      lockCropperPageScroll();
-      cropFrameIsPortrait = true;
-      rotateCropButton.setAttribute("aria-pressed", "false");
+      sourceUrl = item.sourceUrl;
+      activeSlotIndex = item.slotIndex;
+      cropFrameIsPortrait = item.draft?.crop?.rotation !== 90;
+      rotateCropButton.setAttribute("aria-pressed", String(!cropFrameIsPortrait));
+      updateCropperNavigation();
       const expectedSourceUrl = sourceUrl;
       cropImage.onload = () => {
         if (sourceUrl !== expectedSourceUrl || overlay.style.display !== "flex") return;
         requestAnimationFrame(() => {
           if (sourceUrl !== expectedSourceUrl || overlay.style.display !== "flex") return;
           cropper = new Cropper(cropImage, {
-            aspectRatio:frameAspectRatio, viewMode:1, autoCropArea:.9, responsive:true,
+            aspectRatio:cropFrameIsPortrait ? frameAspectRatio : 1 / frameAspectRatio, viewMode:1, autoCropArea:.9, responsive:true,
             dragMode:"crop", movable:false, zoomable:true, zoomOnWheel:true,
-            cropBoxMovable:true, cropBoxResizable:true, background:false
+            zoomOnTouch:true, cropBoxMovable:true, cropBoxResizable:true, background:false
           });
-          rotateCropButton.focus({ preventScroll:true });
+          cropper.setAspectRatio(cropFrameIsPortrait ? frameAspectRatio : 1 / frameAspectRatio);
+          if (item.draft?.crop) {
+            cropper.setData({
+              x:item.draft.crop.x,
+              y:item.draft.crop.y,
+              width:item.draft.crop.width,
+              height:item.draft.crop.height
+            });
+          }
+          if (cropBatch) {
+            cropBatch.loading = false;
+            setCropperProcessing(false);
+            updateCropperNavigation();
+          }
         });
       };
-      cropImage.onerror = closeCropper;
+      cropImage.onerror = () => {
+        window.alert("One of the selected photos could not be opened. Your previously saved pictures are unchanged.");
+        closeCropper();
+      };
       cropImage.src = sourceUrl;
     }
 
+    function startCropBatch(files, slotIndices, returnFocus) {
+      if (!files.length || files.length !== slotIndices.length) return;
+      cropBatch = {
+        currentIndex:0,
+        committed:false,
+        items:files.map((file, index) => ({
+          file,
+          slotIndex:slotIndices[index],
+          sourceUrl:URL.createObjectURL(file),
+          draft:null
+        }))
+      };
+      cropperReturnFocus = returnFocus;
+      overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+      lockCropperPageScroll();
+      loadCurrentCropPhoto();
+    }
+
     function closeCropper() {
+      const closingBatch = cropBatch;
       overlay.style.display = "none";
       overlay.setAttribute("aria-hidden", "true");
       destroyCropper();
       const scrollPosition = unlockCropperPageScroll();
-      revoke(sourceUrl);
+      closingBatch?.items.forEach((item) => {
+        revoke(item.sourceUrl);
+        if (!closingBatch.committed) revoke(item.draft?.entry?.url);
+      });
       sourceUrl = null;
-      sourceFile = null;
       activeSlotIndex = null;
-      const filePondCleanup = pond.removeFiles();
+      cropBatch = null;
       if (cropperReturnFocus?.isConnected && !cropperReturnFocus.hidden) {
         try { cropperReturnFocus.focus({ preventScroll:true }); }
         catch { cropperReturnFocus.focus(); }
       }
       cropperReturnFocus = null;
-      restorePageScrollAfterLayout(scrollPosition, filePondCleanup);
+      restorePageScrollAfterLayout(scrollPosition, Promise.resolve());
     }
-
-    pond.on("addfile", (error, fileItem) => {
-      if (error) return;
-      revoke(sourceUrl);
-      sourceFile = fileItem.file;
-      sourceUrl = URL.createObjectURL(sourceFile);
-      openCropper();
-    });
 
     imageSlots.forEach((slot) => {
       const input = slot.querySelector(".upload-input");
@@ -1745,18 +1792,26 @@
         input.click();
       });
       input.addEventListener("change", () => {
-        const file = input.files[0];
-        if (!file) return;
-        scrollToPagePosition(pendingUploadScrollPosition);
-        activeSlotIndex = Number(slot.dataset.slot);
-        pond.removeFiles().then(() => pond.addFile(file));
+        const selectedFiles = Array.from(input.files || []);
         input.value = "";
+        if (!selectedFiles.length) return;
+        scrollToPagePosition(pendingUploadScrollPosition);
+        const selectedSlot = Number(slot.dataset.slot);
+        const emptySlots = uploadedImages.map((entry, index) => entry ? -1 : index).filter((index) => index !== -1);
+        const targetSlots = [selectedSlot, ...emptySlots.filter((index) => index !== selectedSlot)];
+        const acceptedFiles = selectedFiles.slice(0, targetSlots.length);
+        if (selectedFiles.length > targetSlots.length) {
+          window.alert(`Only ${targetSlots.length} more ${targetSlots.length === 1 ? "photo can" : "photos can"} be added.`);
+        }
+        startCropBatch(acceptedFiles, targetSlots.slice(0, acceptedFiles.length), slot.querySelector(".slot-picker"));
       });
     });
 
-    document.getElementById("cancelCrop").addEventListener("click", closeCropper);
+    cancelCropButton.addEventListener("click", closeCropper);
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && overlay.style.display === "flex") closeCropper();
+      if (event.key !== "Escape" || overlay.style.display !== "flex") return;
+      if (cropBatch?.processing) event.preventDefault();
+      else closeCropper();
     });
     rotateCropButton.addEventListener("click", () => {
       if (!cropper) return;
@@ -1798,12 +1853,9 @@
       });
     }
 
-    document.getElementById("saveCrop").addEventListener("click", async () => {
-      if (!cropper || activeSlotIndex === null) return;
-      const saveCropButton = document.getElementById("saveCrop");
-      saveCropButton.disabled = true;
-      const index = activeSlotIndex;
-      const original = sourceFile;
+    async function saveCurrentCropDraft() {
+      const item = cropBatch?.items[cropBatch.currentIndex];
+      if (!cropper || !item || activeSlotIndex === null) throw new Error("The current crop is not ready.");
       const cropData = cropper.getData(true);
       const imageData = cropper.getImageData();
       const rotation = cropFrameIsPortrait ? 0 : 90;
@@ -1833,9 +1885,9 @@
           canvasToJpegBlob(printCanvas, 1),
           canvasToJpegBlob(previewCanvas, .95)
         ]);
-        revoke(uploadedImages[index]?.url);
+        revoke(item.draft?.entry?.url);
         const entry = {
-          original,
+          original:item.file,
           crop,
           revision:crypto.randomUUID(),
           effectivePpi:Math.min(printCanvas.width / (54 / 25.4), printCanvas.height / (86 / 25.4)),
@@ -1843,27 +1895,77 @@
           previewBlob,
           url:URL.createObjectURL(previewBlob)
         };
-        uploadedImages[index] = entry;
-        renderSlot(imageSlots[index], entry);
-        updateUploadProgress();
-        window.croppedImageBlob = previewBlob;
-        window.dispatchEvent(new CustomEvent("image-cropped", { detail:{ previewBlob, crop, slotIndex:index, aspectRatio:frameAspectRatio } }));
-        activeSlotIndex = null;
-        closeCropper();
+        item.draft = { crop, entry };
+        return entry;
       } catch (error) {
-        console.error("Full-resolution crop creation failed", { pictureNumber:index + 1, errorName:String(error?.name || "Error") });
-        window.alert(`Picture ${index + 1} could not be prepared at full print quality. Please adjust the crop and try again.`);
+        console.error("Full-resolution crop creation failed", { pictureNumber:item.slotIndex + 1, errorName:String(error?.name || "Error") });
+        throw error;
       } finally {
         [croppedCanvas, printCanvas, previewCanvas].forEach((canvas) => {
           if (canvas) { canvas.width = 1; canvas.height = 1; }
         });
-        saveCropButton.disabled = false;
       }
-    });
+    }
+
+    function setCropperProcessing(processing) {
+      if (cropBatch) cropBatch.processing = processing;
+      rotateCropButton.disabled = processing;
+      cancelCropButton.disabled = processing;
+      backCropButton.disabled = processing || cropBatch?.currentIndex === 0;
+      saveCropButton.disabled = processing;
+    }
+
+    async function moveThroughCropBatch(direction) {
+      if (!cropBatch || cropBatch.processing) return;
+      setCropperProcessing(true);
+      const pictureNumber = cropBatch.currentIndex + 1;
+      try {
+        await saveCurrentCropDraft();
+        if (direction === "back") {
+          cropBatch.currentIndex -= 1;
+          loadCurrentCropPhoto();
+          return;
+        }
+        if (cropBatch.currentIndex < cropBatch.items.length - 1) {
+          cropBatch.currentIndex += 1;
+          loadCurrentCropPhoto();
+          return;
+        }
+        cropBatch.items.forEach((item) => {
+          const entry = item.draft?.entry;
+          if (!entry) throw new Error("One of the selected photos is missing its saved crop.");
+          revoke(uploadedImages[item.slotIndex]?.url);
+          uploadedImages[item.slotIndex] = entry;
+          renderSlot(imageSlots[item.slotIndex], entry);
+          window.dispatchEvent(new CustomEvent("image-cropped", {
+            detail:{ previewBlob:entry.previewBlob, crop:entry.crop, slotIndex:item.slotIndex, aspectRatio:frameAspectRatio }
+          }));
+        });
+        const lastEntry = cropBatch.items.at(-1).draft.entry;
+        window.croppedImageBlob = lastEntry.previewBlob;
+        cropBatch.committed = true;
+        updateUploadProgress();
+        closeCropper();
+      } catch (error) {
+        console.error("Crop batch navigation failed", { pictureNumber, errorName:String(error?.name || "Error") });
+        window.alert(`Photo ${pictureNumber} could not be prepared at full print quality. Please adjust the crop and try again.`);
+      } finally {
+        if (cropBatch && !cropBatch.loading) {
+          setCropperProcessing(false);
+          updateCropperNavigation();
+        }
+      }
+    }
+
+    backCropButton.addEventListener("click", () => { void moveThroughCropBatch("back"); });
+    saveCropButton.addEventListener("click", () => { void moveThroughCropBatch("next"); });
 
     window.addEventListener("beforeunload", () => {
       uploadedImages.forEach((entry) => revoke(entry?.url));
-      revoke(sourceUrl);
+      cropBatch?.items.forEach((item) => {
+        revoke(item.sourceUrl);
+        revoke(item.draft?.entry?.url);
+      });
     });
     updateUploadProgress();
     selectColour("Oak", true);
