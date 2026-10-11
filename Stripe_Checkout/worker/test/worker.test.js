@@ -93,6 +93,21 @@ function uploadRequest(fields, fileType, fileName) {
   });
 }
 
+test('same-origin API route reaches the existing Worker handlers', async () => {
+  const response = await worker.fetch(new Request('https://goodframe.com.au/api/health', {
+    headers:{ Origin:ORIGIN }
+  }), env());
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), ORIGIN);
+  assert.deepEqual(await response.json(), {
+    ok:true,
+    stripeMode:'test',
+    checkoutConfigured:true,
+    fulfilmentEnabled:false,
+    productIdentificationConfigured:true
+  });
+});
+
 test('stores and retrieves an original and thumbnail using exact returned keys', async () => {
   const bucket = new MemoryBucket();
   const testEnv = env(bucket);

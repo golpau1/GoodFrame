@@ -161,7 +161,8 @@ function jsonResponse(request, env, payload, status = 200) {
 
 function getWorkerBaseUrl(request) {
   const url = new URL(request.url);
-  return `${url.protocol}//${url.host}`;
+  const routePrefix = url.pathname === '/api' || url.pathname.startsWith('/api/') ? '/api' : '';
+  return `${url.protocol}//${url.host}${routePrefix}`;
 }
 
 function getArtworkUrl(request, objectKey) {
@@ -2397,6 +2398,11 @@ export {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const pathname = url.pathname === '/api'
+      ? '/'
+      : url.pathname.startsWith('/api/')
+        ? url.pathname.slice(4)
+        : url.pathname;
 
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -2405,7 +2411,7 @@ export default {
       });
     }
 
-    if (request.method === 'GET' && url.pathname === '/health') {
+    if (request.method === 'GET' && pathname === '/health') {
       const stripeConfiguration = getStripeConfiguration(env);
       return jsonResponse(request, env, {
         ok:true,
@@ -2416,52 +2422,52 @@ export default {
       });
     }
 
-    if (request.method === 'GET' && url.pathname === '/admin/product-code-capacity') {
+    if (request.method === 'GET' && pathname === '/admin/product-code-capacity') {
       return getProductCodeCapacityRecord(request, env);
     }
 
-    if (request.method === 'GET' && url.pathname.startsWith('/admin/product-code/')) {
-      return getProductCodeRecord(request, env, decodeURIComponent(url.pathname.slice('/admin/product-code/'.length)));
+    if (request.method === 'GET' && pathname.startsWith('/admin/product-code/')) {
+      return getProductCodeRecord(request, env, decodeURIComponent(pathname.slice('/admin/product-code/'.length)));
     }
 
-    if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
+    if (request.method === 'POST' && pathname === '/create-checkout-session') {
       return createCheckoutSession(request, env);
     }
 
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/reserve') {
+    if (request.method === 'POST' && pathname === '/tiny-frame-pdf/reserve') {
       return reserveTinyFrameProductPdf(request, env);
     }
 
-    if (request.method === 'POST' && url.pathname === '/product-code/assign') {
+    if (request.method === 'POST' && pathname === '/product-code/assign') {
       return reserveTinyFrameProductPdf(request, env);
     }
 
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/upload') {
+    if (request.method === 'POST' && pathname === '/tiny-frame-pdf/upload') {
       return uploadTinyFrameProductPdf(request, env);
     }
 
-    if (request.method === 'GET' && url.pathname === '/checkout-session-status') {
+    if (request.method === 'GET' && pathname === '/checkout-session-status') {
       return getCheckoutSessionStatus(request, env);
     }
 
-    if (request.method === 'POST' && url.pathname === '/artwork/upload') {
+    if (request.method === 'POST' && pathname === '/artwork/upload') {
       return uploadArtwork(request, env);
     }
 
-    if (request.method === 'POST' && url.pathname === '/artwork/manifest') {
+    if (request.method === 'POST' && pathname === '/artwork/manifest') {
       return createArtworkManifest(request, env);
     }
 
-    if (request.method === 'GET' && url.pathname.startsWith('/artwork/')) {
+    if (request.method === 'GET' && pathname.startsWith('/artwork/')) {
       try {
-        const objectKey = url.pathname.slice('/artwork/'.length).split('/').map(decodeURIComponent).join('/');
+        const objectKey = pathname.slice('/artwork/'.length).split('/').map(decodeURIComponent).join('/');
         return getArtwork(request, env, objectKey);
       } catch {
         return new Response('Not found', { status: 404 });
       }
     }
 
-    if (request.method === 'POST' && url.pathname === '/stripe-webhook') {
+    if (request.method === 'POST' && pathname === '/stripe-webhook') {
       return handleStripeWebhook(request, env);
     }
 
