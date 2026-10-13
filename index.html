@@ -1045,6 +1045,9 @@
       let animationFrame = 0;
       let renderFrame = 0;
       let resizeFrame = 0;
+      let wheelTimer = 0;
+      let wheelStartIndex = 0;
+      let wheelActive = false;
       let accessibleIndex = -1;
       const navigationQueue = [];
 
@@ -1171,7 +1174,7 @@
       };
 
       function navigate(direction) {
-        if (pointerId !== null || animationFrame) {
+        if (pointerId !== null || wheelActive || animationFrame) {
           navigationQueue.push(direction);
           return;
         }
@@ -1227,6 +1230,26 @@
 
       collage.addEventListener("pointerup", finishPointer);
       collage.addEventListener("pointercancel", finishPointer);
+      collage.addEventListener("wheel", (event) => {
+        if (Math.abs(event.deltaX) <= Math.abs(event.deltaY) || pointerId !== null) return;
+        event.preventDefault();
+        if (!wheelActive) {
+          stopAnimation();
+          navigationQueue.length = 0;
+          wheelActive = true;
+          wheelStartIndex = nearestVirtualIndex(position);
+        }
+        position += event.deltaX;
+        currentVirtualIndex = nearestVirtualIndex(position);
+        scheduleRender();
+        window.clearTimeout(wheelTimer);
+        wheelTimer = window.setTimeout(() => {
+          wheelActive = false;
+          const targetIndex = clamp(nearestVirtualIndex(position), wheelStartIndex - 2, wheelStartIndex + 2);
+          const targetDistance = Math.abs(centreForVirtualIndex(targetIndex) - position);
+          animateTo(targetIndex, clamp(280 + targetDistance * .3, 280, 520), runQueuedNavigation);
+        }, 90);
+      }, { passive:false });
       previousButton.addEventListener("click", () => navigate(-1));
       nextButton.addEventListener("click", () => navigate(1));
       collage.addEventListener("keydown", (event) => {
