@@ -649,9 +649,9 @@
       .showcase-sticky { position:relative; top:auto; display:block; width:100%; height:auto; min-height:0; padding:0; overflow-x:clip; overflow-y:visible; }
       .showcase-collage { --stack-step:clamp(64px,9vw,92px); position:relative; display:block; width:min(calc(100% - 48px),940px); height:clamp(360px,42vw,440px); margin:0 auto; padding:0; overflow:visible; border:0; border-radius:0; cursor:default; touch-action:pan-y; }
       .showcase-track { position:relative; width:100%; height:100%; margin:0; padding:0; }
-      .showcase-photo { --card-x:0px; --card-y:0px; --card-scale:.5; position:absolute; top:50%; left:50%; z-index:1; display:flex; width:clamp(320px,45vw,430px); aspect-ratio:1; margin:0; padding:0; border:0; border-radius:0; outline:0; overflow:hidden; background:transparent; cursor:default; opacity:0; pointer-events:none; backface-visibility:hidden; transform:translate3d(calc(-50% + var(--card-x)), calc(-50% + var(--card-y)), 0) scale(var(--card-scale)); transform-origin:center; transition:transform 480ms cubic-bezier(.22,.7,.25,1), opacity 320ms ease; }
+      .showcase-photo { --card-x:0px; --card-y:0px; --card-scale:.5; position:absolute; top:50%; left:50%; z-index:1; display:flex; width:clamp(320px,45vw,430px); aspect-ratio:1; margin:0; padding:0; border:0; border-radius:0; outline:0; overflow:hidden; background:transparent; cursor:default; opacity:0; pointer-events:none; backface-visibility:hidden; transform:translate3d(calc(-50% + var(--card-x)), calc(-50% + var(--card-y)), 0) scale(var(--card-scale)); transform-origin:center; transition:transform var(--showcase-motion-duration,300ms) cubic-bezier(.22,.72,.22,1), opacity var(--showcase-motion-duration,300ms) ease; will-change:transform,opacity; }
       .showcase-photo.is-recycling { transition:none; }
-      .showcase-collage.is-interacting .showcase-photo { transition:none; will-change:transform,opacity; }
+      .showcase-collage.is-dragging .showcase-photo, .showcase-collage.is-resetting .showcase-photo { transition:none; }
       .showcase-photo[data-carousel-position="0"] { --card-scale:1; z-index:10; opacity:1; }
       .showcase-photo[data-carousel-position="-1"] { --card-x:calc(var(--stack-step) * -1); --card-y:10px; --card-scale:.89; z-index:8; opacity:1; }
       .showcase-photo[data-carousel-position="1"] { --card-x:var(--stack-step); --card-y:10px; --card-scale:.89; z-index:8; opacity:1; }
@@ -1232,6 +1232,12 @@
         alt:photo.querySelector("img").alt,
         label:photo.getAttribute("aria-label")
       }));
+      sources.forEach((source) => {
+        const preload = new Image();
+        preload.decoding = "async";
+        preload.src = source.src;
+        preload.decode?.().catch(() => {});
+      });
       const modulo = (value, length) => ((value % length) + length) % length;
       const mobileBreakpoint = window.matchMedia("(max-width: 1100px)");
       const slots = Array.from({ length:9 }, (_, index) => {
@@ -1240,6 +1246,7 @@
         const image = document.createElement("img");
         slot.className = "showcase-photo";
         slot.dataset.carouselPosition = String(position);
+        image.decoding = "async";
         image.draggable = false;
         slot.append(image);
         return slot;
@@ -1253,7 +1260,7 @@
         slot.dataset.showcaseImage = source.src;
         slot.setAttribute("aria-label", source.label);
         const image = slot.querySelector("img");
-        image.src = source.src;
+        if (image.getAttribute("src") !== source.src) image.src = source.src;
         image.alt = source.alt;
       };
       const syncAccessibility = () => {
@@ -1308,17 +1315,25 @@
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
       let swipeGesture = null;
       let mobileOffset = 0;
-      let motionFrame = 0;
+      let dragFrame = 0;
+      let pendingOffset = 0;
+      let mobileAnimating = false;
       let motionTarget = 0;
-      let motionStep = 1;
+      let motionTimer = 0;
+      let motionCleanup = null;
+      let motionToken = 0;
+      let cachedStackStep = 1;
+      const mobileQueue = [];
       const slotCentre = (slot) => {
         const bounds = slot.getBoundingClientRect();
         return bounds.left + bounds.width / 2;
       };
-      const measureStackStep = () => {
+      const updateStackStep = () => {
+        if (!mobileBreakpoint.matches || mobileAnimating || swipeGesture) return cachedStackStep;
         const activeSlot = slots.find((slot) => slot.dataset.carouselPosition === "0");
         const nextSlot = slots.find((slot) => slot.dataset.carouselPosition === "1");
-        return Math.max(1, Math.abs(slotCentre(nextSlot) - slotCentre(activeSlot)));
+        cachedStackStep = Math.max(1, Math.abs(slotCentre(nextSlot) - slotCentre(activeSlot)));
+        return cachedStackStep;
       };
       const layoutAt = (position, step) => {
         const distance = Math.abs(position);
@@ -1342,7 +1357,21 @@
           slot.style.zIndex = String(layout.zIndex);
         });
       };
-      const resetMobileStack = (keepInteraction = false) => {
+      const scheduleMobileOffset = (offset) => {
+        pendingOffset = offset;
+        if (dragFrame) return;
+        dragFrame = requestAnimationFrame(() => {
+          dragFrame = 0;
+          renderMobileOffset(pendingOffset, cachedStackStep);
+        });
+      };
+      const flushMobileOffset = () => {
+        if (!dragFrame) return;
+        cancelAnimationFrame(dragFrame);
+        dragFrame = 0;
+        renderMobileOffset(pendingOffset, cachedStackStep);
+      };
+      const resetMobileStack = () => {
         slots.forEach((slot, index) => {
           const position = index - 4;
           slot.dataset.carouselPosition = String(position);
@@ -1352,72 +1381,87 @@
           slot.style.removeProperty("z-index");
         });
         mobileOffset = 0;
-        if (!keepInteraction) collage.classList.remove("is-interacting");
         syncAccessibility();
       };
-      const commitMobileTarget = (target) => {
-        activeIndex = modulo(activeIndex - Math.round(target), sources.length);
+      const finishMobileMotion = (token) => {
+        if (token !== motionToken) return;
+        if (motionTimer) window.clearTimeout(motionTimer);
+        motionTimer = 0;
+        motionCleanup?.();
+        motionCleanup = null;
+        activeIndex = modulo(activeIndex - Math.round(motionTarget), sources.length);
+        collage.classList.add("is-resetting");
         resetMobileStack();
+        void collage.offsetWidth;
+        requestAnimationFrame(() => {
+          collage.classList.remove("is-resetting");
+          mobileAnimating = false;
+          updateStackStep();
+          const nextDirection = mobileQueue.shift();
+          if (nextDirection) navigateMobile(nextDirection);
+        });
       };
-      const completeMotionImmediately = () => {
-        if (!motionFrame) return;
-        cancelAnimationFrame(motionFrame);
-        motionFrame = 0;
-        renderMobileOffset(motionTarget, motionStep);
-        commitMobileTarget(motionTarget);
-      };
-      const animateMobileTo = (target, step, releaseVelocity = 0) => {
-        if (motionFrame) cancelAnimationFrame(motionFrame);
+      const animateMobileTo = (target, releaseVelocity = 0) => {
+        flushMobileOffset();
+        collage.classList.remove("is-dragging");
         motionTarget = target;
-        motionStep = step;
         const startOffset = mobileOffset;
         const distance = target - startOffset;
         if (reducedMotion.matches || Math.abs(distance) < .001) {
-          renderMobileOffset(target, step);
-          commitMobileTarget(target);
+          const token = ++motionToken;
+          mobileAnimating = true;
+          renderMobileOffset(target, cachedStackStep);
+          finishMobileMotion(token);
           return;
         }
-        collage.classList.add("is-interacting");
-        const duration = Math.max(180, Math.min(340, 250 + Math.abs(distance) * 70 - Math.min(Math.abs(releaseVelocity) * 45, 70)));
-        const startedAt = performance.now();
-        const animate = (now) => {
-          const progress = Math.min(1, (now - startedAt) / duration);
-          const eased = 1 - Math.pow(1 - progress, 3);
-          renderMobileOffset(startOffset + distance * eased, step);
-          if (progress < 1) {
-            motionFrame = requestAnimationFrame(animate);
-            return;
-          }
-          motionFrame = 0;
-          commitMobileTarget(target);
+        mobileAnimating = true;
+        const token = ++motionToken;
+        const duration = Math.round(Math.max(190, Math.min(320, 255 + Math.abs(distance) * 55 - Math.min(Math.abs(releaseVelocity) * 55, 75))));
+        collage.style.setProperty("--showcase-motion-duration", `${duration}ms`);
+        const activeSlot = slots.find((slot) => slot.dataset.carouselPosition === "0");
+        const onTransitionEnd = (event) => {
+          if (event.target === activeSlot && event.propertyName === "transform") finishMobileMotion(token);
         };
-        motionFrame = requestAnimationFrame(animate);
+        activeSlot.addEventListener("transitionend", onTransitionEnd);
+        motionCleanup = () => activeSlot.removeEventListener("transitionend", onTransitionEnd);
+        void collage.offsetWidth;
+        renderMobileOffset(target, cachedStackStep);
+        motionTimer = window.setTimeout(() => finishMobileMotion(token), duration + 80);
+      };
+      const navigateMobile = (direction) => {
+        if (mobileAnimating || swipeGesture) {
+          mobileQueue.push(direction);
+          return;
+        }
+        animateMobileTo(-direction);
       };
       const navigateCarousel = (direction) => {
         if (!mobileBreakpoint.matches) {
           moveCarousel(direction);
           return;
         }
-        completeMotionImmediately();
-        animateMobileTo(-direction, measureStackStep());
+        navigateMobile(direction);
       };
       const finishSwipe = (event, allowMomentum) => {
         if (!swipeGesture || event.pointerId !== swipeGesture.pointerId) return;
-        if (collage.hasPointerCapture(event.pointerId)) collage.releasePointerCapture(event.pointerId);
+        try {
+          if (collage.hasPointerCapture(event.pointerId)) collage.releasePointerCapture(event.pointerId);
+        } catch {}
         const completedGesture = swipeGesture;
         swipeGesture = null;
         if (!completedGesture.horizontal) return;
-        const projectedOffset = mobileOffset + completedGesture.velocity * 170 / completedGesture.step;
+        flushMobileOffset();
+        const projectedOffset = mobileOffset + completedGesture.velocity * 165 / cachedStackStep;
         const hasIntent = allowMomentum && (
-          Math.abs(completedGesture.distanceX) >= Math.max(14, completedGesture.step * .18)
+          Math.abs(completedGesture.distanceX) >= Math.max(16, cachedStackStep * .2)
           || Math.abs(completedGesture.velocity) >= .18
         );
         const target = hasIntent ? (projectedOffset < 0 ? -1 : 1) : 0;
-        animateMobileTo(target, completedGesture.step, completedGesture.velocity);
+        animateMobileTo(target, completedGesture.velocity);
       };
       collage.addEventListener("pointerdown", (event) => {
-        if (!mobileBreakpoint.matches || event.target.closest(".showcase-control") || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
-        completeMotionImmediately();
+        if (!mobileBreakpoint.matches || mobileAnimating || event.target.closest(".showcase-control") || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+        updateStackStep();
         const now = performance.now();
         swipeGesture = {
           pointerId:event.pointerId,
@@ -1425,40 +1469,63 @@
           startY:event.clientY,
           distanceX:0,
           horizontal:null,
-          step:measureStackStep(),
           lastX:event.clientX,
           lastTime:now,
           velocity:0
         };
-        try { collage.setPointerCapture(event.pointerId); } catch {}
       });
       collage.addEventListener("pointermove", (event) => {
         if (!swipeGesture || event.pointerId !== swipeGesture.pointerId) return;
-        const distanceX = event.clientX - swipeGesture.startX;
-        const distanceY = event.clientY - swipeGesture.startY;
-        if (swipeGesture.horizontal === null && Math.max(Math.abs(distanceX), Math.abs(distanceY)) >= 6) {
+        const coalescedEvents = event.getCoalescedEvents?.();
+        const pointer = coalescedEvents?.[coalescedEvents.length - 1] || event;
+        const distanceX = pointer.clientX - swipeGesture.startX;
+        const distanceY = pointer.clientY - swipeGesture.startY;
+        if (swipeGesture.horizontal === null && Math.max(Math.abs(distanceX), Math.abs(distanceY)) >= 7) {
           swipeGesture.horizontal = Math.abs(distanceX) > Math.abs(distanceY);
+          if (swipeGesture.horizontal) {
+            collage.classList.add("is-dragging");
+            try { collage.setPointerCapture(event.pointerId); } catch {}
+          }
         }
         if (!swipeGesture.horizontal) return;
         event.preventDefault();
-        const now = performance.now();
+        const now = pointer.timeStamp || performance.now();
         const elapsed = Math.max(1, now - swipeGesture.lastTime);
-        const instantaneousVelocity = (event.clientX - swipeGesture.lastX) / elapsed;
-        swipeGesture.velocity = swipeGesture.velocity * .65 + instantaneousVelocity * .35;
-        swipeGesture.lastX = event.clientX;
+        const instantaneousVelocity = (pointer.clientX - swipeGesture.lastX) / elapsed;
+        swipeGesture.velocity = swipeGesture.velocity * .7 + instantaneousVelocity * .3;
+        swipeGesture.lastX = pointer.clientX;
         swipeGesture.lastTime = now;
         swipeGesture.distanceX = distanceX;
-        collage.classList.add("is-interacting");
-        renderMobileOffset(Math.max(-1.15, Math.min(1.15, distanceX / swipeGesture.step)), swipeGesture.step);
+        const rawOffset = distanceX / cachedStackStep;
+        const resistedOffset = Math.abs(rawOffset) > 1
+          ? Math.sign(rawOffset) * (1 + Math.min(.16, (Math.abs(rawOffset) - 1) * .18))
+          : rawOffset;
+        scheduleMobileOffset(resistedOffset);
       }, { passive:false });
       collage.addEventListener("pointerup", (event) => finishSwipe(event, true));
       collage.addEventListener("pointercancel", (event) => finishSwipe(event, false));
       mobileBreakpoint.addEventListener?.("change", () => {
-        completeMotionImmediately();
-        collage.classList.add("is-interacting");
-        resetMobileStack(true);
-        requestAnimationFrame(() => requestAnimationFrame(() => collage.classList.remove("is-interacting")));
+        motionToken += 1;
+        if (motionTimer) window.clearTimeout(motionTimer);
+        motionTimer = 0;
+        motionCleanup?.();
+        motionCleanup = null;
+        flushMobileOffset();
+        if (mobileAnimating) activeIndex = modulo(activeIndex - Math.round(motionTarget), sources.length);
+        mobileAnimating = false;
+        swipeGesture = null;
+        mobileQueue.length = 0;
+        collage.classList.remove("is-dragging");
+        collage.classList.add("is-resetting");
+        resetMobileStack();
+        void collage.offsetWidth;
+        requestAnimationFrame(() => {
+          collage.classList.remove("is-resetting");
+          updateStackStep();
+        });
       });
+      if ("ResizeObserver" in window) new ResizeObserver(() => updateStackStep()).observe(collage);
+      requestAnimationFrame(updateStackStep);
       previousButton.addEventListener("click", () => navigateCarousel(-1));
       nextButton.addEventListener("click", () => navigateCarousel(1));
       gallery.addEventListener("keydown", (event) => {
