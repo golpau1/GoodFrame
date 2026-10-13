@@ -648,14 +648,14 @@
       .showcase-gallery > * { position:relative; z-index:1; }
       .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
       .showcase-sticky { position:relative; top:auto; display:block; width:100%; height:auto; min-height:0; padding:0; overflow-x:clip; overflow-y:visible; }
-      .showcase-collage { position:relative; display:block; width:100%; height:auto; margin:0; padding:0; overflow:hidden; border:0; border-radius:0; cursor:default; touch-action:auto; }
+      .showcase-collage { --fan-card-size:min(29vw,280px); --fan-stage-height:clamp(470px,65vw,620px); position:relative; display:block; width:100%; height:auto; margin:0; padding:0; overflow:hidden; border:0; border-radius:0; cursor:default; touch-action:auto; }
       .showcase-track { display:none; }
-      .showcase-mobile-viewport { --mobile-slide-width:min(58vw,430px); display:block; width:100%; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scroll-behavior:auto; scroll-padding-inline:calc((100% - var(--mobile-slide-width))/2); scroll-snap-type:x mandatory; scrollbar-width:none; touch-action:pan-x pan-y; -webkit-overflow-scrolling:touch; }
-      .showcase-mobile-viewport::-webkit-scrollbar { display:none; width:0; height:0; }
-      .showcase-mobile-track { display:flex; align-items:center; width:max-content; gap:8px; padding:8px calc((100vw - var(--mobile-slide-width))/2) 14px; overflow-anchor:none; }
-      .showcase-mobile-slide { position:relative; flex:0 0 var(--mobile-slide-width); width:var(--mobile-slide-width); aspect-ratio:1; margin:0; padding:0; overflow:hidden; border:0; border-radius:6px; background:transparent; scroll-snap-align:center; scroll-snap-stop:always; transform:translateZ(0); backface-visibility:hidden; }
-      .showcase-mobile-slide img { display:block; width:100%; height:100%; object-fit:cover; border:0; border-radius:6px; box-shadow:none; user-select:none; -webkit-user-drag:none; }
-      .showcase-control { position:absolute; top:50%; z-index:10; display:grid; place-items:center; width:42px; height:42px; padding:0; border:1px solid var(--walnut); border-radius:5px; background:var(--walnut); color:var(--light); cursor:pointer; transform:translateY(-50%); transition:background 180ms ease, border-color 180ms ease, transform 180ms ease; }
+      .showcase-mobile-viewport { position:relative; display:block; width:100%; height:var(--fan-stage-height); overflow:hidden; overscroll-behavior-x:none; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+      .showcase-mobile-viewport.is-dragging { cursor:grabbing; }
+      .showcase-mobile-track { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+      .showcase-mobile-slide { position:absolute; top:12px; left:50%; width:var(--fan-card-size); height:var(--fan-card-size); margin:0; padding:0; overflow:hidden; border:0; border-radius:6px; background:transparent; opacity:0; transform:translate3d(-50%,0,0); transform-origin:50% 50%; will-change:transform,opacity; backface-visibility:hidden; -webkit-backface-visibility:hidden; contain:layout paint style; }
+      .showcase-mobile-slide img { display:block; width:100%; height:100%; object-fit:cover; border:0; border-radius:6px; box-shadow:none; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+      .showcase-control { position:absolute; top:calc(12px + var(--fan-card-size)/2); z-index:40; display:grid; place-items:center; width:42px; height:42px; padding:0; border:1px solid var(--walnut); border-radius:5px; background:var(--walnut); color:var(--light); cursor:pointer; transform:translateY(-50%); transition:background 180ms ease, border-color 180ms ease, transform 180ms ease; }
       .showcase-control--prev { left:-48px; }
       .showcase-control--next { right:-48px; }
       .showcase-control svg { display:block; width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
@@ -686,7 +686,7 @@
       .palette-panel:not(.has-pictures) .purchase-row { padding-top:8px; padding-bottom:32px; }
     }
     @media (max-width:1100px) {
-      /* Tablet/mobile carousel breakpoint: native horizontal scrolling with centred snap points. */
+      /* Tablet/mobile carousel breakpoint: transform-driven circular fan. */
       .showcase-gallery { width:100%; margin:0; padding:32px 0 40px; }
       .showcase-control { display:grid; width:42px; height:42px; }
       .showcase-control--prev { left:8px; }
@@ -694,7 +694,7 @@
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
     }
     @media (max-width:600px) {
-      .showcase-mobile-viewport { --mobile-slide-width:min(82vw,326px); }
+      .showcase-collage { --fan-card-size:min(58vw,230px); --fan-stage-height:clamp(390px,118vw,460px); }
       .showcase-control { width:40px; height:40px; }
       .showcase-control--prev { left:6px; }
       .showcase-control--next { right:6px; }
@@ -1248,16 +1248,11 @@
       mobileViewport.setAttribute("aria-label", "Swipe through gallery images");
       mobileViewport.tabIndex = 0;
       mobileTrack.className = "showcase-mobile-track";
-      const mobileCopies = 5;
-      const mobileMiddleCopy = 2;
-      const mobileSlides = Array.from({ length:sources.length * mobileCopies }, (_, absoluteIndex) => {
-        const sourceIndex = absoluteIndex % sources.length;
-        const source = sources[sourceIndex];
+      const mobileSlides = sources.map((source, sourceIndex) => {
         const slide = document.createElement("div");
         const image = document.createElement("img");
         slide.className = "showcase-mobile-slide";
         slide.dataset.sourceIndex = String(sourceIndex);
-        slide.dataset.absoluteIndex = String(absoluteIndex);
         slide.setAttribute("aria-label", source.label);
         image.src = source.src;
         image.alt = source.alt;
@@ -1346,142 +1341,184 @@
         });
       };
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      let mobileCurrentAbsolute = mobileMiddleCopy * sources.length;
-      let mobilePointerDown = false;
-      let mobileArrowAnimating = false;
-      let mobileSettleTimer = 0;
-      let mobileSuppressSettle = false;
-      const mobileQueue = [];
-      const mobileSlideLeft = (absoluteIndex) => {
-        const slide = mobileSlides[absoluteIndex];
-        if (!slide) return mobileViewport.scrollLeft;
-        return slide.offsetLeft - (mobileViewport.clientWidth - slide.offsetWidth) / 2;
-      };
-      const nearestMobileAbsolute = () => {
-        const viewportCentre = mobileViewport.scrollLeft + mobileViewport.clientWidth / 2;
-        let nearestIndex = 0;
-        let nearestDistance = Number.POSITIVE_INFINITY;
+      let fanPosition = activeIndex;
+      let fanAnimation = 0;
+      let fanRenderFrame = 0;
+      let fanPointerId = null;
+      let fanStartX = 0;
+      let fanStartPosition = 0;
+      let fanLastX = 0;
+      let fanLastTime = 0;
+      let fanVelocity = 0;
+      let fanMoved = false;
+      let fanCardSize = 0;
+      let fanSpacing = 0;
+      let fanStepRadians = 0;
+      let fanRadius = 0;
+      let fanAccessibleIndex = -1;
+      const fanQueue = [];
+      const syncMobileAccessibility = () => {
+        const selected = modulo(Math.round(fanPosition), sources.length);
+        if (selected === fanAccessibleIndex) return;
+        fanAccessibleIndex = selected;
         mobileSlides.forEach((slide, index) => {
-          const slideCentre = slide.offsetLeft + slide.offsetWidth / 2;
-          const distance = Math.abs(slideCentre - viewportCentre);
-          if (distance < nearestDistance) {
-            nearestDistance = distance;
-            nearestIndex = index;
-          }
-        });
-        return nearestIndex;
-      };
-      const syncMobileAccessibility = (absoluteIndex) => {
-        mobileSlides.forEach((slide, index) => {
-          const active = index === absoluteIndex;
+          const active = index === selected;
           if (active) slide.setAttribute("aria-current", "true");
           else slide.removeAttribute("aria-current");
           slide.setAttribute("aria-hidden", active ? "false" : "true");
         });
       };
-      const clearMobileSettleTimer = () => {
-        if (mobileSettleTimer) window.clearTimeout(mobileSettleTimer);
-        mobileSettleTimer = 0;
+      const measureFan = () => {
+        fanCardSize = mobileSlides[0]?.offsetWidth || 1;
+        const isPhone = mobileViewport.clientWidth <= 600;
+        const stepDegrees = isPhone ? 15 : 12;
+        fanSpacing = fanCardSize + 34;
+        fanStepRadians = stepDegrees * Math.PI / 180;
+        fanRadius = fanSpacing / Math.sin(fanStepRadians);
       };
-      const jumpMobileTo = (absoluteIndex, callback) => {
-        mobileSuppressSettle = true;
-        mobileCurrentAbsolute = absoluteIndex;
-        mobileViewport.style.scrollSnapType = "none";
-        mobileViewport.scrollTo({ left:mobileSlideLeft(absoluteIndex), behavior:"auto" });
-        syncMobileAccessibility(absoluteIndex);
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          mobileViewport.style.removeProperty("scroll-snap-type");
-          mobileSuppressSettle = false;
+      const renderFan = () => {
+        fanRenderFrame = 0;
+        if (!mobileBreakpoint.matches || !fanRadius) return;
+        const maxVisible = mobileViewport.clientWidth <= 600 ? 2.72 : 3.05;
+        mobileSlides.forEach((slide, sourceIndex) => {
+          let relative = sourceIndex - fanPosition;
+          relative -= Math.round(relative / sources.length) * sources.length;
+          const angle = relative * fanStepRadians;
+          const x = fanRadius * Math.sin(angle);
+          const y = fanRadius * (1 - Math.cos(angle));
+          const rotation = angle * 180 / Math.PI;
+          const visible = Math.abs(relative) <= maxVisible;
+          slide.style.transform = `translate3d(calc(-50% + ${x.toFixed(3)}px),${y.toFixed(3)}px,0) rotate(${rotation.toFixed(3)}deg)`;
+          slide.style.opacity = visible ? "1" : "0";
+          slide.style.zIndex = String(20 - Math.round(Math.abs(relative) * 2));
+        });
+        syncMobileAccessibility();
+      };
+      const scheduleFanRender = () => {
+        if (!fanRenderFrame) fanRenderFrame = requestAnimationFrame(renderFan);
+      };
+      const stopFanAnimation = () => {
+        if (fanAnimation) cancelAnimationFrame(fanAnimation);
+        fanAnimation = 0;
+      };
+      const normaliseFanPosition = () => {
+        const rounded = Math.round(fanPosition);
+        fanPosition = modulo(rounded, sources.length);
+        activeIndex = fanPosition;
+        renderFan();
+      };
+      const runQueuedFanNavigation = () => {
+        const direction = fanQueue.shift();
+        if (direction) navigateMobile(direction);
+      };
+      const animateFanTo = (target, duration = 520, callback) => {
+        stopFanAnimation();
+        const start = fanPosition;
+        const distance = target - start;
+        if (reducedMotion.matches || Math.abs(distance) < .001) {
+          fanPosition = target;
+          normaliseFanPosition();
           callback?.();
-        }));
-      };
-      const runNextMobileNavigation = () => {
-        const nextDirection = mobileQueue.shift();
-        if (nextDirection) navigateMobile(nextDirection);
-      };
-      const settleMobile = () => {
-        clearMobileSettleTimer();
-        if (!mobileBreakpoint.matches || mobilePointerDown || mobileSuppressSettle) return;
-        if (mobileArrowAnimating && Math.abs(mobileViewport.scrollLeft - mobileSlideLeft(mobileCurrentAbsolute)) > 2) {
-          scheduleMobileSettle(80);
           return;
         }
-        const settledAbsolute = nearestMobileAbsolute();
-        activeIndex = modulo(settledAbsolute, sources.length);
-        const canonicalAbsolute = mobileMiddleCopy * sources.length + activeIndex;
-        mobileArrowAnimating = false;
-        if (settledAbsolute !== canonicalAbsolute) {
-          jumpMobileTo(canonicalAbsolute, runNextMobileNavigation);
-          return;
-        }
-        mobileCurrentAbsolute = settledAbsolute;
-        syncMobileAccessibility(settledAbsolute);
-        runNextMobileNavigation();
-      };
-      const scheduleMobileSettle = (delay = 120) => {
-        clearMobileSettleTimer();
-        if (mobileSuppressSettle) return;
-        mobileSettleTimer = window.setTimeout(settleMobile, delay);
+        const startedAt = performance.now();
+        const tick = (now) => {
+          const progress = Math.min(1, (now - startedAt) / duration);
+          const eased = 1 - Math.pow(1 - progress, 4);
+          fanPosition = start + distance * eased;
+          renderFan();
+          if (progress < 1) {
+            fanAnimation = requestAnimationFrame(tick);
+            return;
+          }
+          fanAnimation = 0;
+          normaliseFanPosition();
+          callback?.();
+        };
+        fanAnimation = requestAnimationFrame(tick);
       };
       const navigateMobile = (direction) => {
-        if (mobileArrowAnimating || mobilePointerDown || mobileSuppressSettle) {
-          mobileQueue.push(direction);
+        if (fanPointerId !== null || fanAnimation) {
+          fanQueue.push(direction);
           return;
         }
-        const currentAbsolute = nearestMobileAbsolute();
-        const targetAbsolute = Math.max(0, Math.min(mobileSlides.length - 1, currentAbsolute + direction));
-        mobileArrowAnimating = true;
-        mobileCurrentAbsolute = targetAbsolute;
-        mobileViewport.scrollTo({
-          left:mobileSlideLeft(targetAbsolute),
-          behavior:reducedMotion.matches ? "auto" : "smooth"
-        });
-        scheduleMobileSettle(reducedMotion.matches ? 0 : 420);
+        animateFanTo(Math.round(fanPosition) + direction, 520, runQueuedFanNavigation);
       };
       const prepareMobile = () => {
-        clearMobileSettleTimer();
-        mobilePointerDown = false;
-        mobileArrowAnimating = false;
-        mobileQueue.length = 0;
-        requestAnimationFrame(() => jumpMobileTo(mobileMiddleCopy * sources.length + activeIndex));
+        stopFanAnimation();
+        fanPointerId = null;
+        fanQueue.length = 0;
+        fanPosition = activeIndex;
+        fanAccessibleIndex = -1;
+        requestAnimationFrame(() => {
+          measureFan();
+          renderFan();
+        });
       };
       const navigateCarousel = (direction) => {
         if (mobileBreakpoint.matches) navigateMobile(direction);
         else moveCarousel(direction);
       };
-      mobileViewport.addEventListener("scroll", () => scheduleMobileSettle(), { passive:true });
-      mobileViewport.addEventListener("scrollend", settleMobile);
-      mobileViewport.addEventListener("pointerdown", () => {
-        mobilePointerDown = true;
-        clearMobileSettleTimer();
-        if (!mobileArrowAnimating) return;
-        mobileViewport.scrollTo({ left:mobileViewport.scrollLeft, behavior:"auto" });
-        mobileArrowAnimating = false;
-        mobileQueue.length = 0;
+      mobileViewport.addEventListener("pointerdown", (event) => {
+        if (!mobileBreakpoint.matches || (event.pointerType === "mouse" && event.button !== 0)) return;
+        stopFanAnimation();
+        fanQueue.length = 0;
+        fanPointerId = event.pointerId;
+        fanStartX = fanLastX = event.clientX;
+        fanStartPosition = fanPosition;
+        fanLastTime = performance.now();
+        fanVelocity = 0;
+        fanMoved = false;
+        mobileViewport.classList.add("is-dragging");
+        if (event.pointerType === "mouse") mobileViewport.setPointerCapture?.(event.pointerId);
+      });
+      mobileViewport.addEventListener("pointermove", (event) => {
+        if (event.pointerId !== fanPointerId || !fanSpacing) return;
+        const now = performance.now();
+        const deltaX = event.clientX - fanLastX;
+        const deltaTime = Math.max(1, now - fanLastTime);
+        const totalX = event.clientX - fanStartX;
+        if (Math.abs(totalX) > 4) fanMoved = true;
+        const instantaneousVelocity = Math.max(-.004, Math.min(.004, -deltaX / fanSpacing / deltaTime));
+        fanVelocity = fanVelocity * .68 + instantaneousVelocity * .32;
+        fanPosition = fanStartPosition - totalX / fanSpacing;
+        fanLastX = event.clientX;
+        fanLastTime = now;
+        scheduleFanRender();
       }, { passive:true });
-      const finishMobilePointer = () => {
-        mobilePointerDown = false;
-        scheduleMobileSettle();
+      const finishFanPointer = (event) => {
+        if (event.pointerId !== fanPointerId) return;
+        if (mobileViewport.hasPointerCapture?.(event.pointerId)) mobileViewport.releasePointerCapture(event.pointerId);
+        mobileViewport.classList.remove("is-dragging");
+        fanPointerId = null;
+        const travel = fanPosition - fanStartPosition;
+        let target = Math.round(fanPosition + fanVelocity * 190);
+        if (fanMoved && target === Math.round(fanStartPosition) && Math.abs(travel) > .12) {
+          target = Math.round(fanStartPosition) + Math.sign(travel);
+        }
+        const duration = Math.min(620, Math.max(360, 360 + Math.abs(target - fanPosition) * 150));
+        animateFanTo(target, duration, runQueuedFanNavigation);
       };
-      mobileViewport.addEventListener("pointerup", finishMobilePointer, { passive:true });
-      mobileViewport.addEventListener("pointercancel", finishMobilePointer, { passive:true });
+      mobileViewport.addEventListener("pointerup", finishFanPointer);
+      mobileViewport.addEventListener("pointercancel", finishFanPointer);
       mobileBreakpoint.addEventListener?.("change", () => {
         desktopMotionToken += 1;
         moving = false;
         queuedDirection = 0;
-        clearMobileSettleTimer();
+        stopFanAnimation();
         if (mobileBreakpoint.matches) prepareMobile();
         else {
-          mobilePointerDown = false;
-          mobileArrowAnimating = false;
-          mobileQueue.length = 0;
+          fanPointerId = null;
+          fanQueue.length = 0;
+          activeIndex = modulo(Math.round(fanPosition), sources.length);
           syncDesktopStack();
         }
       });
       if ("ResizeObserver" in window) {
         new ResizeObserver(() => {
-          if (!mobileBreakpoint.matches || mobilePointerDown || mobileArrowAnimating) return;
-          requestAnimationFrame(() => jumpMobileTo(mobileMiddleCopy * sources.length + activeIndex));
+          if (!mobileBreakpoint.matches) return;
+          measureFan();
+          scheduleFanRender();
         }).observe(mobileViewport);
       }
       if (mobileBreakpoint.matches) prepareMobile();
