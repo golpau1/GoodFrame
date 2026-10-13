@@ -649,7 +649,7 @@
     .showcase-gallery::before, .showcase-gallery::after { display:none; }
     .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
     .showcase-sticky { position:relative; display:block; width:100%; margin:0; padding:0; }
-    .showcase-collage { --gallery-height:clamp(620px,70svh,760px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow:hidden; background:#fff; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+    .showcase-collage { --gallery-height:clamp(640px,74svh,800px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow:hidden; background:#fff; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
     .showcase-collage.is-dragging { cursor:grabbing; }
     .showcase-track { position:absolute; inset:0; display:block; width:100%; height:100%; margin:0; padding:0; pointer-events:none; }
     .showcase-photo { position:absolute; top:50%; left:0; display:block; width:var(--slide-width,1px); height:var(--slide-height,1px); margin:0; padding:0; overflow:visible; border:0; border-radius:0; outline:0; background:transparent; opacity:0; pointer-events:none; transform:translate3d(-200vw,-50%,0); transform-origin:50% 50%; transition:none; will-change:transform,opacity; backface-visibility:hidden; -webkit-backface-visibility:hidden; contain:layout style; }
@@ -661,10 +661,10 @@
     .showcase-control svg { display:block; width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.45; stroke-linecap:round; stroke-linejoin:round; }
     .showcase-control:hover { border-color:rgba(20,18,16,.28); background:#fff; color:#111; transform:translateY(-50%) scale(1.03); }
     @media (min-width:601px) and (max-width:1100px) {
-      .showcase-collage { --gallery-height:clamp(520px,68svh,680px); }
+      .showcase-collage { --gallery-height:clamp(560px,72svh,720px); }
     }
     @media (max-width:600px) {
-      .showcase-collage { --gallery-height:clamp(430px,58svh,500px); }
+      .showcase-collage { --gallery-height:clamp(470px,64svh,560px); }
       .showcase-control { width:36px; height:36px; }
       .showcase-control--prev { left:8px; }
       .showcase-control--next { right:8px; }
@@ -1011,16 +1011,28 @@
       const modulo = (value, length) => ((value % length) + length) % length;
       const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const composition = [
+        { ratio:.80, height:.92, y:-18, gap:44, fit:"contain", position:"50% 50%" },
+        { ratio:1.24, height:.58, y:86, gap:66, fit:"cover", position:"50% 64%" },
+        { ratio:1.52, height:.72, y:-54, gap:34, fit:"cover", position:"50% 62%" },
+        { ratio:.70, height:.84, y:38, gap:82, fit:"cover", position:"50% 58%" },
+        { ratio:1.68, height:.61, y:76, gap:48, fit:"cover", position:"50% 66%" },
+        { ratio:.92, height:.75, y:-72, gap:74, fit:"cover", position:"50% 60%" }
+      ];
       const sources = slides.map((slide, index) => {
         const image = slide.querySelector("img");
+        const layout = composition[index % composition.length];
         slide.dataset.sourceIndex = String(index);
+        slide.dataset.crop = layout.fit;
         slide.setAttribute("role", "group");
+        slide.setAttribute("aria-label", `Photograph ${index + 1} of ${slides.length}`);
         image.decoding = "async";
         image.draggable = false;
+        image.style.objectFit = layout.fit;
+        image.style.objectPosition = layout.position;
         return {
           image,
-          ratio:(Number(image.getAttribute("width")) || image.naturalWidth || 1) /
-            (Number(image.getAttribute("height")) || image.naturalHeight || 1)
+          ...layout
         };
       });
 
@@ -1028,14 +1040,13 @@
       collage.setAttribute("aria-roledescription", "carousel");
       let slideWidths = [];
       let slideCentres = [];
+      let slideOffsets = [];
       let cycleLength = 1;
-      let gap = 16;
       let position = 0;
       let currentVirtualIndex = 0;
       let pointerId = null;
       let dragStartX = 0;
       let dragStartPosition = 0;
-      let dragStartIndex = 0;
       let lastPointerX = 0;
       let lastPointerTime = 0;
       let velocity = 0;
@@ -1044,7 +1055,6 @@
       let renderFrame = 0;
       let resizeFrame = 0;
       let wheelTimer = 0;
-      let wheelStartIndex = 0;
       let wheelActive = false;
       let accessibleIndex = -1;
       const navigationQueue = [];
@@ -1093,7 +1103,7 @@
           const slideCentre = canonicalCentre + nearestCycle * cycleLength - position + viewportCentre;
           const width = slideWidths[sourceIndex];
           const visible = slideCentre + width / 2 > -width && slideCentre - width / 2 < viewportWidth + width;
-          slide.style.transform = `translate3d(${(slideCentre - width / 2).toFixed(3)}px,-50%,0)`;
+          slide.style.transform = `translate3d(${(slideCentre - width / 2).toFixed(3)}px,calc(-50% + ${slideOffsets[sourceIndex].toFixed(3)}px),0)`;
           slide.style.opacity = visible ? "1" : "0";
         });
         syncAccessibility();
@@ -1111,22 +1121,26 @@
       const measure = (selectedIndex = modulo(currentVirtualIndex, slides.length)) => {
         const viewportWidth = collage.clientWidth;
         const viewportHeight = collage.clientHeight;
-        const slideHeight = Math.min(viewportHeight * .88, viewportHeight - 40);
-        gap = viewportWidth <= 600 ? 18 : viewportWidth <= 1100 ? 32 : 50;
+        const availableHeight = Math.max(1, viewportHeight - (viewportWidth <= 600 ? 30 : 48));
+        const responsiveScale = viewportWidth <= 600 ? .56 : viewportWidth <= 1100 ? .76 : 1;
         slideWidths = [];
         slideCentres = [];
+        slideOffsets = [];
         let cursor = 0;
         slides.forEach((slide, index) => {
-          const width = slideHeight * sources[index].ratio;
+          const layout = sources[index];
+          const slideHeight = Math.min(availableHeight, viewportHeight * layout.height);
+          const width = slideHeight * layout.ratio;
           slide.style.setProperty("--slide-width", `${width.toFixed(3)}px`);
           slide.style.setProperty("--slide-height", `${slideHeight.toFixed(3)}px`);
           slideWidths.push(width);
           slideCentres.push(cursor + width / 2);
-          cursor += width + gap;
+          slideOffsets.push(layout.y * responsiveScale);
+          cursor += width + layout.gap * responsiveScale;
         });
         cycleLength = Math.max(1, cursor);
         currentVirtualIndex = modulo(selectedIndex, slides.length);
-        position = slideCentres[currentVirtualIndex];
+        position = slideCentres[currentVirtualIndex] + (viewportWidth <= 600 ? 48 : viewportWidth <= 1100 ? 28 : 0);
         accessibleIndex = -1;
         render();
       };
@@ -1142,13 +1156,14 @@
         if (direction) navigate(direction);
       };
 
-      const animateTo = (targetVirtualIndex, duration = 520, callback) => {
+      const animatePosition = (targetPosition, duration = 420, callback) => {
         stopAnimation();
         const startPosition = position;
-        const targetPosition = centreForVirtualIndex(targetVirtualIndex);
         const distance = targetPosition - startPosition;
         if (reducedMotion.matches || Math.abs(distance) < .5) {
-          normaliseAt(targetVirtualIndex);
+          position = targetPosition;
+          currentVirtualIndex = nearestVirtualIndex(position);
+          render();
           callback?.();
           return;
         }
@@ -1164,10 +1179,19 @@
             return;
           }
           animationFrame = 0;
-          normaliseAt(targetVirtualIndex);
+          position = targetPosition;
+          currentVirtualIndex = nearestVirtualIndex(position);
+          render();
           callback?.();
         };
         animationFrame = requestAnimationFrame(tick);
+      };
+
+      const animateTo = (targetVirtualIndex, duration = 520, callback) => {
+        animatePosition(centreForVirtualIndex(targetVirtualIndex), duration, () => {
+          normaliseAt(targetVirtualIndex);
+          callback?.();
+        });
       };
 
       function navigate(direction) {
@@ -1185,7 +1209,6 @@
         pointerId = event.pointerId;
         dragStartX = lastPointerX = event.clientX;
         dragStartPosition = position;
-        dragStartIndex = nearestVirtualIndex(position);
         lastPointerTime = performance.now();
         velocity = 0;
         moved = false;
@@ -1214,15 +1237,16 @@
         if (collage.hasPointerCapture?.(event.pointerId)) collage.releasePointerCapture(event.pointerId);
         collage.classList.remove("is-dragging");
         pointerId = null;
-        const travel = position - dragStartPosition;
-        let targetIndex = nearestVirtualIndex(position + velocity * 180);
-        targetIndex = clamp(targetIndex, dragStartIndex - 2, dragStartIndex + 2);
-        if (moved && targetIndex === dragStartIndex && Math.abs(travel) > 28) {
-          targetIndex = dragStartIndex + Math.sign(travel);
+        if (!moved || Math.abs(velocity) < .025) {
+          currentVirtualIndex = nearestVirtualIndex(position);
+          render();
+          runQueuedNavigation();
+          return;
         }
-        const targetDistance = Math.abs(centreForVirtualIndex(targetIndex) - position);
-        const duration = clamp(360 + targetDistance * .35, 360, 620);
-        animateTo(targetIndex, duration, runQueuedNavigation);
+        const momentum = clamp(velocity * 220, -Math.min(collage.clientWidth * .65, 560), Math.min(collage.clientWidth * .65, 560));
+        const targetPosition = position + momentum;
+        const duration = clamp(220 + Math.abs(momentum) * .42, 220, 480);
+        animatePosition(targetPosition, duration, runQueuedNavigation);
       };
 
       collage.addEventListener("pointerup", finishPointer);
@@ -1234,7 +1258,6 @@
           stopAnimation();
           navigationQueue.length = 0;
           wheelActive = true;
-          wheelStartIndex = nearestVirtualIndex(position);
         }
         position += event.deltaX;
         currentVirtualIndex = nearestVirtualIndex(position);
@@ -1242,9 +1265,9 @@
         window.clearTimeout(wheelTimer);
         wheelTimer = window.setTimeout(() => {
           wheelActive = false;
-          const targetIndex = clamp(nearestVirtualIndex(position), wheelStartIndex - 2, wheelStartIndex + 2);
-          const targetDistance = Math.abs(centreForVirtualIndex(targetIndex) - position);
-          animateTo(targetIndex, clamp(280 + targetDistance * .3, 280, 520), runQueuedNavigation);
+          currentVirtualIndex = nearestVirtualIndex(position);
+          render();
+          runQueuedNavigation();
         }, 90);
       }, { passive:false });
       previousButton.addEventListener("click", () => navigate(-1));
