@@ -649,11 +649,11 @@
     .showcase-gallery::before, .showcase-gallery::after { display:none; }
     .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
     .showcase-sticky { position:relative; display:block; width:100%; margin:0; padding:0; }
-    .showcase-collage { --gallery-height:clamp(500px,48vw,650px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow:hidden; background:#fff; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+    .showcase-collage { --gallery-height:clamp(620px,70svh,760px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow:hidden; background:#fff; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
     .showcase-collage.is-dragging { cursor:grabbing; }
     .showcase-track { position:absolute; inset:0; display:block; width:100%; height:100%; margin:0; padding:0; pointer-events:none; }
-    .showcase-photo { position:absolute; top:50%; left:0; display:block; width:var(--slide-width,1px); height:var(--slide-height,1px); margin:0; padding:0; overflow:hidden; border-width:1px 1.2px .9px 1.1px; border-style:solid; border-color:rgba(18,16,14,.78); border-radius:3px 4px 3px 4px; outline:0; background:#fff; opacity:0; pointer-events:none; transform:translate3d(-200vw,-50%,0); transform-origin:50% 50%; transition:none; will-change:transform,opacity; backface-visibility:hidden; -webkit-backface-visibility:hidden; contain:layout paint style; }
-    .showcase-photo img { display:block; width:100%; height:100%; object-fit:contain; border:0; border-radius:2px 3px 2px 3px; box-shadow:none; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+    .showcase-photo { position:absolute; top:50%; left:0; display:block; width:var(--slide-width,1px); height:var(--slide-height,1px); margin:0; padding:0; overflow:visible; border:0; border-radius:0; outline:0; background:transparent; opacity:0; pointer-events:none; transform:translate3d(-200vw,-50%,0); transform-origin:50% 50%; transition:none; will-change:transform,opacity; backface-visibility:hidden; -webkit-backface-visibility:hidden; contain:layout style; }
+    .showcase-photo img { display:block; width:100%; height:100%; object-fit:contain; border:0; border-radius:0; box-shadow:none; pointer-events:none; user-select:none; -webkit-user-drag:none; }
     .showcase-item-label, .showcase-note, .showcase-mobile-viewport { display:none; }
     .showcase-control { position:absolute; top:50%; z-index:40; display:grid; place-items:center; width:36px; height:36px; margin:0; padding:0; border:1px solid rgba(20,18,16,.16); border-radius:50%; background:rgba(255,255,255,.82); color:#1d1a17; cursor:pointer; transform:translateY(-50%); transition:background-color 160ms ease,border-color 160ms ease,transform 160ms ease; -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
     .showcase-control--prev { left:clamp(10px,2vw,28px); }
@@ -661,10 +661,10 @@
     .showcase-control svg { display:block; width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.45; stroke-linecap:round; stroke-linejoin:round; }
     .showcase-control:hover { border-color:rgba(20,18,16,.28); background:#fff; color:#111; transform:translateY(-50%) scale(1.03); }
     @media (min-width:601px) and (max-width:1100px) {
-      .showcase-collage { --gallery-height:clamp(450px,64vw,560px); }
+      .showcase-collage { --gallery-height:clamp(520px,68svh,680px); }
     }
     @media (max-width:600px) {
-      .showcase-collage { --gallery-height:clamp(370px,105vw,430px); }
+      .showcase-collage { --gallery-height:clamp(430px,58svh,500px); }
       .showcase-control { width:36px; height:36px; }
       .showcase-control--prev { left:8px; }
       .showcase-control--next { right:8px; }
@@ -1011,7 +1011,6 @@
       const modulo = (value, length) => ((value % length) + length) % length;
       const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      const heightScales = [.84, .76, .86, .94, .82, .90];
       const sources = slides.map((slide, index) => {
         const image = slide.querySelector("img");
         slide.dataset.sourceIndex = String(index);
@@ -1021,8 +1020,7 @@
         return {
           image,
           ratio:(Number(image.getAttribute("width")) || image.naturalWidth || 1) /
-            (Number(image.getAttribute("height")) || image.naturalHeight || 1),
-          heightScale:heightScales[index] || .86
+            (Number(image.getAttribute("height")) || image.naturalHeight || 1)
         };
       });
 
@@ -1113,16 +1111,15 @@
       const measure = (selectedIndex = modulo(currentVirtualIndex, slides.length)) => {
         const viewportWidth = collage.clientWidth;
         const viewportHeight = collage.clientHeight;
-        const baseHeight = viewportHeight * (viewportWidth <= 600 ? .60 : viewportWidth <= 1100 ? .64 : .72);
-        gap = viewportWidth <= 600 ? 12 : viewportWidth <= 1100 ? 24 : 30;
+        const slideHeight = Math.min(viewportHeight * .88, viewportHeight - 40);
+        gap = viewportWidth <= 600 ? 18 : viewportWidth <= 1100 ? 32 : 50;
         slideWidths = [];
         slideCentres = [];
         let cursor = 0;
         slides.forEach((slide, index) => {
-          const height = Math.min(viewportHeight - 68, baseHeight * sources[index].heightScale);
-          const width = height * sources[index].ratio;
+          const width = slideHeight * sources[index].ratio;
           slide.style.setProperty("--slide-width", `${width.toFixed(3)}px`);
-          slide.style.setProperty("--slide-height", `${height.toFixed(3)}px`);
+          slide.style.setProperty("--slide-height", `${slideHeight.toFixed(3)}px`);
           slideWidths.push(width);
           slideCentres.push(cursor + width / 2);
           cursor += width + gap;
