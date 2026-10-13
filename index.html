@@ -649,7 +649,7 @@
     .showcase-gallery::before, .showcase-gallery::after { display:none; }
     .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
     .showcase-sticky { position:relative; display:block; width:100%; margin:0; padding:0; }
-    .showcase-collage { --gallery-height:clamp(640px,74svh,800px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:#fff; cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-snap-type:none; }
+    .showcase-collage { --gallery-height:clamp(700px,82svh,960px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:#fff; cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-snap-type:none; }
     .showcase-collage::-webkit-scrollbar { display:none; }
     .showcase-collage.is-dragging { cursor:grabbing; }
     .showcase-track { position:relative; display:block; width:max-content; min-width:100%; height:100%; margin:0; padding:0; pointer-events:none; }
@@ -662,10 +662,10 @@
     .showcase-control svg { display:block; width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.45; stroke-linecap:round; stroke-linejoin:round; }
     .showcase-control:hover { border-color:rgba(20,18,16,.28); background:#fff; color:#111; transform:translateY(-50%) scale(1.03); }
     @media (min-width:601px) and (max-width:1100px) {
-      .showcase-collage { --gallery-height:clamp(560px,72svh,720px); }
+      .showcase-collage { --gallery-height:clamp(600px,78svh,800px); }
     }
     @media (max-width:600px) {
-      .showcase-collage { --gallery-height:clamp(470px,64svh,560px); }
+      .showcase-collage { --gallery-height:min(64svh,118vw); }
       .showcase-control { width:36px; height:36px; }
       .showcase-control--prev { left:8px; }
       .showcase-control--next { right:8px; }
@@ -1010,12 +1010,12 @@
       const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
       // Each print retains its intrinsic proportions. Only size, placement and angle vary.
       const composition = [
-        { height:.82, offset:-24, gap:68, rotation:-2.5 },
-        { height:.55, offset:72, gap:112, rotation:3.2 },
-        { height:.73, offset:-48, gap:42, rotation:0 },
-        { height:.62, offset:45, gap:92, rotation:-3.4 },
-        { height:.86, offset:4, gap:54, rotation:1.8 },
-        { height:.58, offset:-65, gap:76, rotation:-1.2 }
+        { height:.90, offset:-22, gap:54, rotation:0 },
+        { height:.84, offset:34, gap:106, rotation:.6 },
+        { height:.88, offset:-38, gap:38, rotation:0 },
+        { height:.70, offset:72, gap:84, rotation:-.7 },
+        { height:.86, offset:4, gap:64, rotation:0 },
+        { height:.89, offset:-28, gap:122, rotation:0 }
       ];
       previous.parentElement.parentElement.append(previous, next);
       previous.setAttribute("aria-label", "Scroll photographs left");
@@ -1033,11 +1033,13 @@
         previous.disabled = viewport.scrollLeft <= 1;
         next.disabled = viewport.scrollLeft >= viewport.scrollWidth - viewport.clientWidth - 1;
       };
+      let printStops = [];
       const measure = () => {
         const width = viewport.clientWidth;
         const height = viewport.clientHeight;
         const scale = width <= 600 ? .46 : width <= 1100 ? .72 : 1;
-        const edge = width <= 600 ? 34 : 64;
+        const edge = width <= 600 ? 20 : 48;
+        printStops = [];
         let cursor = edge;
         photos.forEach((photo, index) => {
           const image = photo.querySelector("img");
@@ -1047,10 +1049,11 @@
           const cos = Math.cos(angle), sin = Math.sin(angle);
           // Reserve space for the complete rotated rectangle, including every border.
           const printHeight = Math.min(height * config.height,
-            (height - 48 - 2 * Math.abs(config.offset * scale)) / (cos + ratio * sin),
-            (width - edge * 2) * config.height / .86 / (ratio * cos + sin));
+            (height - 24 - 2 * Math.abs(config.offset * scale)) / (cos + ratio * sin),
+            (width - edge * 2) * config.height / .90 / (ratio * cos + sin));
           const printWidth = printHeight * ratio;
           const boundsWidth = printWidth * cos + printHeight * sin;
+          printStops.push(Math.max(0, cursor - edge));
           photo.style.width = `${printWidth}px`;
           photo.style.height = `${printHeight}px`;
           photo.style.left = `${cursor + (boundsWidth - printWidth) / 2}px`;
@@ -1062,10 +1065,14 @@
         track.style.width = `${cursor - last.gap * scale + edge}px`;
         updateControls();
       };
-      const scroll = (direction) => viewport.scrollBy({
-        left:direction * viewport.clientWidth * .72,
-        behavior:reducedMotion.matches ? "instant" : "smooth"
-      });
+      // Arrows reveal the neighboring print; free scrolling never snaps to these positions.
+      const scroll = (direction) => {
+        const current = viewport.scrollLeft;
+        const target = direction > 0
+          ? printStops.find((left) => left > current + 2) ?? viewport.scrollWidth
+          : [...printStops].reverse().find((left) => left < current - 2) ?? 0;
+        viewport.scrollTo({ left:target, behavior:reducedMotion.matches ? "instant" : "smooth" });
+      };
       previous.addEventListener("click", () => scroll(-1));
       next.addEventListener("click", () => scroll(1));
       viewport.addEventListener("scroll", updateControls, { passive:true });
