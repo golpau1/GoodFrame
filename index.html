@@ -699,12 +699,18 @@
       /* Tablet/mobile carousel breakpoint: stacked cards with horizontal swipe navigation. */
       .showcase-gallery { width:100%; margin:0; padding:32px 0 40px; }
       .showcase-collage { display:block; }
-      .showcase-control { display:none; }
+      .showcase-control { display:grid; width:42px; height:42px; }
+      .showcase-control--prev { left:8px; }
+      .showcase-control--next { right:8px; }
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
     }
     @media (max-width:600px) {
       .showcase-collage { --stack-step:clamp(46px,14vw,60px); width:100%; height:clamp(270px,82vw,350px); }
       .showcase-photo { width:min(76vw,326px); }
+      .showcase-control { width:40px; height:40px; }
+      .showcase-control--prev { left:6px; }
+      .showcase-control--next { right:6px; }
+      .showcase-control svg { width:18px; height:18px; }
     }
     .showcase-photo, .showcase-photo img { border-radius:6px; }
     .showcase-photo { overflow:hidden; }
@@ -1387,6 +1393,14 @@
         };
         motionFrame = requestAnimationFrame(animate);
       };
+      const navigateCarousel = (direction) => {
+        if (!mobileBreakpoint.matches) {
+          moveCarousel(direction);
+          return;
+        }
+        completeMotionImmediately();
+        animateMobileTo(-direction, measureStackStep());
+      };
       const finishSwipe = (event, allowMomentum) => {
         if (!swipeGesture || event.pointerId !== swipeGesture.pointerId) return;
         if (collage.hasPointerCapture(event.pointerId)) collage.releasePointerCapture(event.pointerId);
@@ -1402,7 +1416,7 @@
         animateMobileTo(target, completedGesture.step, completedGesture.velocity);
       };
       collage.addEventListener("pointerdown", (event) => {
-        if (!mobileBreakpoint.matches || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+        if (!mobileBreakpoint.matches || event.target.closest(".showcase-control") || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
         completeMotionImmediately();
         const now = performance.now();
         swipeGesture = {
@@ -1445,16 +1459,16 @@
         resetMobileStack(true);
         requestAnimationFrame(() => requestAnimationFrame(() => collage.classList.remove("is-interacting")));
       });
-      previousButton.addEventListener("click", () => moveCarousel(-1));
-      nextButton.addEventListener("click", () => moveCarousel(1));
+      previousButton.addEventListener("click", () => navigateCarousel(-1));
+      nextButton.addEventListener("click", () => navigateCarousel(1));
       gallery.addEventListener("keydown", (event) => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          moveCarousel(-1);
+          navigateCarousel(-1);
         }
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          moveCarousel(1);
+          navigateCarousel(1);
         }
       });
     });
