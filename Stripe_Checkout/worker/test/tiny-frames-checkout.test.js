@@ -88,8 +88,8 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /checkout_request_id:checkoutContext\.id/);
   assert.match(html, /title\.textContent = `\$\{item\.colour\} · Frame \+ 8 Pictures`;/);
   assert.doesNotMatch(html, /Frame Only/);
-  assert.match(html, /const PRODUCT_PRICE = 74\.99;/);
-  assert.match(html, /id="config-price">74\.99</);
+  assert.match(html, /const PRODUCT_PRICE = 74\.95;/);
+  assert.match(html, /id="config-price">74\.95</);
   assert.doesNotMatch(html, /title\.textContent[^;]+item\.productCode/);
   assert.doesNotMatch(html, /product identification code could not be verified/i);
 });
@@ -263,13 +263,13 @@ function frameWithPictures(overrides = {}) {
   };
 }
 
-test('the only Tiny Frame product is $74.99 and shipping is authoritative on the Worker', () => {
+test('the only Tiny Frame product is $74.95 and shipping is authoritative on the Worker', () => {
   const lineItems = buildLineItems([
     frameWithPictures(),
     { price_data: { product_data: { name: 'Shipping' } }, quantity: 99 }
   ]);
 
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [7499, 1000]);
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [7495, 1000]);
   assert.equal(lineItems.at(-1).name, 'Shipping');
   assert.equal(lineItems.filter(item => item.name === 'Shipping').length, 1);
   assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
@@ -288,7 +288,7 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   ));
   const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
 
-  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7499');
+  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7495');
   assert.equal(payload.get('line_items[1][price_data][unit_amount]'), '1000');
   assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
   assert.equal(payload.has('line_items[0][price_data][product_data][description]'), false);
@@ -299,7 +299,7 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '19472');
   assert.equal(payload.get('metadata[product_codes]'), '19472');
   assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '19472');
-  const productMap = '1:19472 | Walnut | WALNUT · FRAME + 8 PICTURES | AUD 74.99 | PDF 19472/19472-print-sheet.pdf';
+  const productMap = '1:19472 | Walnut | WALNUT · FRAME + 8 PICTURES | AUD 74.95 | PDF 19472/19472-print-sheet.pdf';
   assert.equal(payload.get('metadata[product_map]'), productMap);
   assert.equal(payload.get('payment_intent_data[metadata][product_map]'), productMap);
   assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Walnut');
