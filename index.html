@@ -603,29 +603,6 @@
     @media (min-width:1101px) {
       .brand-statement-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:center; width:100%; min-height:96px; padding:24px 7%; background:var(--walnut); color:var(--light); }
       .brand-statement { margin:0; padding:0 20px; font-family:var(--font-display); font-size:clamp(11px,.9vw,14px); font-weight:400; letter-spacing:.035em; line-height:1.35; text-align:center; }
-      .showcase-gallery { display:block; width:100%; margin:0; padding:clamp(40px,5vw,64px) 0 clamp(48px,5.5vw,72px); overflow:hidden; border-radius:0; background:transparent; box-shadow:none; }
-      .showcase-collage { --stack-step:clamp(82px,8vw,108px); position:relative; width:min(1240px,calc(100% - 136px)); height:clamp(420px,42vw,540px); margin:0 auto; padding:0; overflow:visible; cursor:default; touch-action:pan-y; }
-      .showcase-track { position:relative; width:100%; height:100%; margin:0; padding:0; }
-      .showcase-photo { --card-x:0px; --card-y:0px; --card-scale:.5; position:absolute; top:50%; left:50%; z-index:1; display:flex; width:clamp(300px,36vw,490px); aspect-ratio:1; margin:0; padding:0; overflow:hidden; border:0; outline:0; background:transparent; cursor:default; opacity:0; pointer-events:none; transform:translate3d(calc(-50% + var(--card-x)), calc(-50% + var(--card-y)), 0) scale(var(--card-scale)); transition:transform 520ms cubic-bezier(.22,.7,.25,1), opacity 360ms ease; }
-      .showcase-photo.is-recycling { transition:none; }
-      .showcase-photo[data-carousel-position="0"] { --card-scale:1; z-index:10; opacity:1; }
-      .showcase-photo[data-carousel-position="-1"] { --card-x:calc(var(--stack-step) * -1); --card-y:12px; --card-scale:.89; z-index:8; opacity:1; }
-      .showcase-photo[data-carousel-position="1"] { --card-x:var(--stack-step); --card-y:12px; --card-scale:.89; z-index:8; opacity:1; }
-      .showcase-photo[data-carousel-position="-2"] { --card-x:calc(var(--stack-step) * -2); --card-y:24px; --card-scale:.79; z-index:6; opacity:1; }
-      .showcase-photo[data-carousel-position="2"] { --card-x:calc(var(--stack-step) * 2); --card-y:24px; --card-scale:.79; z-index:6; opacity:1; }
-      .showcase-photo[data-carousel-position="-3"] { --card-x:calc(var(--stack-step) * -3); --card-y:36px; --card-scale:.69; z-index:4; opacity:1; }
-      .showcase-photo[data-carousel-position="3"] { --card-x:calc(var(--stack-step) * 3); --card-y:36px; --card-scale:.69; z-index:4; opacity:1; }
-      .showcase-photo[data-carousel-position="-4"] { --card-x:calc(var(--stack-step) * -4); --card-y:48px; --card-scale:.59; z-index:2; opacity:1; }
-      .showcase-photo[data-carousel-position="4"] { --card-x:calc(var(--stack-step) * 4); --card-y:48px; --card-scale:.59; z-index:2; opacity:1; }
-      .showcase-photo[data-carousel-position="-5"] { --card-x:calc(var(--stack-step) * -5); --card-y:60px; --card-scale:.5; }
-      .showcase-photo[data-carousel-position="5"] { --card-x:calc(var(--stack-step) * 5); --card-y:60px; --card-scale:.5; }
-      .showcase-photo img { display:block; width:100%; height:100%; object-fit:cover; border:0; box-shadow:none; user-select:none; -webkit-user-drag:none; }
-      .showcase-control { position:absolute; top:50%; z-index:10; display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid var(--walnut); border-radius:5px; background:var(--walnut); color:var(--light); cursor:pointer; transform:translateY(-50%); transition:background 180ms ease, border-color 180ms ease, transform 180ms ease; }
-      .showcase-control--prev { left:-56px; }
-      .showcase-control--next { right:-56px; }
-      .showcase-control svg { display:block; width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
-      .showcase-control:hover { border-color:var(--brown); background:var(--brown); transform:translateY(-50%) scale(1.02); }
-      .showcase-note { display:none; }
     }
     @media (min-width:1101px) and (max-width:1400px) {
     }
@@ -643,27 +620,6 @@
       .brand-statement-track { display:flex; flex:none; align-items:center; width:max-content; animation:brand-statement-scroll 32s linear infinite; }
       .brand-statement-track span, .brand-statement-track b { flex:none; font-family:var(--font-display); font-size:11px; font-weight:400; letter-spacing:.02em; line-height:1; }
       .brand-statement-track b { margin:0 28px; font-weight:400; }
-      .showcase-gallery { position:relative; isolation:isolate; display:block; width:100%; max-width:none; height:auto; min-height:0; margin:0; padding:clamp(36px,5vw,54px) 0 clamp(44px,6vw,62px); overflow:hidden; border-radius:0; background:transparent; color:var(--brown); }
-      .showcase-gallery::before, .showcase-gallery::after { display:none; }
-      .showcase-gallery > * { position:relative; z-index:1; }
-      .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
-      .showcase-sticky { position:relative; top:auto; display:block; width:100%; height:auto; min-height:0; padding:0; overflow-x:clip; overflow-y:visible; }
-      .showcase-collage { --fan-card-size:min(29vw,280px); --fan-stage-height:clamp(470px,65vw,620px); position:relative; display:block; width:100%; height:auto; margin:0; padding:0; overflow:hidden; border:0; border-radius:0; cursor:default; touch-action:auto; }
-      .showcase-track { display:none; }
-      .showcase-mobile-viewport { position:relative; display:block; width:100%; height:var(--fan-stage-height); overflow:hidden; overscroll-behavior-x:none; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
-      .showcase-mobile-viewport.is-dragging { cursor:grabbing; }
-      .showcase-mobile-track { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-      .showcase-mobile-slide { position:absolute; top:12px; left:50%; width:var(--fan-card-size); height:var(--fan-card-size); margin:0; padding:0; overflow:hidden; border:0; border-radius:6px; background:transparent; opacity:0; transform:translate3d(-50%,0,0); transform-origin:50% 50%; will-change:transform,opacity; backface-visibility:hidden; -webkit-backface-visibility:hidden; contain:layout paint style; }
-      .showcase-mobile-slide img { display:block; width:100%; height:100%; object-fit:cover; border:0; border-radius:6px; box-shadow:none; pointer-events:none; user-select:none; -webkit-user-drag:none; }
-      .showcase-control { position:absolute; top:calc(12px + var(--fan-card-size)/2); z-index:40; display:grid; place-items:center; width:42px; height:42px; padding:0; border:1px solid var(--walnut); border-radius:5px; background:var(--walnut); color:var(--light); cursor:pointer; transform:translateY(-50%); transition:background 180ms ease, border-color 180ms ease, transform 180ms ease; }
-      .showcase-control--prev { left:-48px; }
-      .showcase-control--next { right:-48px; }
-      .showcase-control svg { display:block; width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
-      .showcase-note { display:none; }
-      .showcase-item-label { display:none; }
-      .showcase-mobile-caption { display:flex; align-items:baseline; gap:12px; width:calc(100% - 40px); margin:2px auto 0; color:var(--light); }
-      .showcase-mobile-caption strong { font-family:var(--font-body); font-size:11px; font-weight:400; letter-spacing:.04em; }
-      .showcase-mobile-caption span { font-size:10px; letter-spacing:.035em; line-height:1.25; }
     }
     @media (max-width:360px) {
       .header-left-nav { gap:6px; }
@@ -686,27 +642,36 @@
       .palette-panel:not(.has-pictures) .purchase-row { padding-top:8px; padding-bottom:32px; }
     }
     @media (max-width:1100px) {
-      /* Tablet/mobile carousel breakpoint: transform-driven circular fan. */
-      .showcase-gallery { width:100%; margin:0; padding:32px 0 40px; }
-      .showcase-control { display:grid; width:42px; height:42px; }
-      .showcase-control--prev { left:8px; }
-      .showcase-control--next { right:8px; }
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
     }
-    @media (max-width:600px) {
-      .showcase-collage { --fan-card-size:min(58vw,230px); --fan-stage-height:clamp(390px,118vw,460px); }
-      .showcase-control { width:40px; height:40px; }
-      .showcase-control--prev { left:6px; }
-      .showcase-control--next { right:6px; }
-      .showcase-control svg { width:18px; height:18px; }
+    /* One measured, transform-driven gallery system is shared by every viewport. */
+    .showcase-gallery { position:relative; isolation:isolate; display:block; width:100%; margin:0; padding:0; overflow:hidden; background:#fff; color:#171412; }
+    .showcase-gallery::before, .showcase-gallery::after { display:none; }
+    .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
+    .showcase-sticky { position:relative; display:block; width:100%; margin:0; padding:0; }
+    .showcase-collage { --gallery-height:clamp(500px,48vw,650px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow:hidden; background:#fff; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+    .showcase-collage.is-dragging { cursor:grabbing; }
+    .showcase-track { position:absolute; inset:0; display:block; width:100%; height:100%; margin:0; padding:0; pointer-events:none; }
+    .showcase-photo { position:absolute; top:50%; left:0; display:block; width:var(--slide-width,1px); height:var(--slide-height,1px); margin:0; padding:0; overflow:hidden; border-width:1px 1.2px .9px 1.1px; border-style:solid; border-color:rgba(18,16,14,.78); border-radius:3px 4px 3px 4px; outline:0; background:#fff; opacity:0; pointer-events:none; transform:translate3d(-200vw,-50%,0); transform-origin:50% 50%; transition:none; will-change:transform,opacity; backface-visibility:hidden; -webkit-backface-visibility:hidden; contain:layout paint style; }
+    .showcase-photo img { display:block; width:100%; height:100%; object-fit:contain; border:0; border-radius:2px 3px 2px 3px; box-shadow:none; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+    .showcase-item-label, .showcase-note, .showcase-mobile-viewport { display:none; }
+    .showcase-control { position:absolute; top:50%; z-index:40; display:grid; place-items:center; width:36px; height:36px; margin:0; padding:0; border:1px solid rgba(20,18,16,.16); border-radius:50%; background:rgba(255,255,255,.82); color:#1d1a17; cursor:pointer; transform:translateY(-50%); transition:background-color 160ms ease,border-color 160ms ease,transform 160ms ease; -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
+    .showcase-control--prev { left:clamp(10px,2vw,28px); }
+    .showcase-control--next { right:clamp(10px,2vw,28px); }
+    .showcase-control svg { display:block; width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.45; stroke-linecap:round; stroke-linejoin:round; }
+    .showcase-control:hover { border-color:rgba(20,18,16,.28); background:#fff; color:#111; transform:translateY(-50%) scale(1.03); }
+    @media (min-width:601px) and (max-width:1100px) {
+      .showcase-collage { --gallery-height:clamp(450px,64vw,560px); }
     }
-    .showcase-photo, .showcase-photo img { border-radius:6px; }
-    .showcase-photo { overflow:hidden; }
-    .showcase-gallery { position:relative; isolation:isolate; }
-    .showcase-gallery::before { position:absolute; inset:0; z-index:0; display:block; content:""; pointer-events:none; background-image:linear-gradient(rgba(60,42,33,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(60,42,33,.06) 1px,transparent 1px); background-size:29px 29px; }
-    .showcase-gallery > * { position:relative; z-index:1; }
+    @media (max-width:600px) {
+      .showcase-collage { --gallery-height:clamp(370px,105vw,430px); }
+      .showcase-control { width:36px; height:36px; }
+      .showcase-control--prev { left:8px; }
+      .showcase-control--next { right:8px; }
+      .showcase-control svg { width:16px; height:16px; }
+    }
     .header { position:sticky; top:0; z-index:20; width:100%; border-bottom:1px solid rgba(60,42,33,.25); background:var(--color-background); }
-    .showcase-gallery { background:var(--warm-beige); }
+    .showcase-gallery { background:#fff; }
     a:focus-visible, button:focus-visible { outline-color:var(--brown); }
     .header a:hover { color:var(--brown); opacity:1; text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; }
     .hero-intro-link:hover, .reset-images-button:hover { color:var(--brown); }
@@ -718,7 +683,7 @@
     .purchase-button:not(:disabled) #purchase-label, .purchase-button:not(:disabled) .purchase-price { color:inherit; }
     .purchase-button:not(:disabled):hover { background:transparent; color:var(--brown); box-shadow:none; }
     .slot-picker:hover, .faq-button:hover { background:rgba(182,109,77,.18); }
-    .cropper-actions #saveCrop:hover, .cart-action--primary:hover, .showcase-control:hover { border-color:var(--accent); background:var(--brown); color:var(--cream); box-shadow:inset 0 0 0 1px var(--accent); opacity:1; }
+    .cropper-actions #saveCrop:hover, .cart-action--primary:hover { border-color:var(--accent); background:var(--brown); color:var(--cream); box-shadow:inset 0 0 0 1px var(--accent); opacity:1; }
     .footer-contact a:hover { color:var(--cream); text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; opacity:1; }
     @media (max-width:1100px) {
       /* Mobile/tablet readability refinements. Desktop typography remains unchanged. */
@@ -904,12 +869,12 @@
       <div class="showcase-collage" role="region" aria-label="Editorial image carousel">
        <button class="showcase-control showcase-control--prev" type="button" aria-label="Previous gallery image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
        <div class="showcase-track">
-      <div class="showcase-photo showcase-photo--one" data-showcase-image="Assets/coffee/hero-frame.jpg" aria-label="Workshop frame photograph"><img src="Assets/coffee/hero-frame.jpg" alt="Timber frame styled on a warm tabletop"><span class="showcase-item-label">#01</span></div>
-      <div class="showcase-photo showcase-photo--two" data-showcase-image="Assets/coffee/supporting-photos.jpg" aria-label="Photograph of frame and photographs"><img src="Assets/coffee/supporting-photos.jpg" alt="Open timber photo box with photographs"><span class="showcase-item-label">#02</span></div>
-      <div class="showcase-photo showcase-photo--three" data-showcase-image="Assets/coffee/supporting-frame.jpg" aria-label="Photograph of open timber frame"><img src="Assets/coffee/supporting-frame.jpg" alt="Open timber frame with photographs sliding out"><span class="showcase-item-label">#03</span></div>
-      <div class="showcase-photo showcase-photo--four" data-showcase-image="Assets/coffee/framed-life-happens.jpg" aria-label="Framed product photograph"><img src="Assets/coffee/framed-life-happens.jpg" alt="Framed print styled with Good Frame materials"><span class="showcase-item-label">#04</span></div>
-      <div class="showcase-photo showcase-photo--five" data-showcase-image="Assets/coffee/ralphs-display.jpg" aria-label="Styled display photograph"><img src="Assets/coffee/ralphs-display.jpg" alt="Styled frame display in a warm interior"><span class="showcase-item-label">#05</span></div>
-      <div class="showcase-photo showcase-photo--six" data-showcase-image="Assets/coffee/coffee-beans-scoop.jpg" aria-label="Material detail photograph"><img src="Assets/coffee/coffee-beans-scoop.jpg" alt="Warm close-up detail photograph"><span class="showcase-item-label">#06</span></div>
+      <div class="showcase-photo showcase-photo--one" data-showcase-image="Assets/coffee/hero-frame.jpg" aria-label="Workshop frame photograph"><img src="Assets/coffee/hero-frame.jpg" width="1500" height="1000" alt="Timber frame styled on a warm tabletop"><span class="showcase-item-label">#01</span></div>
+      <div class="showcase-photo showcase-photo--two" data-showcase-image="Assets/coffee/supporting-photos.jpg" aria-label="Photograph of frame and photographs"><img src="Assets/coffee/supporting-photos.jpg" width="1500" height="1500" alt="Open timber photo box with photographs"><span class="showcase-item-label">#02</span></div>
+      <div class="showcase-photo showcase-photo--three" data-showcase-image="Assets/coffee/supporting-frame.jpg" aria-label="Photograph of open timber frame"><img src="Assets/coffee/supporting-frame.jpg" width="1500" height="1500" alt="Open timber frame with photographs sliding out"><span class="showcase-item-label">#03</span></div>
+      <div class="showcase-photo showcase-photo--four" data-showcase-image="Assets/coffee/framed-life-happens.jpg" aria-label="Framed product photograph"><img src="Assets/coffee/framed-life-happens.jpg" width="2970" height="3712" alt="Framed print styled with Good Frame materials"><span class="showcase-item-label">#04</span></div>
+      <div class="showcase-photo showcase-photo--five" data-showcase-image="Assets/coffee/ralphs-display.jpg" aria-label="Styled display photograph"><img src="Assets/coffee/ralphs-display.jpg" width="4640" height="6960" alt="Styled frame display in a warm interior"><span class="showcase-item-label">#05</span></div>
+      <div class="showcase-photo showcase-photo--six" data-showcase-image="Assets/coffee/coffee-beans-scoop.jpg" aria-label="Material detail photograph"><img src="Assets/coffee/coffee-beans-scoop.jpg" width="4000" height="6000" alt="Warm close-up detail photograph"><span class="showcase-item-label">#06</span></div>
        </div>
        <button class="showcase-control showcase-control--next" type="button" aria-label="Next gallery image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
       </div>
@@ -1035,389 +1000,155 @@
     faqDialog.addEventListener("click", (event) => {
       if (event.target === faqDialog) faqDialog.close();
     });
-    /* Legacy pinned/body-lock implementation disabled while mobile scrolling is stabilized. */
-    if (false) (() => {
-      const mobile = window.matchMedia("(max-width: 1100px)");
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      document.querySelectorAll(".showcase-gallery").forEach((gallery) => {
-        const panel = gallery.querySelector(".showcase-sticky");
-        const heading = gallery.querySelector(".showcase-heading");
-        const viewport = gallery.querySelector(".showcase-collage");
-        const track = gallery.querySelector(".showcase-track");
-        if (!panel || !heading || !viewport || !track) return;
-        const scrollPerPixel = 1;
-        let travel = 0;
-        let distance = 0;
-        let inset = 0;
-        let active = false;
-        let frame = 0;
-        let needsMeasure = true;
-        let locked = false;
-        let progress = 0;
-        let galleryStart = 0;
-        let touchY = 0;
-        let savedBodyPosition = "";
-        let savedBodyTop = "";
-        let savedBodyWidth = "";
-        let savedBodyOverflow = "";
-        let savedDocumentOverflow = "";
-        const number = (value) => parseFloat(value) || 0;
-        const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-        function disable() {
-          if (locked) unlock(-1);
-          active = false;
-          gallery.removeAttribute("data-scroll-gallery");
-          gallery.style.removeProperty("--showcase-height");
-          gallery.style.removeProperty("--showcase-size");
-          track.style.removeProperty("transform");
-          viewport.scrollLeft = 0;
-        }
-        function measure() {
-          if (!mobile.matches || reducedMotion.matches) {
-            disable();
-            return;
-          }
-          gallery.setAttribute("data-scroll-gallery", "");
-          const panelStyle = getComputedStyle(panel);
-          const headingStyle = getComputedStyle(heading);
-          inset = number(panelStyle.top);
-          const availableHeight = panel.clientHeight
-            - number(panelStyle.paddingTop) - number(panelStyle.paddingBottom)
-            - heading.offsetHeight
-            - number(headingStyle.marginTop) - number(headingStyle.marginBottom);
-          const size = Math.floor(Math.min(panel.clientWidth - 40, availableHeight));
-          if (size < 120) {
-            disable();
-            return;
-          }
-          gallery.style.setProperty("--showcase-size", `${size}px`);
-          travel = Math.max(0, track.scrollWidth - viewport.clientWidth);
-          if (travel === 0) {
-            disable();
-            return;
-          }
-          distance = travel * scrollPerPixel;
-          gallery.style.setProperty("--showcase-height", `${panel.offsetHeight + distance}px`);
-          viewport.scrollLeft = 0;
-          active = true;
-        }
-        function render() {
-          track.style.transform = `translate3d(${-travel * progress}px, 0, 0)`;
-        }
-        function lock(initialProgress) {
-          if (locked) return;
-          locked = true;
-          progress = initialProgress;
-          galleryStart = window.scrollY + gallery.getBoundingClientRect().top;
-          savedBodyPosition = document.body.style.position;
-          savedBodyTop = document.body.style.top;
-          savedBodyWidth = document.body.style.width;
-          savedBodyOverflow = document.body.style.overflow;
-          savedDocumentOverflow = document.documentElement.style.overflow;
-          document.body.style.position = "fixed";
-          document.body.style.top = `-${window.scrollY}px`;
-          document.body.style.width = "100%";
-          document.body.style.overflow = "hidden";
-          document.documentElement.style.overflow = "hidden";
-          render();
-        }
-        function unlock(direction) {
-          if (!locked) return;
-          const releaseAt = direction > 0 ? galleryStart + distance : galleryStart;
-          locked = false;
-          document.body.style.position = savedBodyPosition;
-          document.body.style.top = savedBodyTop;
-          document.body.style.width = savedBodyWidth;
-          document.body.style.overflow = savedBodyOverflow;
-          document.documentElement.style.overflow = savedDocumentOverflow;
-          window.scrollTo(0, releaseAt);
-          schedule();
-        }
-        function advance(delta) {
-          progress = clamp(progress + delta, 0, 1);
-          render();
-          if (progress >= 1) unlock(1);
-          if (progress <= 0) unlock(-1);
-        }
-        function update() {
-          frame = 0;
-          if (needsMeasure) {
-            needsMeasure = false;
-            measure();
-          }
-          if (!active) return;
-          if (locked) {
-            render();
-            return;
-          }
-          const elapsed = inset - gallery.getBoundingClientRect().top;
-          progress = clamp(elapsed / distance, 0, 1);
-          render();
-        }
-        function schedule() {
-          if (!frame) frame = requestAnimationFrame(update);
-        }
-        function remeasure() {
-          needsMeasure = true;
-          schedule();
-        }
-        window.addEventListener("scroll", schedule, { passive:true });
-        window.addEventListener("resize", remeasure, { passive:true });
-        window.addEventListener("pageshow", remeasure);
-        mobile.addEventListener("change", remeasure);
-        reducedMotion.addEventListener("change", remeasure);
-        window.addEventListener("wheel", (event) => {
-          if (!mobile.matches || !active || Math.abs(event.deltaY) < 1) return;
-          const rect = gallery.getBoundingClientRect();
-          if (!locked && event.deltaY > 0 && rect.top <= 3 && rect.bottom > window.innerHeight - 3) lock(0);
-          if (!locked && event.deltaY < 0 && rect.bottom <= window.innerHeight + 3 && rect.top < 3) lock(1);
-          if (!locked) return;
-          event.preventDefault();
-          advance(event.deltaY / distance);
-        }, { passive:false, capture:true });
-        window.addEventListener("touchstart", (event) => {
-          if (!mobile.matches || !active || !event.touches.length) return;
-          touchY = event.touches[0].clientY;
-          const rect = gallery.getBoundingClientRect();
-          if (!locked && rect.top <= 3 && rect.bottom > window.innerHeight - 3) lock(0);
-          if (!locked && rect.bottom <= window.innerHeight + 3 && rect.top < 3) lock(1);
-        }, { passive:true, capture:true });
-        window.addEventListener("touchmove", (event) => {
-          if (!mobile.matches || !active || !locked || !event.touches.length) return;
-          const currentY = event.touches[0].clientY;
-          const deltaY = touchY - currentY;
-          touchY = currentY;
-          if (Math.abs(deltaY) < .5) return;
-          event.preventDefault();
-          advance(deltaY / distance);
-        }, { passive:false, capture:true });
-        track.addEventListener("focusin", (event) => {
-          if (!active) return;
-          const photo = event.target.closest(".showcase-photo");
-          if (!photo) return;
-          viewport.scrollLeft = 0;
-          const sectionTop = window.scrollY + gallery.getBoundingClientRect().top;
-          window.scrollTo({ top:sectionTop - inset + clamp(photo.offsetLeft, 0, travel) * scrollPerPixel, behavior:"instant" });
-          schedule();
-        });
-        if ("ResizeObserver" in window) {
-          const observer = new ResizeObserver(remeasure);
-          observer.observe(panel);
-          observer.observe(heading);
-        }
-        document.fonts?.ready.then(remeasure);
-        remeasure();
-      });
-    })();
     document.querySelectorAll(".showcase-gallery").forEach((gallery) => {
+      const collage = gallery.querySelector(".showcase-collage");
       const track = gallery.querySelector(".showcase-track");
-      const sourceButtons = track ? [...track.querySelectorAll(".showcase-photo")] : [];
+      const slides = track ? [...track.querySelectorAll(".showcase-photo")] : [];
       const previousButton = gallery.querySelector(".showcase-control--prev");
       const nextButton = gallery.querySelector(".showcase-control--next");
-      if (!track || !sourceButtons.length || !previousButton || !nextButton) return;
-      const sources = sourceButtons.map((photo) => ({
-        src:photo.dataset.showcaseImage,
-        alt:photo.querySelector("img").alt,
-        label:photo.getAttribute("aria-label")
-      }));
-      sources.forEach((source) => {
-        const preload = new Image();
-        preload.decoding = "async";
-        preload.src = source.src;
-        preload.decode?.().catch(() => {});
-      });
+      if (!collage || !track || !slides.length || !previousButton || !nextButton) return;
+
       const modulo = (value, length) => ((value % length) + length) % length;
-      const mobileBreakpoint = window.matchMedia("(max-width: 1100px)");
-      const collage = gallery.querySelector(".showcase-collage");
-      const slots = Array.from({ length:9 }, (_, index) => {
-        const position = index - 4;
-        const slot = document.createElement("div");
-        const image = document.createElement("img");
-        slot.className = "showcase-photo";
-        slot.dataset.carouselPosition = String(position);
+      const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const heightScales = [.84, .76, .86, .94, .82, .90];
+      const sources = slides.map((slide, index) => {
+        const image = slide.querySelector("img");
+        slide.dataset.sourceIndex = String(index);
+        slide.setAttribute("role", "group");
         image.decoding = "async";
         image.draggable = false;
-        slot.append(image);
-        return slot;
+        return {
+          image,
+          ratio:(Number(image.getAttribute("width")) || image.naturalWidth || 1) /
+            (Number(image.getAttribute("height")) || image.naturalHeight || 1),
+          heightScale:heightScales[index] || .86
+        };
       });
-      track.replaceChildren(...slots);
-      const mobileViewport = document.createElement("div");
-      const mobileTrack = document.createElement("div");
-      mobileViewport.className = "showcase-mobile-viewport";
-      mobileViewport.setAttribute("role", "region");
-      mobileViewport.setAttribute("aria-label", "Swipe through gallery images");
-      mobileViewport.tabIndex = 0;
-      mobileTrack.className = "showcase-mobile-track";
-      const mobileSlides = sources.map((source, sourceIndex) => {
-        const slide = document.createElement("div");
-        const image = document.createElement("img");
-        slide.className = "showcase-mobile-slide";
-        slide.dataset.sourceIndex = String(sourceIndex);
-        slide.setAttribute("aria-label", source.label);
-        image.src = source.src;
-        image.alt = source.alt;
-        image.decoding = "async";
-        image.draggable = false;
-        slide.append(image);
-        return slide;
-      });
-      mobileTrack.replaceChildren(...mobileSlides);
-      mobileViewport.append(mobileTrack);
-      collage.insertBefore(mobileViewport, nextButton);
-      let activeIndex = 0;
-      let moving = false;
-      let queuedDirection = 0;
-      let desktopMotionToken = 0;
-      const setSlotSource = (slot, sourceIndex) => {
-        const source = sources[modulo(sourceIndex, sources.length)];
-        slot.dataset.showcaseImage = source.src;
-        slot.setAttribute("aria-label", source.label);
-        const image = slot.querySelector("img");
-        if (image.getAttribute("src") !== source.src) image.src = source.src;
-        image.alt = source.alt;
+
+      collage.tabIndex = 0;
+      collage.setAttribute("aria-roledescription", "carousel");
+      let slideWidths = [];
+      let slideCentres = [];
+      let cycleLength = 1;
+      let gap = 16;
+      let position = 0;
+      let currentVirtualIndex = 0;
+      let pointerId = null;
+      let dragStartX = 0;
+      let dragStartPosition = 0;
+      let dragStartIndex = 0;
+      let lastPointerX = 0;
+      let lastPointerTime = 0;
+      let velocity = 0;
+      let moved = false;
+      let animationFrame = 0;
+      let renderFrame = 0;
+      let resizeFrame = 0;
+      let accessibleIndex = -1;
+      const navigationQueue = [];
+
+      const centreForVirtualIndex = (virtualIndex) => {
+        const sourceIndex = modulo(virtualIndex, slides.length);
+        const cycle = Math.floor(virtualIndex / slides.length);
+        return slideCentres[sourceIndex] + cycle * cycleLength;
       };
+
+      const nearestVirtualIndex = (value) => {
+        const approximateCycle = Math.floor(value / cycleLength);
+        let closestIndex = 0;
+        let closestDistance = Number.POSITIVE_INFINITY;
+        for (let cycle = approximateCycle - 1; cycle <= approximateCycle + 1; cycle += 1) {
+          slides.forEach((_, sourceIndex) => {
+            const virtualIndex = cycle * slides.length + sourceIndex;
+            const distance = Math.abs(centreForVirtualIndex(virtualIndex) - value);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestIndex = virtualIndex;
+            }
+          });
+        }
+        return closestIndex;
+      };
+
       const syncAccessibility = () => {
-        slots.forEach((slot) => {
-          const active = slot.dataset.carouselPosition === "0";
-          if (active) slot.setAttribute("aria-current", "true");
-          else slot.removeAttribute("aria-current");
-          slot.setAttribute("aria-hidden", active ? "false" : "true");
+        const selected = modulo(Math.round(currentVirtualIndex), slides.length);
+        if (selected === accessibleIndex) return;
+        accessibleIndex = selected;
+        slides.forEach((slide, index) => {
+          if (index === selected) slide.setAttribute("aria-current", "true");
+          else slide.removeAttribute("aria-current");
+          slide.setAttribute("aria-hidden", index === selected ? "false" : "true");
         });
       };
-      slots.forEach((slot) => setSlotSource(slot, activeIndex + Number(slot.dataset.carouselPosition)));
-      syncAccessibility();
-      const syncDesktopStack = () => {
-        slots.forEach((slot, index) => {
-          const position = index - 4;
-          slot.classList.remove("is-recycling");
-          slot.dataset.carouselPosition = String(position);
-          slot.style.removeProperty("transform");
-          slot.style.removeProperty("opacity");
-          slot.style.removeProperty("z-index");
-          setSlotSource(slot, activeIndex + position);
+
+      const render = () => {
+        renderFrame = 0;
+        const viewportWidth = collage.clientWidth;
+        const viewportCentre = viewportWidth / 2;
+        slides.forEach((slide, sourceIndex) => {
+          const canonicalCentre = slideCentres[sourceIndex];
+          const nearestCycle = Math.round((position - canonicalCentre) / cycleLength);
+          const slideCentre = canonicalCentre + nearestCycle * cycleLength - position + viewportCentre;
+          const width = slideWidths[sourceIndex];
+          const visible = slideCentre + width / 2 > -width && slideCentre - width / 2 < viewportWidth + width;
+          slide.style.transform = `translate3d(${(slideCentre - width / 2).toFixed(3)}px,-50%,0)`;
+          slide.style.opacity = visible ? "1" : "0";
         });
         syncAccessibility();
       };
-      const moveCarousel = (direction) => {
-        if (moving) {
-          queuedDirection = Math.max(-sources.length, Math.min(sources.length, queuedDirection + direction));
-          return;
-        }
-        moving = true;
-        const motionToken = ++desktopMotionToken;
-        const futureActive = modulo(activeIndex + direction, sources.length);
-        const outgoingPosition = direction > 0 ? -4 : 4;
-        const entryPosition = direction > 0 ? 5 : -5;
-        const targetPosition = direction > 0 ? 4 : -4;
-        const recycledSlot = slots.find((slot) => Number(slot.dataset.carouselPosition) === outgoingPosition);
-        recycledSlot.classList.add("is-recycling");
-        recycledSlot.dataset.carouselPosition = String(entryPosition);
-        setSlotSource(recycledSlot, futureActive + targetPosition);
-        void recycledSlot.offsetWidth;
-        requestAnimationFrame(() => {
-          if (motionToken !== desktopMotionToken) return;
-          activeIndex = futureActive;
-          slots.forEach((slot) => {
-            if (slot === recycledSlot) return;
-            const position = Number(slot.dataset.carouselPosition);
-            slot.dataset.carouselPosition = String(position - direction);
-          });
-          recycledSlot.classList.remove("is-recycling");
-          syncAccessibility();
-          requestAnimationFrame(() => {
-            if (motionToken !== desktopMotionToken) return;
-            recycledSlot.dataset.carouselPosition = String(targetPosition);
-            syncAccessibility();
-            const transitionTime = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 540;
-            window.setTimeout(() => {
-              if (motionToken !== desktopMotionToken) return;
-              moving = false;
-              if (!queuedDirection) return;
-              const nextDirection = Math.sign(queuedDirection);
-              queuedDirection -= nextDirection;
-              moveCarousel(nextDirection);
-            }, transitionTime);
-          });
+
+      const scheduleRender = () => {
+        if (!renderFrame) renderFrame = requestAnimationFrame(render);
+      };
+
+      const stopAnimation = () => {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+      };
+
+      const measure = (selectedIndex = modulo(currentVirtualIndex, slides.length)) => {
+        const viewportWidth = collage.clientWidth;
+        const viewportHeight = collage.clientHeight;
+        const baseHeight = viewportHeight * (viewportWidth <= 600 ? .60 : viewportWidth <= 1100 ? .64 : .72);
+        gap = viewportWidth <= 600 ? 12 : viewportWidth <= 1100 ? 24 : 30;
+        slideWidths = [];
+        slideCentres = [];
+        let cursor = 0;
+        slides.forEach((slide, index) => {
+          const height = Math.min(viewportHeight - 68, baseHeight * sources[index].heightScale);
+          const width = height * sources[index].ratio;
+          slide.style.setProperty("--slide-width", `${width.toFixed(3)}px`);
+          slide.style.setProperty("--slide-height", `${height.toFixed(3)}px`);
+          slideWidths.push(width);
+          slideCentres.push(cursor + width / 2);
+          cursor += width + gap;
         });
+        cycleLength = Math.max(1, cursor);
+        currentVirtualIndex = modulo(selectedIndex, slides.length);
+        position = slideCentres[currentVirtualIndex];
+        accessibleIndex = -1;
+        render();
       };
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      let fanPosition = activeIndex;
-      let fanAnimation = 0;
-      let fanRenderFrame = 0;
-      let fanPointerId = null;
-      let fanStartX = 0;
-      let fanStartPosition = 0;
-      let fanLastX = 0;
-      let fanLastTime = 0;
-      let fanVelocity = 0;
-      let fanMoved = false;
-      let fanCardSize = 0;
-      let fanSpacing = 0;
-      let fanStepRadians = 0;
-      let fanRadius = 0;
-      let fanAccessibleIndex = -1;
-      const fanQueue = [];
-      const syncMobileAccessibility = () => {
-        const selected = modulo(Math.round(fanPosition), sources.length);
-        if (selected === fanAccessibleIndex) return;
-        fanAccessibleIndex = selected;
-        mobileSlides.forEach((slide, index) => {
-          const active = index === selected;
-          if (active) slide.setAttribute("aria-current", "true");
-          else slide.removeAttribute("aria-current");
-          slide.setAttribute("aria-hidden", active ? "false" : "true");
-        });
+
+      const normaliseAt = (virtualIndex) => {
+        currentVirtualIndex = modulo(virtualIndex, slides.length);
+        position = slideCentres[currentVirtualIndex];
+        render();
       };
-      const measureFan = () => {
-        fanCardSize = mobileSlides[0]?.offsetWidth || 1;
-        const isPhone = mobileViewport.clientWidth <= 600;
-        const stepDegrees = isPhone ? 15 : 12;
-        fanSpacing = fanCardSize + 34;
-        fanStepRadians = stepDegrees * Math.PI / 180;
-        fanRadius = fanSpacing / Math.sin(fanStepRadians);
+
+      const runQueuedNavigation = () => {
+        const direction = navigationQueue.shift();
+        if (direction) navigate(direction);
       };
-      const renderFan = () => {
-        fanRenderFrame = 0;
-        if (!mobileBreakpoint.matches || !fanRadius) return;
-        const maxVisible = mobileViewport.clientWidth <= 600 ? 2.72 : 3.05;
-        mobileSlides.forEach((slide, sourceIndex) => {
-          let relative = sourceIndex - fanPosition;
-          relative -= Math.round(relative / sources.length) * sources.length;
-          const angle = relative * fanStepRadians;
-          const x = fanRadius * Math.sin(angle);
-          const y = fanRadius * (1 - Math.cos(angle));
-          const rotation = angle * 180 / Math.PI;
-          const visible = Math.abs(relative) <= maxVisible;
-          slide.style.transform = `translate3d(calc(-50% + ${x.toFixed(3)}px),${y.toFixed(3)}px,0) rotate(${rotation.toFixed(3)}deg)`;
-          slide.style.opacity = visible ? "1" : "0";
-          slide.style.zIndex = String(20 - Math.round(Math.abs(relative) * 2));
-        });
-        syncMobileAccessibility();
-      };
-      const scheduleFanRender = () => {
-        if (!fanRenderFrame) fanRenderFrame = requestAnimationFrame(renderFan);
-      };
-      const stopFanAnimation = () => {
-        if (fanAnimation) cancelAnimationFrame(fanAnimation);
-        fanAnimation = 0;
-      };
-      const normaliseFanPosition = () => {
-        const rounded = Math.round(fanPosition);
-        fanPosition = modulo(rounded, sources.length);
-        activeIndex = fanPosition;
-        renderFan();
-      };
-      const runQueuedFanNavigation = () => {
-        const direction = fanQueue.shift();
-        if (direction) navigateMobile(direction);
-      };
-      const animateFanTo = (target, duration = 520, callback) => {
-        stopFanAnimation();
-        const start = fanPosition;
-        const distance = target - start;
-        if (reducedMotion.matches || Math.abs(distance) < .001) {
-          fanPosition = target;
-          normaliseFanPosition();
+
+      const animateTo = (targetVirtualIndex, duration = 520, callback) => {
+        stopAnimation();
+        const startPosition = position;
+        const targetPosition = centreForVirtualIndex(targetVirtualIndex);
+        const distance = targetPosition - startPosition;
+        if (reducedMotion.matches || Math.abs(distance) < .5) {
+          normaliseAt(targetVirtualIndex);
           callback?.();
           return;
         }
@@ -1425,115 +1156,106 @@
         const tick = (now) => {
           const progress = Math.min(1, (now - startedAt) / duration);
           const eased = 1 - Math.pow(1 - progress, 4);
-          fanPosition = start + distance * eased;
-          renderFan();
+          position = startPosition + distance * eased;
+          currentVirtualIndex = nearestVirtualIndex(position);
+          render();
           if (progress < 1) {
-            fanAnimation = requestAnimationFrame(tick);
+            animationFrame = requestAnimationFrame(tick);
             return;
           }
-          fanAnimation = 0;
-          normaliseFanPosition();
+          animationFrame = 0;
+          normaliseAt(targetVirtualIndex);
           callback?.();
         };
-        fanAnimation = requestAnimationFrame(tick);
+        animationFrame = requestAnimationFrame(tick);
       };
-      const navigateMobile = (direction) => {
-        if (fanPointerId !== null || fanAnimation) {
-          fanQueue.push(direction);
+
+      function navigate(direction) {
+        if (pointerId !== null || animationFrame) {
+          navigationQueue.push(direction);
           return;
         }
-        animateFanTo(Math.round(fanPosition) + direction, 520, runQueuedFanNavigation);
-      };
-      const prepareMobile = () => {
-        stopFanAnimation();
-        fanPointerId = null;
-        fanQueue.length = 0;
-        fanPosition = activeIndex;
-        fanAccessibleIndex = -1;
-        requestAnimationFrame(() => {
-          measureFan();
-          renderFan();
-        });
-      };
-      const navigateCarousel = (direction) => {
-        if (mobileBreakpoint.matches) navigateMobile(direction);
-        else moveCarousel(direction);
-      };
-      mobileViewport.addEventListener("pointerdown", (event) => {
-        if (!mobileBreakpoint.matches || (event.pointerType === "mouse" && event.button !== 0)) return;
-        stopFanAnimation();
-        fanQueue.length = 0;
-        fanPointerId = event.pointerId;
-        fanStartX = fanLastX = event.clientX;
-        fanStartPosition = fanPosition;
-        fanLastTime = performance.now();
-        fanVelocity = 0;
-        fanMoved = false;
-        mobileViewport.classList.add("is-dragging");
-        if (event.pointerType === "mouse") mobileViewport.setPointerCapture?.(event.pointerId);
-      });
-      mobileViewport.addEventListener("pointermove", (event) => {
-        if (event.pointerId !== fanPointerId || !fanSpacing) return;
-        const now = performance.now();
-        const deltaX = event.clientX - fanLastX;
-        const deltaTime = Math.max(1, now - fanLastTime);
-        const totalX = event.clientX - fanStartX;
-        if (Math.abs(totalX) > 4) fanMoved = true;
-        const instantaneousVelocity = Math.max(-.004, Math.min(.004, -deltaX / fanSpacing / deltaTime));
-        fanVelocity = fanVelocity * .68 + instantaneousVelocity * .32;
-        fanPosition = fanStartPosition - totalX / fanSpacing;
-        fanLastX = event.clientX;
-        fanLastTime = now;
-        scheduleFanRender();
-      }, { passive:true });
-      const finishFanPointer = (event) => {
-        if (event.pointerId !== fanPointerId) return;
-        if (mobileViewport.hasPointerCapture?.(event.pointerId)) mobileViewport.releasePointerCapture(event.pointerId);
-        mobileViewport.classList.remove("is-dragging");
-        fanPointerId = null;
-        const travel = fanPosition - fanStartPosition;
-        let target = Math.round(fanPosition + fanVelocity * 190);
-        if (fanMoved && target === Math.round(fanStartPosition) && Math.abs(travel) > .12) {
-          target = Math.round(fanStartPosition) + Math.sign(travel);
-        }
-        const duration = Math.min(620, Math.max(360, 360 + Math.abs(target - fanPosition) * 150));
-        animateFanTo(target, duration, runQueuedFanNavigation);
-      };
-      mobileViewport.addEventListener("pointerup", finishFanPointer);
-      mobileViewport.addEventListener("pointercancel", finishFanPointer);
-      mobileBreakpoint.addEventListener?.("change", () => {
-        desktopMotionToken += 1;
-        moving = false;
-        queuedDirection = 0;
-        stopFanAnimation();
-        if (mobileBreakpoint.matches) prepareMobile();
-        else {
-          fanPointerId = null;
-          fanQueue.length = 0;
-          activeIndex = modulo(Math.round(fanPosition), sources.length);
-          syncDesktopStack();
-        }
-      });
-      if ("ResizeObserver" in window) {
-        new ResizeObserver(() => {
-          if (!mobileBreakpoint.matches) return;
-          measureFan();
-          scheduleFanRender();
-        }).observe(mobileViewport);
+        animateTo(currentVirtualIndex + direction, 520, runQueuedNavigation);
       }
-      if (mobileBreakpoint.matches) prepareMobile();
-      previousButton.addEventListener("click", () => navigateCarousel(-1));
-      nextButton.addEventListener("click", () => navigateCarousel(1));
-      gallery.addEventListener("keydown", (event) => {
+
+      collage.addEventListener("pointerdown", (event) => {
+        if (event.target.closest(".showcase-control") || (event.pointerType === "mouse" && event.button !== 0)) return;
+        stopAnimation();
+        navigationQueue.length = 0;
+        pointerId = event.pointerId;
+        dragStartX = lastPointerX = event.clientX;
+        dragStartPosition = position;
+        dragStartIndex = nearestVirtualIndex(position);
+        lastPointerTime = performance.now();
+        velocity = 0;
+        moved = false;
+        collage.classList.add("is-dragging");
+        if (event.pointerType === "mouse") collage.setPointerCapture?.(event.pointerId);
+      });
+
+      collage.addEventListener("pointermove", (event) => {
+        if (event.pointerId !== pointerId) return;
+        const now = performance.now();
+        const deltaX = event.clientX - lastPointerX;
+        const deltaTime = Math.max(1, now - lastPointerTime);
+        const totalX = event.clientX - dragStartX;
+        if (Math.abs(totalX) > 4) moved = true;
+        const instantaneousVelocity = clamp(-deltaX / deltaTime, -1.5, 1.5);
+        velocity = velocity * .68 + instantaneousVelocity * .32;
+        position = dragStartPosition - totalX;
+        currentVirtualIndex = nearestVirtualIndex(position);
+        lastPointerX = event.clientX;
+        lastPointerTime = now;
+        scheduleRender();
+      }, { passive:true });
+
+      const finishPointer = (event) => {
+        if (event.pointerId !== pointerId) return;
+        if (collage.hasPointerCapture?.(event.pointerId)) collage.releasePointerCapture(event.pointerId);
+        collage.classList.remove("is-dragging");
+        pointerId = null;
+        const travel = position - dragStartPosition;
+        let targetIndex = nearestVirtualIndex(position + velocity * 180);
+        targetIndex = clamp(targetIndex, dragStartIndex - 2, dragStartIndex + 2);
+        if (moved && targetIndex === dragStartIndex && Math.abs(travel) > 28) {
+          targetIndex = dragStartIndex + Math.sign(travel);
+        }
+        const targetDistance = Math.abs(centreForVirtualIndex(targetIndex) - position);
+        const duration = clamp(360 + targetDistance * .35, 360, 620);
+        animateTo(targetIndex, duration, runQueuedNavigation);
+      };
+
+      collage.addEventListener("pointerup", finishPointer);
+      collage.addEventListener("pointercancel", finishPointer);
+      previousButton.addEventListener("click", () => navigate(-1));
+      nextButton.addEventListener("click", () => navigate(1));
+      collage.addEventListener("keydown", (event) => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          navigateCarousel(-1);
+          navigate(-1);
         }
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          navigateCarousel(1);
+          navigate(1);
         }
       });
+
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(() => {
+          if (resizeFrame) cancelAnimationFrame(resizeFrame);
+          resizeFrame = requestAnimationFrame(() => {
+            resizeFrame = 0;
+            const selectedIndex = modulo(nearestVirtualIndex(position), slides.length);
+            stopAnimation();
+            navigationQueue.length = 0;
+            measure(selectedIndex);
+          });
+        }).observe(collage);
+      }
+
+      measure(0);
+      Promise.all(sources.map(({ image }) => image.decode?.().catch(() => {}) || Promise.resolve()))
+        .then(() => measure(modulo(currentVirtualIndex, slides.length)));
     });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
