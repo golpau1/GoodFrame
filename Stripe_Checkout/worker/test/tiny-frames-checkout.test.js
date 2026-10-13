@@ -51,7 +51,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /getCartPhotoPreviews\(item\.cartItemId\)/);
   assert.match(html, /database\.createObjectStore\(CART_PREVIEW_STORE_NAME, \{ keyPath:"cartItemId" \}\)/);
   assert.match(html, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.match(html, /\/product-code\/assign/);
+  assert.doesNotMatch(html, /\/product-code\/assign/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
   assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);
   assert.match(html, /createFullResolutionPrintCrop/);
@@ -86,7 +86,10 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.doesNotMatch(html, /checkoutState === "cancelled"\) \{\s*await showUnsuccessfulCheckout\(\);/);
   assert.match(html, /clearPurchasedCartItems\(checkoutContext\)/);
   assert.match(html, /checkout_request_id:checkoutContext\.id/);
-  assert.match(html, /title\.textContent = `\$\{item\.colour\} · \$\{normalizeOrderType\(item\.order\) === "frame-plus-pictures" \? "Frame \+ 8 Pictures" : "Frame Only"\}`;/);
+  assert.match(html, /title\.textContent = `\$\{item\.colour\} · Frame \+ 8 Pictures`;/);
+  assert.doesNotMatch(html, /Frame Only/);
+  assert.match(html, /const PRODUCT_PRICE = 90;/);
+  assert.match(html, /id="config-price">90</);
   assert.doesNotMatch(html, /title\.textContent[^;]+item\.productCode/);
   assert.doesNotMatch(html, /product identification code could not be verified/i);
 });
@@ -260,16 +263,16 @@ function frameWithPictures(overrides = {}) {
   };
 }
 
-test('Tiny Frame prices and shipping are authoritative on the Worker', () => {
+test('the only Tiny Frame product is $90 and shipping is authoritative on the Worker', () => {
   const lineItems = buildLineItems([
-    frameOnly(),
     frameWithPictures(),
     { price_data: { product_data: { name: 'Shipping' } }, quantity: 99 }
   ]);
 
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [7000, 9000, 1000]);
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [9000, 1000]);
   assert.equal(lineItems.at(-1).name, 'Shipping');
   assert.equal(lineItems.filter(item => item.name === 'Shipping').length, 1);
+  assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
 });
 
 test('picture products require a valid upload reference', () => {
@@ -280,32 +283,26 @@ test('picture products require a valid upload reference', () => {
 });
 
 test('Stripe payload contains safe Tiny Frame metadata and storefront return URLs', () => {
-  let productIndex = 0;
-  const lineItems = buildLineItems([frameOnly(), frameWithPictures()]).map(item => (
-    item.cartItemId ? { ...item, productCode:['58321', '19472'][productIndex++] } : item
+  const lineItems = buildLineItems([frameWithPictures()]).map(item => (
+    item.cartItemId ? { ...item, productCode:'19472' } : item
   ));
   const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
 
-  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7000');
-  assert.equal(payload.get('line_items[1][price_data][unit_amount]'), '9000');
-  assert.equal(payload.get('line_items[2][price_data][unit_amount]'), '1000');
-  assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME ONLY');
-  assert.equal(payload.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
+  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '9000');
+  assert.equal(payload.get('line_items[1][price_data][unit_amount]'), '1000');
+  assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
   assert.equal(payload.has('line_items[0][price_data][product_data][description]'), false);
-  assert.equal(payload.has('line_items[1][price_data][product_data][description]'), false);
-  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_only');
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_type]'), 'tiny_frame_8_pictures');
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][frame_colour]'), 'Walnut');
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][upload_reference]'), uploadReference);
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][upload_session_id]'), uploadReference);
-  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '58321');
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_code]'), '19472');
-  assert.equal(payload.get('metadata[product_codes]'), '58321,19472');
-  assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '58321,19472');
-  const productMap = '1:58321 | Oak | OAK · FRAME ONLY | AUD 70.00; 2:19472 | Walnut | WALNUT · FRAME + 8 PICTURES | AUD 90.00 | PDF 19472/19472-print-sheet.pdf';
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_8_pictures');
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][frame_colour]'), 'Walnut');
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_reference]'), uploadReference);
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_session_id]'), uploadReference);
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '19472');
+  assert.equal(payload.get('metadata[product_codes]'), '19472');
+  assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '19472');
+  const productMap = '1:19472 | Walnut | WALNUT · FRAME + 8 PICTURES | AUD 90.00 | PDF 19472/19472-print-sheet.pdf';
   assert.equal(payload.get('metadata[product_map]'), productMap);
   assert.equal(payload.get('payment_intent_data[metadata][product_map]'), productMap);
-  assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Oak,Walnut');
+  assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Walnut');
   assert.equal(payload.get('payment_intent_data[description]'), 'Good Frame Order');
   assert.equal(payload.get('metadata[upload_references]'), uploadReference);
   assert.equal(payload.get('metadata[upload_session_ids]'), uploadReference);

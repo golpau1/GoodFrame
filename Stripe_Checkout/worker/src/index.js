@@ -34,12 +34,6 @@ const PRICE_BY_SIZE = Object.freeze({
   '841x1189mm': 70000
 });
 const TINY_FRAME_PRODUCTS = Object.freeze({
-  tiny_frame_only: Object.freeze({
-    orderType: 'frame-only',
-    name: 'Tiny Frame - Frame Only',
-    unitAmount: 7000,
-    requiresPictures: false
-  }),
   tiny_frame_8_pictures: Object.freeze({
     orderType: 'frame-plus-pictures',
     name: 'Tiny Frame + 8 Pictures',
@@ -1313,9 +1307,6 @@ function cleanText(value, fallback) {
 
 function normalizeTinyFrameOrderType(value) {
   const normalized = cleanText(value, '').toLowerCase();
-  if (normalized === 'frame-only' || normalized === 'frame only') {
-    return 'frame-only';
-  }
   if (['frame-plus-pictures', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
     return 'frame-plus-pictures';
   }
@@ -1328,7 +1319,6 @@ function normalizeTinyFrameProductType(item) {
     return explicitProductType;
   }
   const orderType = normalizeTinyFrameOrderType(item?.orderType);
-  if (orderType === 'frame-only') return 'tiny_frame_only';
   if (orderType === 'frame-plus-pictures') return 'tiny_frame_8_pictures';
   return '';
 }
@@ -1440,7 +1430,7 @@ function buildLineItems(items) {
       throw new Error('Frame + 8 Pictures requires a completed picture upload reference');
     }
     const customerFacingName = tinyFrameProduct
-      ? `${frameColour.toUpperCase()} · ${tinyFrameProduct.requiresPictures ? 'FRAME + 8 PICTURES' : 'FRAME ONLY'}`
+      ? `${frameColour.toUpperCase()} · FRAME + 8 PICTURES`
       : `Print & Frame - ${size}`;
 
     for (let unitIndex = 0; unitIndex < quantity; unitIndex += 1) {

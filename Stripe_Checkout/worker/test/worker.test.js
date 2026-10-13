@@ -383,11 +383,11 @@ test('checkout charges $90 for a Tiny Frame with eight pictures plus $10 shippin
   }
 });
 
-test('checkout charges $70 for Frame Only plus $10 shipping', async () => {
+test('checkout rejects the removed Frame Only product before contacting Stripe', async () => {
   const originalFetch = globalThis.fetch;
-  let stripeBody;
-  globalThis.fetch = async (_url, options) => {
-    stripeBody = new URLSearchParams(options.body);
+  let stripeWasCalled = false;
+  globalThis.fetch = async () => {
+    stripeWasCalled = true;
     return Response.json({ id: 'cs_test_frameonly1', url: 'https://checkout.stripe.test/frame-only' });
   };
   try {
@@ -404,17 +404,9 @@ test('checkout charges $70 for Frame Only plus $10 shipping', async () => {
         artworkObjectKeys: []
       }] })
     }), env());
-    assert.equal(response.status, 200);
-    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'WALNUT · FRAME ONLY');
-    assert.equal(stripeBody.has('line_items[0][price_data][product_data][description]'), false);
-    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '7000');
-    assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'Shipping');
-    assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '1000');
-    assert.equal(
-      Number(stripeBody.get('line_items[0][price_data][unit_amount]')) +
-        Number(stripeBody.get('line_items[1][price_data][unit_amount]')),
-      8000
-    );
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /invalid product type/);
+    assert.equal(stripeWasCalled, false);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -430,15 +422,19 @@ test('quantity creates one unique five-digit code per physical frame and retries
     return Response.json({ id:'cs_test_quantity3', url:'https://checkout.stripe.test/quantity-3' });
   };
   try {
-    const testEnv = env();
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_00000000000000000000000000000006';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
     const requestBody = JSON.stringify({
       checkoutRequestId:'co_00000000000000000000000000000006',
       items:[{
-        productType:'tiny_frame_only',
+        productType:'tiny_frame_8_pictures',
         cartItemId:'ci_00000000000000000000000000000006',
         size:'80x80mm',
         frameColour:'Oak',
-        quantity:3
+        quantity:3,
+        uploadReference
       }]
     });
     const makeRequest = () => new Request('https://worker.example/create-checkout-session', {
@@ -457,12 +453,12 @@ test('quantity creates one unique five-digit code per physical frame and retries
     )), firstResult.productCodes);
     assert.deepEqual([0, 1, 2].map(index => (
       stripeBody.get(`line_items[${index}][price_data][unit_amount]`)
-    )), ['7000', '7000', '7000']);
+    )), ['9000', '9000', '9000']);
     assert.equal(stripeBody.get('line_items[3][price_data][unit_amount]'), '1000');
     assert.equal(stripeBody.has('line_items[4][price_data][unit_amount]'), false);
     const paymentProductMap = stripeBody.get('payment_intent_data[metadata][product_map]');
     firstResult.productCodes.forEach((code, index) => {
-      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| OAK · FRAME ONLY \\| AUD 70\\.00`));
+      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| OAK · FRAME \\+ 8 PICTURES \\| AUD 90\\.00`));
     });
 
     const retry = await worker.fetch(makeRequest(), testEnv);
@@ -481,18 +477,22 @@ test('authorized order management can find the Stripe relationship by product co
     url:'https://checkout.stripe.test/searchable'
   });
   try {
-    const testEnv = { ...env(), ADMIN_API_KEY:'local-admin-key-at-least-24-characters' };
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_00000000000000000000000000000007';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = { ...env(bucket), ADMIN_API_KEY:'local-admin-key-at-least-24-characters' };
     const checkout = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method:'POST',
       headers:{ Origin:ORIGIN, 'Content-Type':'application/json' },
       body:JSON.stringify({
         checkoutRequestId:'co_00000000000000000000000000000007',
         items:[{
-          productType:'tiny_frame_only',
+          productType:'tiny_frame_8_pictures',
           cartItemId:'ci_00000000000000000000000000000007',
           size:'80x80mm',
           frameColour:'Walnut',
-          quantity:1
+          quantity:1,
+          uploadReference
         }]
       })
     }), testEnv);
@@ -510,9 +510,9 @@ test('authorized order management can find the Stripe relationship by product co
     const record = await authorized.json();
     assert.equal(record.productCode, productCode);
     assert.equal(record.stripeCheckoutSessionId, 'cs_test_searchable1');
-    assert.equal(record.productType, 'tiny_frame_only');
+    assert.equal(record.productType, 'tiny_frame_8_pictures');
     assert.equal(record.frameColour, 'Walnut');
-    assert.equal(record.unitAmount, 7000);
+    assert.equal(record.unitAmount, 9000);
     assert.equal(record.currency, 'aud');
     const capacity = await worker.fetch(new Request(
       'https://worker.example/admin/product-code-capacity',
@@ -532,8 +532,11 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
     url:'https://checkout.stripe.com/c/pay/webhook-product'
   });
   const webhookSecret = 'whsec_live_product_test';
+  const bucket = new MemoryBucket();
+  const uploadReference = 'tf_00000000000000000000000000000008';
+  await seedPictureUpload(bucket, uploadReference);
   const liveEnv = {
-    ...env(),
+    ...env(bucket),
     STRIPE_MODE:'live',
     STRIPE_TEST_SECRET_KEY:undefined,
     STRIPE_SECRET_KEY:'sk_live_existing_configuration',
@@ -548,11 +551,12 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
       body:JSON.stringify({
         checkoutRequestId:'co_00000000000000000000000000000008',
         items:[{
-          productType:'tiny_frame_only',
+          productType:'tiny_frame_8_pictures',
           cartItemId:'ci_00000000000000000000000000000008',
           size:'80x80mm',
           frameColour:'Oak',
-          quantity:1
+          quantity:1,
+          uploadReference
         }]
       })
     }), liveEnv);
@@ -599,20 +603,22 @@ test('checkout adds the $10 shipping line only once for multiple Tiny Frames', a
   };
   try {
     const bucket = new MemoryBucket();
-    const uploadReference = 'tf_1234567890abcdef1234567890abcdef';
-    await seedPictureUpload(bucket, uploadReference);
+    const firstUploadReference = 'tf_1234567890abcdef1234567890abcdef';
+    const secondUploadReference = 'tf_abcdef1234567890abcdef1234567890';
+    await seedPictureUpload(bucket, firstUploadReference);
+    await seedPictureUpload(bucket, secondUploadReference);
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',
       headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
       body: JSON.stringify({ checkoutRequestId:'co_00000000000000000000000000000004', items: [
-        { productType:'tiny_frame_only', cartItemId:'ci_00000000000000000000000000000004', size:'80x80mm', frameColour:'Oak', quantity:1 },
-        { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000005', size:'80x80mm', frameColour:'Walnut', quantity:1, uploadReference }
+        { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000004', size:'80x80mm', frameColour:'Oak', quantity:1, uploadReference:firstUploadReference },
+        { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000005', size:'80x80mm', frameColour:'Walnut', quantity:1, uploadReference:secondUploadReference }
       ] })
     }), env(bucket));
     assert.equal(response.status, 200);
-    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME ONLY');
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME + 8 PICTURES');
     assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
-    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '7000');
+    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '9000');
     assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '9000');
     assert.equal(stripeBody.get('line_items[2][price_data][product_data][name]'), 'Shipping');
     assert.equal(stripeBody.get('line_items[2][price_data][unit_amount]'), '1000');
