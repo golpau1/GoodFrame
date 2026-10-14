@@ -645,11 +645,11 @@
       .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
     }
     /* One native horizontal canvas; prints retain their complete intrinsic proportions. */
-    .showcase-gallery { position:relative; isolation:isolate; display:block; width:100%; margin:0; padding:0; overflow:hidden; background:#fff; color:#171412; }
+    .showcase-gallery { position:relative; isolation:isolate; display:block; width:100%; margin:0; padding:0; overflow:hidden; background:#FFF7E1; color:#171412; }
     .showcase-gallery::before, .showcase-gallery::after { display:none; }
     .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
     .showcase-sticky { position:relative; display:block; width:100%; margin:0; padding:0; }
-    .showcase-collage { --gallery-height:clamp(700px,82svh,960px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:#fff; cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-snap-type:none; }
+    .showcase-collage { --gallery-height:clamp(700px,82svh,960px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:#FFF7E1; cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-snap-type:none; }
     .showcase-collage::-webkit-scrollbar { display:none; }
     .showcase-collage.is-dragging { cursor:grabbing; }
     .showcase-track { position:relative; display:block; width:max-content; min-width:100%; height:100%; margin:0; padding:0; pointer-events:none; }
@@ -672,7 +672,7 @@
       .showcase-control svg { width:16px; height:16px; }
     }
     .header { position:sticky; top:0; z-index:20; width:100%; border-bottom:1px solid rgba(60,42,33,.25); background:var(--color-background); }
-    .showcase-gallery { background:#fff; }
+    .showcase-gallery { background:#FFF7E1; }
     a:focus-visible, button:focus-visible { outline-color:var(--brown); }
     .header a:hover { color:var(--brown); opacity:1; text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; }
     .hero-intro-link:hover, .reset-images-button:hover { color:var(--brown); }
