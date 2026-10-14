@@ -73,7 +73,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /productCode:attempt\.productCode/);
   assert.match(html, /\.image-remove-button \{[^}]*top:4px; right:4px;[^}]*transform:none;/);
   assert.doesNotMatch(html, /\.image-remove-button \{[^}]*translate\(50%,-50%\)/);
-  assert.match(html, /\.showcase-gallery::before \{[^}]*background-size:29px 29px;/);
+  assert.match(html, /\.showcase-gallery::before, \.showcase-gallery::after \{ display:none; \}/);
   assert.doesNotMatch(html, /\.showcase-gallery::before \{[^}]*background-size:23px 23px;/);
   assert.doesNotMatch(html, /\.showcase-gallery::before \{[^}]*background-size:46px 46px;/);
   assert.match(html, /id="checkout-confirmed-dialog"/);
@@ -263,15 +263,14 @@ function frameWithPictures(overrides = {}) {
   };
 }
 
-test('the only Tiny Frame product is $74.95 and shipping is authoritative on the Worker', () => {
+test('the only Tiny Frame product is $74.95 and client-supplied shipping is ignored', () => {
   const lineItems = buildLineItems([
     frameWithPictures(),
     { price_data: { product_data: { name: 'Shipping' } }, quantity: 99 }
   ]);
 
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [7495, 1000]);
-  assert.equal(lineItems.at(-1).name, 'Shipping');
-  assert.equal(lineItems.filter(item => item.name === 'Shipping').length, 1);
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [7495]);
+  assert.equal(lineItems.filter(item => item.name === 'Shipping').length, 0);
   assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
 });
 
@@ -289,7 +288,9 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
 
   assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7495');
-  assert.equal(payload.get('line_items[1][price_data][unit_amount]'), '1000');
+  assert.equal(payload.has('line_items[1][price_data][unit_amount]'), false);
+  assert.equal(payload.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
+  assert.equal(payload.get('shipping_address_collection[allowed_countries][0]'), 'AU');
   assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
   assert.equal(payload.has('line_items[0][price_data][product_data][description]'), false);
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_8_pictures');

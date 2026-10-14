@@ -427,6 +427,12 @@
     .cart-currency-picker::after { position:absolute; top:50%; right:1px; width:4px; height:4px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
     .cart-currency-select:disabled { cursor:wait; opacity:.55; }
     .cart-currency-note { margin:-7px 0 12px; color:var(--muted); font-size:8px; font-weight:400; letter-spacing:.055em; line-height:1.4; text-align:right; }
+    .cart-country-picker { position:relative; display:inline-flex; min-width:0; max-width:62%; align-items:center; color:var(--brown); }
+    .cart-country-select { width:100%; min-height:24px; padding:2px 14px 2px 0; overflow:hidden; border:0; border-radius:0; outline:0; appearance:none; -webkit-appearance:none; background:transparent; color:inherit; font:inherit; font-size:9px; font-weight:500; letter-spacing:.045em; line-height:1; cursor:pointer; text-align:right; text-overflow:ellipsis; }
+    .cart-country-select:focus, .cart-country-select:focus-visible { outline:none; }
+    .cart-country-select:focus-visible { box-shadow:0 1px 0 var(--brown); }
+    .cart-country-picker::after { position:absolute; top:50%; right:1px; width:4px; height:4px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
+    .cart-country-select:disabled { cursor:wait; opacity:.55; }
     .cart-action { width:100%; margin-top:7px; padding:13px 16px !important; border:1px solid var(--brown) !important; font:inherit; font-family:var(--font-display); font-size:10px; font-weight:600; letter-spacing:.15em; text-transform:uppercase; }
     .cart-action--primary { background:var(--brown); color:var(--cream); }
     .cart-action:not(.cart-action--primary) { margin-top:5px; padding:8px 12px !important; border:0 !important; color:var(--muted); font-size:9px; font-weight:500; }
@@ -937,6 +943,7 @@
         <section class="cart-items" id="cart-items" aria-label="Cart items"></section>
         <aside class="cart-summary" aria-label="Order summary">
           <div class="cart-summary-row"><span>Subtotal</span><span id="cart-subtotal">$0</span></div>
+          <div class="cart-summary-row"><span>Shipping to</span><span class="cart-country-picker"><select class="cart-country-select" id="shipping-country" aria-label="Shipping country"><option value="AU">Australia</option></select></span></div>
           <div class="cart-summary-row"><span>Shipping</span><span id="cart-shipping">$0</span></div>
           <div class="cart-summary-rule"></div>
           <div class="cart-total"><span>Total</span><span class="cart-total-value"><span id="cart-total">$0.00</span><span class="cart-currency-picker"><select class="cart-currency-select" id="cart-currency" aria-label="Display currency" aria-describedby="cart-currency-note"><option value="AUD">AUD</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option><option value="NZD">NZD</option><option value="CAD">CAD</option></select></span></span></div>
@@ -1656,11 +1663,55 @@
     const photoPreviewGrid = document.getElementById("photo-preview-grid");
     const cartCurrencySelect = document.getElementById("cart-currency");
     const cartCurrencyNote = document.getElementById("cart-currency-note");
+    const shippingCountrySelect = document.getElementById("shipping-country");
     const CART_CURRENCIES = Object.freeze(["AUD", "USD", "GBP", "EUR", "NZD", "CAD"]);
     const CART_CURRENCY_SYMBOLS = Object.freeze({ AUD:"$", USD:"US$", GBP:"£", EUR:"€", NZD:"NZ$", CAD:"CA$" });
     let cartDisplayCurrency = "AUD";
     let cartExchangeRates = Object.freeze({ AUD:1 });
     let cartExchangeRatesPromise = null;
+    let shippingCountry = "AU";
+    let shippingPrice = SHIPPING_PRICE;
+    let shippingQuoteReady = false;
+    let supportedShippingCountries = [];
+
+    function populateShippingCountries(countryCodes) {
+      if (!Array.isArray(countryCodes) || !countryCodes.length || supportedShippingCountries.length) return;
+      const names = new Intl.DisplayNames([navigator.language || "en-AU"], { type:"region" });
+      supportedShippingCountries = countryCodes.map((code) => ({ code, name:names.of(code) || code }))
+        .sort((left, right) => left.code === "AU" ? -1 : right.code === "AU" ? 1 : left.name.localeCompare(right.name));
+      shippingCountrySelect.replaceChildren(...supportedShippingCountries.map(({ code, name }) => {
+        const option = document.createElement("option");
+        option.value = code;
+        option.textContent = name;
+        return option;
+      }));
+    }
+
+    async function loadShippingQuote(country = "") {
+      shippingQuoteReady = false;
+      shippingCountrySelect.disabled = true;
+      renderCart();
+      try {
+        const query = country ? `?country=${encodeURIComponent(country)}` : "";
+        const response = await fetch(`${checkoutApiBaseUrl}/shipping-quote${query}`, { cache:"no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !Number.isInteger(result.amount) || result.currency !== "aud") {
+          throw new Error(result.error || "Shipping could not be calculated.");
+        }
+        populateShippingCountries(result.supportedCountries);
+        shippingCountry = result.shippingCountry;
+        shippingPrice = result.amount / 100;
+        shippingCountrySelect.value = shippingCountry;
+        shippingQuoteReady = true;
+        cartNotice = "";
+      } catch (error) {
+        console.error("Shipping quote failed", error);
+        cartNotice = `${error.message} Please try again.`;
+      } finally {
+        shippingCountrySelect.disabled = false;
+        renderCart();
+      }
+    }
 
     function money(value, currency = cartDisplayCurrency) {
       const rate = currency === "AUD" ? 1 : cartExchangeRates[currency];
@@ -1887,7 +1938,7 @@
         colour:item.colour,
         quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
         uploadReference:item.uploadSessionId || item.uploadReference || ""
-      })));
+      })).concat([{ shippingCountry }]));
       const stored = getStoredCheckoutContext();
       if (stored?.fingerprint === fingerprint) return stored.id;
       const id = createCheckoutRequestId();
@@ -2152,12 +2203,15 @@
       checkoutButton.textContent = "OPENING CHECKOUT…";
       try {
         cartNotice = "";
+        await loadShippingQuote(shippingCountrySelect.value || shippingCountry);
+        if (!shippingQuoteReady) throw new Error("Shipping could not be confirmed.");
         await preparePictureOrdersForCheckout();
         const response = await fetch(`${checkoutApiBaseUrl}/create-checkout-session`, {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
           body:JSON.stringify({
             checkoutRequestId:getCheckoutRequestId(),
+            shippingCountry,
             items:cartItems.map((item) => ({
               productType:productIdFor(item.order),
               cartItemId:item.cartItemId,
@@ -2184,7 +2238,7 @@
       cartItemsElement.replaceChildren();
       cartItemsElement.scrollTop = 0;
       const subtotal = cartItems.reduce((sum, item) => sum + item.price, 0);
-      const shipping = cartItems.length ? SHIPPING_PRICE : 0;
+      const shipping = cartItems.length ? shippingPrice : 0;
       if (cartNotice) {
         const notice = document.createElement("p");
         notice.className = "cart-empty";
@@ -2246,7 +2300,7 @@
       document.getElementById("cart-shipping").dataset.audPrice = String(shipping);
       document.getElementById("cart-total").dataset.audPrice = String(subtotal + shipping);
       updateCartPriceDisplay();
-      document.getElementById("checkout-button").disabled = !cartItems.length;
+      document.getElementById("checkout-button").disabled = !cartItems.length || !shippingQuoteReady;
       cartLink.querySelector(".cart-count").textContent = String(cartItems.length);
       cartLink.setAttribute("aria-label", `Open cart, ${cartItems.length} ${cartItems.length === 1 ? "item" : "items"}`);
     }
@@ -2559,6 +2613,7 @@
     checkoutUnsuccessfulDialog.addEventListener("click", (event) => { if (event.target === checkoutUnsuccessfulDialog) checkoutUnsuccessfulDialog.close(); });
     cartLink.addEventListener("click", (event) => { event.preventDefault(); openCart(); });
     cartCurrencySelect.addEventListener("change", () => { void selectCartCurrency(cartCurrencySelect.value); });
+    shippingCountrySelect.addEventListener("change", () => { void loadShippingQuote(shippingCountrySelect.value); });
     document.getElementById("continue-shopping").addEventListener("click", () => { cart.close(); history.replaceState(null, "", location.pathname); });
     document.getElementById("checkout-confirmed-continue").addEventListener("click", () => checkoutConfirmedDialog.close());
     document.getElementById("checkout-unsuccessful-continue").addEventListener("click", () => checkoutUnsuccessfulDialog.close());
@@ -2568,6 +2623,7 @@
     });
     document.getElementById("checkout-button").addEventListener("click", startCheckout);
     renderCart();
+    void loadShippingQuote();
     handleCheckoutReturn();
   </script>
 </body>

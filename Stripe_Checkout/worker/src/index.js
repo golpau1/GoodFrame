@@ -42,6 +42,9 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
   })
 });
 const SHIPPING_AMOUNT = 1000;
+const LIVE_INTERNATIONAL_SHIPPING_RATE_ID = 'shr_1UQbhPBqoMGy9EwIyslTEhqQ';
+const STRIPE_SHIPPING_COUNTRIES = Object.freeze(`AC AD AE AF AG AI AL AM AO AQ AR AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CD CF CG CH CI CK CL CM CN CO CR CV CW CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HN HR HT HU ID IE IL IM IN IO IQ IS IT JE JM JO JP KE KG KH KI KM KN KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MK ML MM MN MO MQ MR MS MT MU MV MW MX MY MZ NA NC NE NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SZ TA TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VG VN VU WF WS XK YE YT ZA ZM ZW`.split(' '));
+const STRIPE_SHIPPING_COUNTRY_SET = new Set(STRIPE_SHIPPING_COUNTRIES);
 const TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
 const TINY_FRAME_UPLOAD_IMAGE_COUNT = 8;
 const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
@@ -107,6 +110,17 @@ function getStripeConfiguration(env) {
     webhookSecret,
     fulfilmentEnabled:mode === 'live'
   });
+}
+
+function getInternationalShippingRateId(env, stripeMode) {
+  if (stripeMode === 'live') return LIVE_INTERNATIONAL_SHIPPING_RATE_ID;
+  const testRateId = String(env.STRIPE_TEST_INTERNATIONAL_SHIPPING_RATE_ID || '').trim();
+  return testRateId.startsWith('shr_') ? testRateId : '';
+}
+
+function normalizeShippingCountry(value, fallback = '') {
+  const country = String(value || fallback).trim().toUpperCase();
+  return STRIPE_SHIPPING_COUNTRY_SET.has(country) ? country : '';
 }
 
 function getSiteBaseUrl(env) {
@@ -1460,12 +1474,6 @@ function buildLineItems(items) {
     throw new Error('Cart cannot contain more than 99 physical products');
   }
 
-  lineItems.push({
-    name: 'Shipping',
-    unitAmount: SHIPPING_AMOUNT,
-    quantity: 1
-  });
-
   return lineItems;
 }
 
@@ -1499,7 +1507,14 @@ function createStripeProductMapping(lineItems) {
   return chunkStripeMetadataEntries(entries);
 }
 
-function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checkoutRequestId = '') {
+function createStripePayload(
+  lineItems,
+  siteBaseUrl,
+  stripeMode = 'live',
+  checkoutRequestId = '',
+  shippingCountry = 'AU',
+  internationalShippingRateId = ''
+) {
   const productCodes = lineItems.map(item => item.productCode).filter(Boolean);
   const productTypes = lineItems.map(item => item.productType).filter(Boolean);
   const frameColours = lineItems.map(item => item.frameColour).filter(Boolean);
@@ -1509,13 +1524,22 @@ function createStripePayload(lineItems, siteBaseUrl, stripeMode = 'live', checko
     success_url: `${siteBaseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteBaseUrl}/?checkout=cancelled#cart`,
     billing_address_collection: 'required',
-    'shipping_address_collection[allowed_countries][0]': 'AU',
-    'shipping_address_collection[allowed_countries][1]': 'US',
-    'shipping_address_collection[allowed_countries][2]': 'BR'
+    'shipping_address_collection[allowed_countries][0]': shippingCountry
   });
+
+  if (shippingCountry === 'AU') {
+    payload.set('shipping_options[0][shipping_rate_data][type]', 'fixed_amount');
+    payload.set('shipping_options[0][shipping_rate_data][display_name]', 'Shipping');
+    payload.set('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(SHIPPING_AMOUNT));
+    payload.set('shipping_options[0][shipping_rate_data][fixed_amount][currency]', 'aud');
+  } else {
+    payload.set('shipping_options[0][shipping_rate]', internationalShippingRateId);
+  }
 
   payload.set('metadata[stripe_mode]', stripeMode);
   payload.set('payment_intent_data[metadata][stripe_mode]', stripeMode);
+  payload.set('metadata[shipping_country]', shippingCountry);
+  payload.set('payment_intent_data[metadata][shipping_country]', shippingCountry);
   payload.set('metadata[checkout_request_id]', checkoutRequestId);
   payload.set('payment_intent_data[metadata][checkout_request_id]', checkoutRequestId);
   const productCodeChunks = [];
@@ -1597,18 +1621,21 @@ async function sha256Hex(value) {
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function createCheckoutPayloadFingerprint(lineItems) {
-  return JSON.stringify(lineItems.map(item => ({
-    cartItemId:item.cartItemId || '',
-    unitIndex:Number.isInteger(item.unitIndex) ? item.unitIndex : -1,
-    productCode:item.productCode || '',
-    productType:item.productType || '',
-    size:item.size || '',
-    frameColour:item.frameColour || '',
-    uploadReference:item.uploadReference || '',
-    unitAmount:item.unitAmount,
-    quantity:item.quantity
-  })));
+function createCheckoutPayloadFingerprint(lineItems, shippingCountry) {
+  return JSON.stringify({
+    shippingCountry,
+    lineItems:lineItems.map(item => ({
+      cartItemId:item.cartItemId || '',
+      unitIndex:Number.isInteger(item.unitIndex) ? item.unitIndex : -1,
+      productCode:item.productCode || '',
+      productType:item.productType || '',
+      size:item.size || '',
+      frameColour:item.frameColour || '',
+      uploadReference:item.uploadReference || '',
+      unitAmount:item.unitAmount,
+      quantity:item.quantity
+    }))
+  });
 }
 
 async function loadProcessedImagesForManifest(manifest, env) {
@@ -1793,6 +1820,16 @@ async function createCheckoutSession(request, env) {
 
   let checkoutRequestId = normalizeCheckoutRequestId(body.checkoutRequestId);
   let checkoutItems = Array.isArray(body.items) ? body.items : [];
+  const shippingCountry = normalizeShippingCountry(body.shippingCountry, 'AU');
+  if (!shippingCountry) {
+    return jsonResponse(request, env, { error:'Shipping country is not supported' }, 400);
+  }
+  const internationalShippingRateId = shippingCountry === 'AU'
+    ? ''
+    : getInternationalShippingRateId(env, stripeConfiguration.mode);
+  if (shippingCountry !== 'AU' && !internationalShippingRateId) {
+    return jsonResponse(request, env, { error:'International shipping is not configured' }, 503);
+  }
   if (!checkoutRequestId) {
     const legacyRequestHash = await sha256Hex(JSON.stringify(checkoutItems));
     checkoutRequestId = `co_${legacyRequestHash.slice(0, 32)}`;
@@ -1823,7 +1860,7 @@ async function createCheckoutSession(request, env) {
     capacity = allocation.capacity;
     let physicalIndex = 0;
     lineItems = lineItems.map(item => item.cartItemId ? allocation.units[physicalIndex++] : item);
-    const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(lineItems));
+    const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(lineItems, shippingCountry));
     const checkoutRequest = await beginCheckoutRequest(
       env.PRODUCT_CODES_DB,
       checkoutRequestId,
@@ -1858,7 +1895,14 @@ async function createCheckoutSession(request, env) {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Idempotency-Key':checkoutRequestId
     },
-    body: createStripePayload(lineItems, siteBaseUrl, stripeConfiguration.mode, checkoutRequestId)
+    body:createStripePayload(
+      lineItems,
+      siteBaseUrl,
+      stripeConfiguration.mode,
+      checkoutRequestId,
+      shippingCountry,
+      internationalShippingRateId
+    )
   });
   const stripeResult = await stripeResponse.json();
 
@@ -2425,6 +2469,61 @@ async function getProductCodeCapacityRecord(request, env) {
   return jsonResponse(request, env, await getProductCodeCapacity(env.PRODUCT_CODES_DB));
 }
 
+async function retrieveShippingQuote(env, stripeConfiguration, shippingCountry) {
+  if (shippingCountry === 'AU') {
+    return { amount:SHIPPING_AMOUNT, currency:'aud', displayName:'Shipping', rateId:null };
+  }
+  const rateId = getInternationalShippingRateId(env, stripeConfiguration.mode);
+  if (!rateId) throw new Error('International shipping is not configured');
+  const response = await fetch(`https://api.stripe.com/v1/shipping_rates/${encodeURIComponent(rateId)}`, {
+    headers:{ Authorization:`Bearer ${stripeConfiguration.secretKey}` }
+  });
+  const rate = await response.json();
+  if (
+    !response.ok || rate?.id !== rateId || rate?.active !== true ||
+    rate?.livemode !== (stripeConfiguration.mode === 'live') ||
+    rate?.type !== 'fixed_amount' || rate?.fixed_amount?.currency !== 'aud' ||
+    !Number.isInteger(rate?.fixed_amount?.amount)
+  ) {
+    throw new Error('International shipping rate is unavailable');
+  }
+  return {
+    amount:rate.fixed_amount.amount,
+    currency:rate.fixed_amount.currency,
+    displayName:String(rate.display_name || 'International shipping'),
+    rateId
+  };
+}
+
+async function getShippingQuote(request, env) {
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+  const stripeConfiguration = getStripeConfiguration(env);
+  if (!stripeConfiguration) {
+    return jsonResponse(request, env, { error:'Checkout is not configured' }, 503);
+  }
+  const url = new URL(request.url);
+  const requestedCountry = url.searchParams.get('country');
+  const detectedCountry = normalizeShippingCountry(request.cf?.country, 'AU') || 'AU';
+  const shippingCountry = normalizeShippingCountry(requestedCountry, detectedCountry);
+  if (!shippingCountry) {
+    return jsonResponse(request, env, { error:'Shipping country is not supported' }, 400);
+  }
+  try {
+    const quote = await retrieveShippingQuote(env, stripeConfiguration, shippingCountry);
+    return jsonResponse(request, env, {
+      shippingCountry,
+      detectedCountry,
+      supportedCountries:STRIPE_SHIPPING_COUNTRIES,
+      ...quote
+    });
+  } catch (error) {
+    console.error('Stripe shipping-rate lookup failed', { message:error.message });
+    return jsonResponse(request, env, { error:error.message }, 503);
+  }
+}
+
 export {
   buildLineItems,
   claimWebhookEvent,
@@ -2432,6 +2531,7 @@ export {
   createStripePayload,
   markProductPdfFilesPaid,
   markUploadSessionsPaid,
+  normalizeShippingCountry,
   normalizeTinyFrameProductType,
   normalizeUploadReference
 };
@@ -2456,6 +2556,10 @@ export default {
         fulfilmentEnabled:Boolean(stripeConfiguration?.fulfilmentEnabled),
         productIdentificationConfigured:Boolean(env.PRODUCT_CODES_DB)
       });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/shipping-quote') {
+      return getShippingQuote(request, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/admin/product-code-capacity') {

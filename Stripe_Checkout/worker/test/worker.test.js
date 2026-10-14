@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import test from 'node:test';
 
-import worker from '../src/index.js';
+import worker, { createStripePayload } from '../src/index.js';
 import { createProductCodeDatabase } from './helpers/d1.js';
 
 const ORIGIN = 'https://goodframe.com.au';
@@ -44,6 +44,7 @@ function env(bucket = new MemoryBucket()) {
     ALLOWED_ORIGINS: ORIGIN,
     STRIPE_MODE: 'test',
     STRIPE_TEST_SECRET_KEY: 'sk_test_example',
+    STRIPE_TEST_INTERNATIONAL_SHIPPING_RATE_ID: 'shr_test_international',
     SITE_BASE_URL: ORIGIN,
     PRODUCT_CODES_DB:createProductCodeDatabase()
   };
@@ -323,7 +324,7 @@ test('webhooks reject events from the opposite Stripe mode', async () => {
   assert.equal(response.status, 400);
 });
 
-test('checkout charges $74.95 for a Tiny Frame with eight pictures plus $10 shipping', async () => {
+test('Australian checkout charges $74.95 plus one $10 shipping option', async () => {
   const originalFetch = globalThis.fetch;
   let stripeBody;
   globalThis.fetch = async (_url, options) => {
@@ -371,13 +372,11 @@ test('checkout charges $74.95 for a Tiny Frame with eight pictures plus $10 ship
       uploadReference
     );
     assert.equal(stripeBody.has('line_items[0][price_data][product_data][metadata][artwork_object_keys]'), false);
-    assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'Shipping');
-    assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '1000');
-    assert.equal(
-      Number(stripeBody.get('line_items[0][price_data][unit_amount]')) +
-        Number(stripeBody.get('line_items[1][price_data][unit_amount]')),
-      8495
-    );
+    assert.equal(stripeBody.has('line_items[1][price_data][unit_amount]'), false);
+    assert.equal(stripeBody.get('shipping_address_collection[allowed_countries][0]'), 'AU');
+    assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
+    assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][currency]'), 'aud');
+    assert.equal(stripeBody.get('metadata[shipping_country]'), 'AU');
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -454,8 +453,8 @@ test('quantity creates one unique five-digit code per physical frame and retries
     assert.deepEqual([0, 1, 2].map(index => (
       stripeBody.get(`line_items[${index}][price_data][unit_amount]`)
     )), ['7495', '7495', '7495']);
-    assert.equal(stripeBody.get('line_items[3][price_data][unit_amount]'), '1000');
-    assert.equal(stripeBody.has('line_items[4][price_data][unit_amount]'), false);
+    assert.equal(stripeBody.has('line_items[3][price_data][unit_amount]'), false);
+    assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
     const paymentProductMap = stripeBody.get('payment_intent_data[metadata][product_map]');
     firstResult.productCodes.forEach((code, index) => {
       assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| OAK · FRAME \\+ 8 PICTURES \\| AUD 74\\.95`));
@@ -594,7 +593,7 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
   }
 });
 
-test('checkout adds the $10 shipping line only once for multiple Tiny Frames', async () => {
+test('checkout adds one $10 shipping option for multiple Tiny Frames', async () => {
   const originalFetch = globalThis.fetch;
   let stripeBody;
   globalThis.fetch = async (_url, options) => {
@@ -620,9 +619,50 @@ test('checkout adds the $10 shipping line only once for multiple Tiny Frames', a
     assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
     assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '7495');
     assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '7495');
-    assert.equal(stripeBody.get('line_items[2][price_data][product_data][name]'), 'Shipping');
-    assert.equal(stripeBody.get('line_items[2][price_data][unit_amount]'), '1000');
-    assert.equal(stripeBody.has('line_items[3][price_data][product_data][name]'), false);
+    assert.equal(stripeBody.has('line_items[2][price_data][product_data][name]'), false);
+    assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
+    assert.equal([...stripeBody.keys()].filter(key => key.startsWith('shipping_options[')).every(key => key.startsWith('shipping_options[0]')), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+for (const shippingCountry of ['US', 'NZ', 'GB']) {
+  test(`${shippingCountry} checkout is locked to its destination and uses only the live international rate`, () => {
+    const payload = createStripePayload(
+      [{ name:'OAK · FRAME + 8 PICTURES', unitAmount:7495, quantity:1 }],
+      ORIGIN,
+      'live',
+      'co_00000000000000000000000000000009',
+      shippingCountry,
+      'shr_1UQbhPBqoMGy9EwIyslTEhqQ'
+    );
+    assert.equal(payload.get('shipping_address_collection[allowed_countries][0]'), shippingCountry);
+    assert.equal(payload.has('shipping_address_collection[allowed_countries][1]'), false);
+    assert.equal(payload.get('shipping_options[0][shipping_rate]'), 'shr_1UQbhPBqoMGy9EwIyslTEhqQ');
+    assert.equal(payload.has('shipping_options[1][shipping_rate]'), false);
+    assert.equal(payload.has('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), false);
+    assert.equal(payload.get('metadata[shipping_country]'), shippingCountry);
+  });
+}
+
+test('shipping quote accepts an active AUD rate in the matching Stripe mode', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    id:'shr_test_international', active:true, livemode:false, type:'fixed_amount',
+    display_name:'International shipping', fixed_amount:{ amount:2500, currency:'aud' }
+  });
+  try {
+    const response = await worker.fetch(new Request('https://worker.example/shipping-quote?country=US', {
+      headers:{ Origin:ORIGIN }
+    }), env());
+    assert.equal(response.status, 200);
+    const quote = await response.json();
+    assert.equal(quote.shippingCountry, 'US');
+    assert.equal(quote.amount, 2500);
+    assert.equal(quote.rateId, 'shr_test_international');
+    assert.equal(quote.supportedCountries.includes('NZ'), true);
+    assert.equal(quote.supportedCountries.includes('GB'), true);
   } finally {
     globalThis.fetch = originalFetch;
   }
