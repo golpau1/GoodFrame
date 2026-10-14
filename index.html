@@ -213,7 +213,7 @@
     a { color:inherit; text-decoration:none; }
     a:focus-visible,button:focus-visible { outline:2px solid currentColor; outline-offset:6px; }
     .homepage { position:relative; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
-    .hero-image { position:absolute; top:0; right:0; left:50%; width:50%; height:100%; object-fit:cover; object-position:center; }
+    .hero-image { position:absolute; top:0; right:0; left:50%; width:50%; height:100%; object-fit:cover; object-position:50% 64%; }
     .announcement-bar { position:relative; z-index:4; display:grid; place-items:center; height:var(--announcement-height); padding:4px 12px; overflow:hidden; background:var(--announcement-background); color:var(--announcement-foreground); font-family:var(--font-body); font-size:clamp(11px,.8vw,13px); font-weight:500; letter-spacing:.16em; line-height:1; text-align:center; white-space:nowrap; }
     .header { position:sticky; z-index:20; top:0; width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; height:var(--header-height); padding:0 4%; background:var(--header-background); color:var(--header-foreground); font-size:clamp(12px,1vw,15px); font-weight:500; line-height:1; }
     .navigation { width:auto; display:flex; }
@@ -532,7 +532,7 @@
       .header-brand { position:static; font-size:clamp(21px,3vw,26px); letter-spacing:.06em; transform:none; }
       .header > #cart-link { position:relative; right:auto; }
       .hero-left-image, .hero-detail-image { display:none; }
-      .hero-image { position:absolute; top:0; right:0; bottom:0; left:0; z-index:1; display:block; width:100%; height:100%; object-fit:cover; object-position:center 64%; }
+      .hero-image { position:absolute; top:0; right:0; bottom:0; left:0; z-index:1; display:block; width:100%; height:100%; object-fit:cover; object-position:46% 64%; }
       .homepage::after { position:absolute; top:40%; right:0; bottom:0; left:0; z-index:2; content:""; pointer-events:none; background:linear-gradient(to bottom,transparent 0%,rgba(60,42,33,.08) 20%,rgba(60,42,33,.72) 100%); }
       .hero-intro { position:absolute; right:20px; bottom:calc(104px + env(safe-area-inset-bottom)); left:20px; z-index:3; width:auto; margin:0; color:var(--light); text-align:center; }
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
@@ -586,7 +586,7 @@
       .cart-icon { width:clamp(26px,1.8vw,28px); height:clamp(26px,1.8vw,28px); }
       .cart-count { top:-7px; right:-10px; }
       .hero-left-image, .hero-detail-image { display:none; }
-      .hero-image { position:absolute; top:0; right:0; bottom:0; left:0; z-index:1; display:block; width:100%; height:100%; object-fit:cover; object-position:center 64%; }
+      .hero-image { position:absolute; top:0; right:0; bottom:0; left:0; z-index:1; display:block; width:100%; height:100%; object-fit:cover; object-position:50% 64%; }
       .homepage::after { position:absolute; top:40%; right:0; bottom:0; left:0; z-index:2; content:""; pointer-events:none; background:linear-gradient(to bottom,transparent 0%,rgba(60,42,33,.08) 20%,rgba(60,42,33,.72) 100%); }
       .hero-intro { position:absolute; right:6%; bottom:calc(132px + env(safe-area-inset-bottom)); left:6%; z-index:3; width:auto; margin:0 auto; color:var(--light); text-align:center; }
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
@@ -806,7 +806,7 @@
   <main class="homepage" id="home">
     <img class="hero-left-image" src="Assets/coffee/hero-frame.jpg" alt="Wooden photo frame on a warm tabletop">
     <img class="hero-detail-image" src="Assets/coffee/supporting-photos.jpg" alt="Wooden photo box with photographs on a table">
-    <img class="hero-image" src="Assets/coffee/supporting-frame.jpg" alt="Open wooden frame with photographs sliding out" fetchpriority="high">
+    <img class="hero-image" src="Assets/coffee/hero-workshop.jpg" width="1365" height="768" alt="Wooden photo box and scattered photographs on a warm table" fetchpriority="high">
     <a class="mobile-hero-cta" href="#colour-palette" aria-label="Scroll to frame configuration"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15M6 13l6 6 6-6"/></svg></a>
     <img class="floating-graphic graphic-71" src="Assets/graphics/71.png" alt="" aria-hidden="true">
     <img class="floating-graphic graphic-83" src="Assets/graphics/83.png" alt="" aria-hidden="true">
