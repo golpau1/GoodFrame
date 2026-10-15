@@ -427,11 +427,11 @@
     .cart-currency-picker::after { position:absolute; top:50%; right:1px; width:4px; height:4px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
     .cart-currency-select:disabled { cursor:wait; opacity:.55; }
     .cart-currency-note { margin:-7px 0 12px; color:var(--muted); font-size:8px; font-weight:400; letter-spacing:.055em; line-height:1.4; text-align:right; }
-    .cart-country-picker { position:relative; display:inline-flex; min-width:0; max-width:62%; align-items:center; color:var(--brown); }
-    .cart-country-button { width:100%; min-height:24px; padding:2px 14px 2px 0 !important; overflow:hidden; border:0 !important; border-radius:0; outline:0; background:transparent; color:inherit; font:inherit; font-size:9px; font-weight:500; letter-spacing:.045em; line-height:1; cursor:pointer; text-align:right; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
+    .cart-country-picker { position:relative; display:inline-flex; width:100%; min-width:0; align-items:center; color:var(--brown); }
+    .cart-country-button { width:100%; min-height:44px; padding:10px 38px 10px 13px !important; overflow:hidden; border:1px solid var(--divider) !important; border-radius:8px; outline:0; background:transparent; color:inherit; font:inherit; font-size:11px; font-weight:500; letter-spacing:.045em; line-height:1.3; cursor:pointer; text-align:left; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
     .cart-country-button:focus, .cart-country-button:focus-visible { outline:none; }
     .cart-country-button:focus-visible { box-shadow:0 1px 0 var(--brown); }
-    .cart-country-picker::after { position:absolute; top:50%; right:1px; width:4px; height:4px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
+    .cart-country-picker::after { position:absolute; top:50%; right:16px; width:5px; height:5px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
     .cart-country-button:disabled { cursor:wait; opacity:.55; }
     .shipping-country-native { display:none; }
     .shipping-country-popover { position:fixed; inset:auto; box-sizing:border-box; margin:0; padding:6px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; border:1px solid var(--divider); border-radius:10px; background:var(--cream); box-shadow:0 12px 30px rgba(60,42,33,.16); color:var(--brown); scrollbar-color:rgba(91,61,46,.38) transparent; scrollbar-width:thin; }
@@ -441,13 +441,19 @@
     .shipping-country-option[aria-selected="true"] { background:rgba(91,61,46,.11); font-weight:600; }
     .shipping-country-option[aria-selected="true"]::after { flex:0 0 auto; width:5px; height:9px; margin:0 3px 2px 0; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; transform:rotate(45deg); }
     @media (pointer:coarse) { .shipping-country-option { min-height:44px; padding:12px 14px !important; font-size:11px; } }
-    .shipping-confirmation { margin:4px 0 8px; padding:17px 0 12px; border-top:1px solid var(--divider); border-bottom:1px solid var(--divider); }
-    .shipping-confirmation-title { margin:0 0 15px; font-family:var(--font-display); font-size:13px; font-weight:600; letter-spacing:.08em; line-height:1.25; text-transform:uppercase; }
-    .shipping-confirmation-row { display:grid; grid-template-columns:minmax(0,1fr) max-content; align-items:center; gap:20px; margin:0 0 8px; color:var(--muted); font-size:9px; letter-spacing:.075em; line-height:1.35; text-transform:uppercase; }
+    #shipping-confirmation-dialog { width:min(440px,calc(100% - 32px)); max-width:none; margin:auto; padding:0; overflow:hidden; border:1px solid var(--divider); border-radius:16px; background:var(--cream); box-shadow:0 18px 48px rgba(60,42,33,.18); color:var(--brown); }
+    #shipping-confirmation-dialog::backdrop { background:rgba(60,42,33,.34); }
+    .shipping-confirmation-shell { padding:34px; }
+    .shipping-confirmation-title { margin:0 0 24px; font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:.09em; line-height:1.25; text-align:center; text-transform:uppercase; }
+    .shipping-confirmation-prompt { margin:0 0 10px; color:var(--muted); font-size:10px; letter-spacing:.055em; line-height:1.4; text-transform:uppercase; }
+    .shipping-confirmation-summary { margin:22px 0 0; padding:17px 0 8px; border-top:1px solid var(--divider); border-bottom:1px solid var(--divider); }
+    .shipping-confirmation-row { display:grid; grid-template-columns:minmax(0,1fr) max-content; align-items:center; gap:20px; margin:0 0 9px; color:var(--muted); font-size:10px; letter-spacing:.075em; line-height:1.35; text-transform:uppercase; }
     .shipping-confirmation-row strong { color:var(--brown); font-weight:600; text-align:right; }
-    .shipping-confirmation-actions { display:grid; grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr); gap:8px; margin-top:15px; }
-    .shipping-confirmation-actions .cart-action { min-width:0; height:45px; min-height:45px; margin:0; padding:10px 9px !important; font-size:8.5px; }
-    .shipping-confirmation-actions .cart-action:not(.cart-action--primary) { border:1px solid var(--divider) !important; color:var(--brown); }
+    .shipping-confirmation-error { margin:14px 0 0; color:var(--muted); font-size:10px; line-height:1.5; text-align:center; }
+    .shipping-confirmation-error[hidden] { display:none; }
+    .shipping-confirmation-actions { display:grid; gap:4px; margin-top:20px; }
+    .shipping-confirmation-actions .cart-action { min-width:0; min-height:45px; margin:0; padding:10px 12px !important; font-size:9px; }
+    .shipping-confirmation-actions .cart-action:not(.cart-action--primary) { color:var(--brown); }
     .cart-action { width:100%; margin-top:7px; padding:13px 16px !important; border:1px solid var(--brown) !important; font:inherit; font-family:var(--font-display); font-size:10px; font-weight:600; letter-spacing:.15em; text-transform:uppercase; }
     .cart-action--primary { background:var(--brown); color:var(--cream); }
     .cart-action:not(.cart-action--primary) { margin-top:5px; padding:8px 12px !important; border:0 !important; color:var(--muted); font-size:9px; font-weight:500; }
@@ -512,9 +518,7 @@
       .cart-total-value { gap:5px; padding-right:5px; }
       .cart-currency-select { width:44px; max-width:44px; font-size:8.5px; }
       .cart-currency-note { margin-top:-6px; font-size:8px; }
-      .shipping-confirmation-title { font-size:16px; }
-      .shipping-confirmation-row { font-size:13px; }
-      .shipping-confirmation-actions .cart-action { height:49px; min-height:49px; font-size:12px; }
+      .shipping-confirmation-actions .cart-action { min-height:49px; font-size:11px; }
       .cart-action { padding:12px 14px !important; }
       #faq-dialog { width:calc(100% - 24px); max-height:calc(100vh - 32px); max-height:calc(100dvh - 32px); }
       .faq-shell { padding:20px; }
@@ -527,6 +531,9 @@
     }
     @media (max-width:480px) {
       #cart-dialog { width:calc(100% - 20px); }
+      #shipping-confirmation-dialog { width:calc(100% - 20px); border-radius:14px; }
+      .shipping-confirmation-shell { padding:28px 22px 24px; }
+      .shipping-confirmation-title { margin-bottom:21px; font-size:14px; }
       .checkout-result-dialog { width:calc(100% - 20px); }
       .cart-dialog-shell { padding-top:24px; padding-right:max(20px,env(safe-area-inset-right)); padding-bottom:max(22px,env(safe-area-inset-bottom)); padding-left:max(20px,env(safe-area-inset-left)); }
       .checkout-result-shell { padding-top:24px; padding-right:max(20px,env(safe-area-inset-right)); padding-bottom:max(22px,env(safe-area-inset-bottom)); padding-left:max(20px,env(safe-area-inset-left)); }
@@ -961,23 +968,29 @@
         <section class="cart-items" id="cart-items" aria-label="Cart items"></section>
         <aside class="cart-summary" aria-label="Order summary">
           <div class="cart-summary-row"><span>Subtotal</span><span id="cart-subtotal">A$0.00</span></div>
-          <div class="cart-summary-row"><span>Shipping to</span><span class="cart-country-picker"><button class="cart-country-button" id="shipping-country-button" type="button" aria-label="Shipping country: Australia" aria-haspopup="listbox" aria-controls="shipping-country-popover" aria-expanded="false">Australia</button><select class="shipping-country-native" id="shipping-country" aria-hidden="true" tabindex="-1"><option value="AU">Australia</option></select></span></div>
           <div class="cart-summary-row"><span>Shipping</span><span id="cart-shipping">A$0.00</span></div>
           <div class="cart-summary-rule"></div>
           <div class="cart-total"><span>Total</span><span class="cart-total-value"><span id="cart-total">A$0.00</span><span class="cart-currency-picker"><select class="cart-currency-select" id="cart-currency" aria-label="Display currency" aria-describedby="cart-currency-note"><option value="AUD">AUD</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option><option value="NZD">NZD</option><option value="CAD">CAD</option></select></span></span></div>
           <p class="cart-currency-note" id="cart-currency-note" role="status" aria-live="polite" hidden></p>
-          <section class="shipping-confirmation" id="shipping-confirmation" aria-labelledby="shipping-confirmation-title" hidden>
-            <h3 class="shipping-confirmation-title" id="shipping-confirmation-title">Confirm your shipping destination</h3>
-            <p class="shipping-confirmation-row"><span>Shipping to</span><strong id="shipping-confirmation-country">Australia</strong></p>
-            <p class="shipping-confirmation-row"><span>Shipping</span><strong id="shipping-confirmation-price">A$10.00</strong></p>
-            <div class="shipping-confirmation-actions">
-              <button class="cart-action" id="change-shipping-country" type="button">Change Country</button>
-              <button class="cart-action cart-action--primary" id="confirm-checkout" type="button">Confirm &amp; Checkout</button>
-            </div>
-          </section>
           <button class="cart-action cart-action--primary" id="checkout-button" type="button">Checkout</button>
           <button class="cart-action" id="continue-shopping" type="button">Continue Shopping</button>
         </aside>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="shipping-confirmation-dialog" aria-labelledby="shipping-confirmation-title">
+    <div class="shipping-confirmation-shell">
+      <h2 class="shipping-confirmation-title" id="shipping-confirmation-title">Confirm Shipping Country</h2>
+      <p class="shipping-confirmation-prompt" id="shipping-confirmation-prompt">Select your delivery country:</p>
+      <span class="cart-country-picker"><button class="cart-country-button" id="shipping-country-button" type="button" aria-label="Shipping country: Australia" aria-describedby="shipping-confirmation-prompt" aria-haspopup="listbox" aria-controls="shipping-country-popover" aria-expanded="false">Australia</button><select class="shipping-country-native" id="shipping-country" aria-hidden="true" tabindex="-1"><option value="AU">Australia</option></select></span>
+      <div class="shipping-confirmation-summary">
+        <p class="shipping-confirmation-row"><span>Shipping</span><strong id="shipping-confirmation-price">A$10.00</strong></p>
+        <p class="shipping-confirmation-row"><span>Total</span><strong id="shipping-confirmation-total">A$10.00</strong></p>
+      </div>
+      <p class="shipping-confirmation-error" id="shipping-confirmation-error" role="alert" hidden></p>
+      <div class="shipping-confirmation-actions">
+        <button class="cart-action cart-action--primary" id="confirm-checkout" type="button">Confirm &amp; Checkout</button>
+        <button class="cart-action" id="shipping-confirmation-back" type="button">Back to Cart</button>
       </div>
     </div>
     <div class="shipping-country-popover" id="shipping-country-popover" popover="manual" role="listbox" aria-label="Shipping country" tabindex="-1"></div>
@@ -1695,12 +1708,14 @@
     const shippingCountryButton = document.getElementById("shipping-country-button");
     const shippingCountryPopover = document.getElementById("shipping-country-popover");
     const checkoutButton = document.getElementById("checkout-button");
-    const shippingConfirmation = document.getElementById("shipping-confirmation");
-    const shippingConfirmationCountryElement = document.getElementById("shipping-confirmation-country");
+    const shippingConfirmationDialog = document.getElementById("shipping-confirmation-dialog");
     const shippingConfirmationPriceElement = document.getElementById("shipping-confirmation-price");
+    const shippingConfirmationTotalElement = document.getElementById("shipping-confirmation-total");
+    const shippingConfirmationError = document.getElementById("shipping-confirmation-error");
     const confirmCheckoutButton = document.getElementById("confirm-checkout");
     const CART_CURRENCIES = Object.freeze(["AUD", "USD", "GBP", "EUR", "NZD", "CAD"]);
     const CART_CURRENCY_SYMBOLS = Object.freeze({ AUD:"A$", USD:"US$", GBP:"£", EUR:"€", NZD:"NZ$", CAD:"CA$" });
+    const SUPPORTED_SHIPPING_COUNTRY_CODES = Object.freeze(["AU", "NZ", "US", "CA", "GB", "JP", "SG", "DE", "FR", "NL"]);
     let cartDisplayCurrency = "AUD";
     let cartExchangeRates = Object.freeze({ AUD:1 });
     let cartExchangeRatesPromise = null;
@@ -1710,28 +1725,48 @@
     let supportedShippingCountries = [];
     let shippingQuoteRequestSequence = 0;
     let shippingConfirmationCountry = "";
+    let shippingConfirmationPrice = SHIPPING_PRICE;
+    let shippingConfirmationQuoteReady = false;
+    let shippingConfirmationRequestSequence = 0;
 
     function shippingCountryName(countryCode) {
       return supportedShippingCountries.find(({ code }) => code === countryCode)?.name || countryCode;
     }
 
-    function hideShippingConfirmation(focusCountry = false) {
+    function resetShippingConfirmation() {
       shippingConfirmationCountry = "";
-      shippingConfirmation.hidden = true;
-      checkoutButton.hidden = false;
+      shippingConfirmationQuoteReady = false;
+      shippingConfirmationError.hidden = true;
+      shippingConfirmationError.textContent = "";
       confirmCheckoutButton.disabled = false;
       confirmCheckoutButton.textContent = "CONFIRM & CHECKOUT";
-      if (focusCountry && !shippingCountryButton.disabled) shippingCountryButton.focus();
+    }
+
+    function hideShippingConfirmation(focusCart = false) {
+      shippingConfirmationRequestSequence += 1;
+      closeShippingCountryPopover();
+      if (shippingConfirmationDialog.open) shippingConfirmationDialog.close();
+      resetShippingConfirmation();
+      if (focusCart && cart.open) checkoutButton.focus({ preventScroll:true });
+    }
+
+    function updateShippingConfirmationAmounts() {
+      const subtotal = cartItems.reduce((sum, item) => sum + item.price, 0);
+      shippingConfirmationPriceElement.textContent = `A$${shippingConfirmationPrice.toFixed(2)}`;
+      shippingConfirmationTotalElement.textContent = `A$${(subtotal + shippingConfirmationPrice).toFixed(2)}`;
     }
 
     function showShippingConfirmation() {
-      if (!cartItems.length || !shippingQuoteReady || shippingCountryButton.disabled) return;
+      if (!cartItems.length || !shippingQuoteReady) return;
       shippingConfirmationCountry = shippingCountry;
-      shippingConfirmationCountryElement.textContent = shippingCountryName(shippingCountry);
-      shippingConfirmationPriceElement.textContent = `A$${shippingPrice.toFixed(2)}`;
-      shippingConfirmation.hidden = false;
-      checkoutButton.hidden = true;
-      confirmCheckoutButton.focus();
+      shippingConfirmationPrice = shippingPrice;
+      shippingConfirmationQuoteReady = true;
+      shippingCountrySelect.value = shippingConfirmationCountry;
+      shippingConfirmationError.hidden = true;
+      updateShippingCountryControl();
+      updateShippingConfirmationAmounts();
+      if (!shippingConfirmationDialog.open) shippingConfirmationDialog.showModal();
+      shippingCountryButton.focus({ preventScroll:true });
     }
 
     function populateShippingCountries(countryCodes) {
@@ -1753,11 +1788,12 @@
     }
 
     function updateShippingCountryControl() {
-      const name = shippingCountryName(shippingCountry);
+      const selectedCountry = shippingConfirmationCountry || shippingCountry;
+      const name = shippingCountryName(selectedCountry);
       shippingCountryButton.textContent = name;
       shippingCountryButton.setAttribute("aria-label", `Shipping country: ${name}`);
       shippingCountryPopover.querySelectorAll(".shipping-country-option").forEach((option) => {
-        const selected = option.dataset.country === shippingCountry;
+        const selected = option.dataset.country === selectedCountry;
         option.setAttribute("aria-selected", String(selected));
         option.tabIndex = selected ? 0 : -1;
       });
@@ -1765,9 +1801,11 @@
 
     function chooseShippingCountry(countryCode) {
       if (!supportedShippingCountries.some(({ code }) => code === countryCode)) return;
+      shippingConfirmationCountry = countryCode;
       shippingCountrySelect.value = countryCode;
+      updateShippingCountryControl();
       closeShippingCountryPopover(true);
-      shippingCountrySelect.dispatchEvent(new Event("change", { bubbles:true }));
+      void loadShippingConfirmationQuote(countryCode);
     }
 
     function renderShippingCountryOptions() {
@@ -1816,7 +1854,8 @@
       updateShippingCountryControl();
       positionShippingCountryPopover();
       const options = [...shippingCountryPopover.querySelectorAll(".shipping-country-option")];
-      const target = focusLast ? options.at(-1) : options.find((option) => option.dataset.country === shippingCountry) || options[0];
+      const selectedCountry = shippingConfirmationCountry || shippingCountry;
+      const target = focusLast ? options.at(-1) : options.find((option) => option.dataset.country === selectedCountry) || options[0];
       target?.focus({ preventScroll:true });
       target?.scrollIntoView({ block:"nearest" });
     }
@@ -1827,12 +1866,43 @@
       if (restoreFocus && !shippingCountryButton.disabled) shippingCountryButton.focus({ preventScroll:true });
     }
 
+    async function loadShippingConfirmationQuote(country) {
+      const requestSequence = ++shippingConfirmationRequestSequence;
+      shippingConfirmationQuoteReady = false;
+      shippingCountryButton.disabled = true;
+      confirmCheckoutButton.disabled = true;
+      shippingConfirmationError.hidden = true;
+      try {
+        const response = await fetch(`${checkoutApiBaseUrl}/shipping-quote?country=${encodeURIComponent(country)}`, { cache:"no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !Number.isInteger(result.amount) || result.currency !== "aud") {
+          throw new Error(result.error || "Shipping could not be calculated.");
+        }
+        if (requestSequence !== shippingConfirmationRequestSequence || !shippingConfirmationDialog.open) return false;
+        populateShippingCountries(result.supportedCountries);
+        shippingConfirmationCountry = result.shippingCountry;
+        shippingConfirmationPrice = result.amount / 100;
+        shippingCountrySelect.value = shippingConfirmationCountry;
+        shippingConfirmationQuoteReady = true;
+        updateShippingCountryControl();
+        updateShippingConfirmationAmounts();
+      } catch (error) {
+        if (requestSequence !== shippingConfirmationRequestSequence || !shippingConfirmationDialog.open) return false;
+        console.error("Shipping confirmation quote failed", error);
+        shippingConfirmationError.textContent = `${error.message} Please try again.`;
+        shippingConfirmationError.hidden = false;
+      } finally {
+        if (requestSequence === shippingConfirmationRequestSequence && shippingConfirmationDialog.open) {
+          shippingCountryButton.disabled = false;
+          confirmCheckoutButton.disabled = !shippingConfirmationQuoteReady;
+        }
+      }
+      return shippingConfirmationQuoteReady;
+    }
+
     async function loadShippingQuote(country = "") {
       const requestSequence = ++shippingQuoteRequestSequence;
       shippingQuoteReady = false;
-      shippingCountrySelect.disabled = true;
-      shippingCountryButton.disabled = true;
-      closeShippingCountryPopover();
       renderCart();
       try {
         const query = country ? `?country=${encodeURIComponent(country)}` : "";
@@ -1855,8 +1925,6 @@
         cartNotice = `${error.message} Please try again.`;
       } finally {
         if (requestSequence === shippingQuoteRequestSequence) {
-          shippingCountrySelect.disabled = false;
-          shippingCountryButton.disabled = false;
           renderCart();
         }
       }
@@ -2076,10 +2144,31 @@
         const cartItemIds = Array.isArray(fingerprintItems)
           ? fingerprintItems.map((item) => String(item?.cartItemId || "")).filter((id) => /^ci_[a-f0-9]{32}$/.test(id))
           : [];
-        return { ...stored, cartItemIds };
+        const fingerprintShippingCountry = Array.isArray(fingerprintItems)
+          ? String(fingerprintItems.find((item) => item?.shippingCountry)?.shippingCountry || "")
+          : "";
+        return {
+          ...stored,
+          cartItemIds,
+          shippingCountry:/^[A-Z]{2}$/.test(String(stored.shippingCountry || "")) ? stored.shippingCountry : fingerprintShippingCountry,
+          shippingAmount:Number.isInteger(stored.shippingAmount) ? stored.shippingAmount : null
+        };
       } catch {
         return null;
       }
+    }
+    function getRestorableCheckoutShipping() {
+      const stored = getStoredCheckoutContext();
+      const currentCartItemIds = cartItems.map((item) => item.cartItemId);
+      if (
+        !stored ||
+        !SUPPORTED_SHIPPING_COUNTRY_CODES.includes(stored.shippingCountry) ||
+        !Number.isInteger(stored.shippingAmount) ||
+        stored.shippingAmount < 0 ||
+        stored.cartItemIds.length !== currentCartItemIds.length ||
+        stored.cartItemIds.some((id, index) => id !== currentCartItemIds[index])
+      ) return null;
+      return { country:stored.shippingCountry, amount:stored.shippingAmount };
     }
     function getCheckoutRequestId() {
       const fingerprint = JSON.stringify(cartItems.map((item) => ({
@@ -2090,12 +2179,21 @@
         uploadReference:item.uploadSessionId || item.uploadReference || ""
       })).concat([{ shippingCountry }]));
       const stored = getStoredCheckoutContext();
-      if (stored?.fingerprint === fingerprint) return stored.id;
+      if (stored?.fingerprint === fingerprint) {
+        localStorage.setItem(CHECKOUT_REQUEST_STORAGE_KEY, JSON.stringify({
+          ...stored,
+          shippingCountry,
+          shippingAmount:Math.round(shippingPrice * 100)
+        }));
+        return stored.id;
+      }
       const id = createCheckoutRequestId();
       localStorage.setItem(CHECKOUT_REQUEST_STORAGE_KEY, JSON.stringify({
         id,
         fingerprint,
-        cartItemIds:cartItems.map((item) => item.cartItemId)
+        cartItemIds:cartItems.map((item) => item.cartItemId),
+        shippingCountry,
+        shippingAmount:Math.round(shippingPrice * 100)
       }));
       return id;
     }
@@ -2769,6 +2867,13 @@
       hideShippingConfirmation();
       unlockPageForCart();
     });
+    shippingConfirmationDialog.addEventListener("close", () => {
+      closeShippingCountryPopover();
+      resetShippingConfirmation();
+    });
+    shippingConfirmationDialog.addEventListener("click", (event) => {
+      if (event.target === shippingConfirmationDialog) hideShippingConfirmation(true);
+    });
     photoPreviewDialog.addEventListener("close", () => {
       clearPhotoPreviewUrls();
       if (photoPreviewReturnFocus?.isConnected) photoPreviewReturnFocus.focus({ preventScroll:true });
@@ -2817,7 +2922,7 @@
       } else if (event.key === "Tab") {
         event.preventDefault();
         closeShippingCountryPopover();
-        (event.shiftKey ? shippingCountryButton : cartCurrencySelect).focus({ preventScroll:true });
+        (event.shiftKey ? shippingCountryButton : confirmCheckoutButton).focus({ preventScroll:true });
       }
     });
     shippingCountryPopover.addEventListener("wheel", (event) => event.stopPropagation(), { passive:true });
@@ -2828,15 +2933,17 @@
     }, true);
     window.addEventListener("resize", positionShippingCountryPopover);
     window.addEventListener("scroll", positionShippingCountryPopover, true);
-    shippingCountrySelect.addEventListener("change", () => {
-      hideShippingConfirmation();
-      void loadShippingQuote(shippingCountrySelect.value);
-    });
-    document.getElementById("change-shipping-country").addEventListener("click", () => hideShippingConfirmation(true));
+    document.getElementById("shipping-confirmation-back").addEventListener("click", () => hideShippingConfirmation(true));
     confirmCheckoutButton.addEventListener("click", () => {
+      if (!shippingConfirmationQuoteReady || !shippingConfirmationCountry) return;
+      const confirmedCountry = shippingConfirmationCountry;
+      shippingCountry = confirmedCountry;
+      shippingPrice = shippingConfirmationPrice;
+      shippingQuoteReady = true;
+      renderCart();
       confirmCheckoutButton.disabled = true;
       confirmCheckoutButton.textContent = "OPENING CHECKOUT…";
-      void startCheckout(shippingConfirmationCountry);
+      void startCheckout(confirmedCountry);
     });
     document.getElementById("continue-shopping").addEventListener("click", () => { cart.close(); history.replaceState(null, "", location.pathname); });
     document.getElementById("checkout-confirmed-continue").addEventListener("click", () => checkoutConfirmedDialog.close());
@@ -2846,8 +2953,13 @@
       window.setTimeout(openCart, 0);
     });
     checkoutButton.addEventListener("click", showShippingConfirmation);
+    const restoredCheckoutShipping = getRestorableCheckoutShipping();
+    if (restoredCheckoutShipping) {
+      shippingCountry = restoredCheckoutShipping.country;
+      shippingPrice = restoredCheckoutShipping.amount / 100;
+    }
     renderCart();
-    void loadShippingQuote();
+    void loadShippingQuote(restoredCheckoutShipping?.country || "");
     handleCheckoutReturn();
   </script>
 </body>
