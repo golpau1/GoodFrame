@@ -1949,6 +1949,15 @@
       }));
       return id;
     }
+    function storeEffectiveCheckoutRequestId(checkoutRequestId) {
+      if (!/^co_[a-f0-9]{32}$/.test(String(checkoutRequestId || ""))) return;
+      const stored = getStoredCheckoutContext();
+      if (!stored) return;
+      localStorage.setItem(CHECKOUT_REQUEST_STORAGE_KEY, JSON.stringify({
+        ...stored,
+        id:checkoutRequestId
+      }));
+    }
     async function createFullResolutionPrintCrop(entry, pictureNumber) {
       if (!(entry?.printBlob instanceof Blob) || entry.printBlob.type !== "image/jpeg" || !entry.printBlob.size) {
         throw new Error(`Picture ${pictureNumber} does not have a confirmed full-resolution crop.`);
@@ -2225,6 +2234,7 @@
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.url) throw new Error(result.error || "Checkout could not be opened.");
+        storeEffectiveCheckoutRequestId(result.checkoutRequestId);
         window.location.assign(result.url);
       } catch (error) {
         console.error("Checkout request failed", error);

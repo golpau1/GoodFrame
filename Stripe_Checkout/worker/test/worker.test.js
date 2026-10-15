@@ -85,6 +85,32 @@ async function seedPictureUpload(bucket, uploadReference) {
   }), { httpMetadata:{ contentType:'application/json' } });
 }
 
+function pictureCheckoutRequest({
+  checkoutRequestId,
+  cartItemId,
+  uploadReference,
+  shippingCountry = 'AU',
+  frameColour = 'Oak',
+  quantity = 1
+}) {
+  return new Request('https://worker.example/create-checkout-session', {
+    method:'POST',
+    headers:{ Origin:ORIGIN, 'Content-Type':'application/json' },
+    body:JSON.stringify({
+      checkoutRequestId,
+      shippingCountry,
+      items:[{
+        productType:'tiny_frame_8_pictures',
+        cartItemId,
+        size:'80x80mm',
+        frameColour,
+        quantity,
+        uploadReference
+      }]
+    })
+  });
+}
+
 function uploadRequest(fields, fileType, fileName) {
   const form = new FormData();
   form.append('file', new Blob(['image bytes'], { type: fileType }), fileName);
@@ -415,7 +441,15 @@ test('quantity creates one unique five-digit code per physical frame and retries
   const originalFetch = globalThis.fetch;
   let stripeBody;
   let stripeCalls = 0;
-  globalThis.fetch = async (_url, options) => {
+  globalThis.fetch = async (url, options = {}) => {
+    if (!options.method) {
+      return Response.json({
+        id:'cs_test_quantity3',
+        url:'https://checkout.stripe.test/quantity-3',
+        status:'open',
+        payment_status:'unpaid'
+      });
+    }
     stripeCalls += 1;
     stripeBody = new URLSearchParams(options.body);
     return Response.json({ id:'cs_test_quantity3', url:'https://checkout.stripe.test/quantity-3' });
@@ -464,6 +498,257 @@ test('quantity creates one unique five-digit code per physical frame and retries
     assert.equal(retry.status, 200);
     assert.deepEqual((await retry.json()).productCodes, firstResult.productCodes);
     assert.equal(stripeCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a new browser checkout request reuses the matching open Stripe session', async () => {
+  const originalFetch = globalThis.fetch;
+  let createCalls = 0;
+  globalThis.fetch = async (_url, options = {}) => {
+    if (!options.method) {
+      return Response.json({
+        id:'cs_test_backretry1',
+        url:'https://checkout.stripe.test/back-retry',
+        status:'open',
+        payment_status:'unpaid'
+      });
+    }
+    createCalls += 1;
+    return Response.json({ id:'cs_test_backretry1', url:'https://checkout.stripe.test/back-retry' });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_10000000000000000000000000000001';
+    const cartItemId = 'ci_10000000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
+    const first = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_10000000000000000000000000000001', cartItemId, uploadReference
+    }), testEnv);
+    const firstResult = await first.json();
+    const retried = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_10000000000000000000000000000002', cartItemId, uploadReference
+    }), testEnv);
+    const retryResult = await retried.json();
+    assert.equal(first.status, 200);
+    assert.equal(retried.status, 200);
+    assert.equal(retryResult.url, firstResult.url);
+    assert.equal(retryResult.checkoutRequestId, firstResult.checkoutRequestId);
+    assert.deepEqual(retryResult.productCodes, firstResult.productCodes);
+    assert.equal(createCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('an expired Checkout session is replaced without changing its product code', async () => {
+  const originalFetch = globalThis.fetch;
+  let createCalls = 0;
+  globalThis.fetch = async (_url, options = {}) => {
+    if (!options.method) {
+      return Response.json({ id:'cs_test_expiredretry1', status:'expired', payment_status:'unpaid' });
+    }
+    createCalls += 1;
+    return Response.json({
+      id:createCalls === 1 ? 'cs_test_expiredretry1' : 'cs_test_expiredretry2',
+      url:`https://checkout.stripe.test/expired-retry-${createCalls}`
+    });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_20000000000000000000000000000001';
+    const cartItemId = 'ci_20000000000000000000000000000001';
+    const requestId = 'co_20000000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
+    const first = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:requestId, cartItemId, uploadReference
+    }), testEnv);
+    const firstResult = await first.json();
+    const retried = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:requestId, cartItemId, uploadReference
+    }), testEnv);
+    const retryResult = await retried.json();
+    assert.equal(first.status, 200);
+    assert.equal(retried.status, 200);
+    assert.equal(retryResult.id, 'cs_test_expiredretry2');
+    assert.notEqual(retryResult.checkoutRequestId, requestId);
+    assert.deepEqual(retryResult.productCodes, firstResult.productCodes);
+    assert.equal(createCalls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a Stripe status network failure leaves the unpaid session safe to retry', async () => {
+  const originalFetch = globalThis.fetch;
+  let retrieveCalls = 0;
+  let createCalls = 0;
+  globalThis.fetch = async (_url, options = {}) => {
+    if (!options.method) {
+      retrieveCalls += 1;
+      if (retrieveCalls === 1) throw new TypeError('network unavailable');
+      return Response.json({
+        id:'cs_test_networkretry1', status:'open', payment_status:'unpaid',
+        url:'https://checkout.stripe.test/network-retry'
+      });
+    }
+    createCalls += 1;
+    return Response.json({ id:'cs_test_networkretry1', url:'https://checkout.stripe.test/network-retry' });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_25000000000000000000000000000001';
+    const cartItemId = 'ci_25000000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
+    const first = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_25000000000000000000000000000001', cartItemId, uploadReference
+    }), testEnv);
+    const firstResult = await first.json();
+    const failedRetry = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_25000000000000000000000000000002', cartItemId, uploadReference
+    }), testEnv);
+    assert.equal(failedRetry.status, 409);
+    assert.match((await failedRetry.json()).error, /could not be confirmed/);
+    const successfulRetry = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_25000000000000000000000000000002', cartItemId, uploadReference
+    }), testEnv);
+    const retryResult = await successfulRetry.json();
+    assert.equal(successfulRetry.status, 200);
+    assert.equal(retryResult.id, firstResult.id);
+    assert.deepEqual(retryResult.productCodes, firstResult.productCodes);
+    assert.equal(createCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('changing checkout details expires the old unpaid session before replacement', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let createCalls = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url:String(url), method:options.method || 'GET' });
+    if (String(url).endsWith('/expire')) {
+      return Response.json({ id:'cs_test_changedretry1', status:'expired' });
+    }
+    if (!options.method) {
+      return Response.json({
+        id:'cs_test_changedretry1', status:'open', payment_status:'unpaid',
+        url:'https://checkout.stripe.test/changed-retry-1'
+      });
+    }
+    createCalls += 1;
+    return Response.json({
+      id:createCalls === 1 ? 'cs_test_changedretry1' : 'cs_test_changedretry2',
+      url:`https://checkout.stripe.test/changed-retry-${createCalls}`
+    });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_30000000000000000000000000000001';
+    const cartItemId = 'ci_30000000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
+    const first = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_30000000000000000000000000000001', cartItemId, uploadReference
+    }), testEnv);
+    const firstResult = await first.json();
+    const retried = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_30000000000000000000000000000002', cartItemId, uploadReference,
+      shippingCountry:'US'
+    }), testEnv);
+    const retryResult = await retried.json();
+    assert.equal(first.status, 200);
+    assert.equal(retried.status, 200);
+    assert.equal(retryResult.id, 'cs_test_changedretry2');
+    assert.deepEqual(retryResult.productCodes, firstResult.productCodes);
+    assert.equal(calls.filter(call => call.url.endsWith('/expire')).length, 1);
+    assert.equal(createCalls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a completed paid Checkout session is never expired or replaced', async () => {
+  const originalFetch = globalThis.fetch;
+  let createCalls = 0;
+  let expireCalls = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url).endsWith('/expire')) {
+      expireCalls += 1;
+      return Response.json({ id:'cs_live_paidretry1', status:'expired' });
+    }
+    if (!options.method) {
+      return Response.json({
+        id:'cs_live_paidretry1', status:'complete', payment_status:'paid',
+        payment_intent:'pi_live_paidretry1'
+      });
+    }
+    createCalls += 1;
+    return Response.json({ id:'cs_live_paidretry1', url:'https://checkout.stripe.test/paid-retry' });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_40000000000000000000000000000001';
+    const cartItemId = 'ci_40000000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = {
+      ...env(bucket),
+      STRIPE_MODE:'live',
+      STRIPE_LIVE_SECRET_KEY:'sk_live_example'
+    };
+    const first = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_40000000000000000000000000000001', cartItemId, uploadReference
+    }), testEnv);
+    const firstResult = await first.json();
+    const retried = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_40000000000000000000000000000002', cartItemId, uploadReference
+    }), testEnv);
+    assert.equal(first.status, 200);
+    assert.equal(retried.status, 409);
+    assert.match((await retried.json()).error, /already been paid/);
+    assert.equal(createCalls, 1);
+    assert.equal(expireCalls, 0);
+    const product = testEnv.PRODUCT_CODES_DB.prepare(
+      'SELECT * FROM product_codes WHERE code = ?'
+    ).bind(firstResult.productCodes[0]).first();
+    assert.equal(product.status, 'paid');
+    assert.equal(product.stripe_payment_intent_id, 'pi_live_paidretry1');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('concurrent checkout clicks use one idempotency identity and one product record', async () => {
+  const originalFetch = globalThis.fetch;
+  const idempotencyKeys = [];
+  globalThis.fetch = async (_url, options = {}) => {
+    idempotencyKeys.push(options.headers['Idempotency-Key']);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    return Response.json({ id:'cs_test_doubleclick1', url:'https://checkout.stripe.test/double-click' });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_50000000000000000000000000000001';
+    const cartItemId = 'ci_50000000000000000000000000000001';
+    const checkoutRequestId = 'co_50000000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
+    const [first, second] = await Promise.all([
+      worker.fetch(pictureCheckoutRequest({ checkoutRequestId, cartItemId, uploadReference }), testEnv),
+      worker.fetch(pictureCheckoutRequest({ checkoutRequestId, cartItemId, uploadReference }), testEnv)
+    ]);
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    assert.deepEqual(idempotencyKeys, [checkoutRequestId, checkoutRequestId]);
+    const count = testEnv.PRODUCT_CODES_DB.prepare(
+      'SELECT COUNT(*) AS count FROM product_codes WHERE cart_item_id = ?'
+    ).bind(cartItemId).first();
+    assert.equal(Number(count.count), 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -596,7 +881,17 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
 test('checkout adds one $10 shipping option for multiple Tiny Frames', async () => {
   const originalFetch = globalThis.fetch;
   let stripeBody;
-  globalThis.fetch = async (_url, options) => {
+  let createCalls = 0;
+  globalThis.fetch = async (_url, options = {}) => {
+    if (!options.method) {
+      return Response.json({
+        id:'cs_test_multiple',
+        url:'https://checkout.stripe.test/multiple',
+        status:'open',
+        payment_status:'unpaid'
+      });
+    }
+    createCalls += 1;
     stripeBody = new URLSearchParams(options.body);
     return Response.json({ id: 'cs_test_multiple', url: 'https://checkout.stripe.test/multiple' });
   };
@@ -606,15 +901,18 @@ test('checkout adds one $10 shipping option for multiple Tiny Frames', async () 
     const secondUploadReference = 'tf_abcdef1234567890abcdef1234567890';
     await seedPictureUpload(bucket, firstUploadReference);
     await seedPictureUpload(bucket, secondUploadReference);
+    const testEnv = env(bucket);
+    const items = [
+      { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000004', size:'80x80mm', frameColour:'Oak', quantity:1, uploadReference:firstUploadReference },
+      { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000005', size:'80x80mm', frameColour:'Walnut', quantity:1, uploadReference:secondUploadReference }
+    ];
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',
       headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ checkoutRequestId:'co_00000000000000000000000000000004', items: [
-        { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000004', size:'80x80mm', frameColour:'Oak', quantity:1, uploadReference:firstUploadReference },
-        { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000005', size:'80x80mm', frameColour:'Walnut', quantity:1, uploadReference:secondUploadReference }
-      ] })
-    }), env(bucket));
+      body: JSON.stringify({ checkoutRequestId:'co_00000000000000000000000000000004', items })
+    }), testEnv);
     assert.equal(response.status, 200);
+    const firstResult = await response.json();
     assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME + 8 PICTURES');
     assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
     assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '7495');
@@ -622,6 +920,16 @@ test('checkout adds one $10 shipping option for multiple Tiny Frames', async () 
     assert.equal(stripeBody.has('line_items[2][price_data][product_data][name]'), false);
     assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
     assert.equal([...stripeBody.keys()].filter(key => key.startsWith('shipping_options[')).every(key => key.startsWith('shipping_options[0]')), true);
+    const retried = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
+      method:'POST',
+      headers:{ Origin:ORIGIN, 'Content-Type':'application/json' },
+      body:JSON.stringify({ checkoutRequestId:'co_00000000000000000000000000000005', items })
+    }), testEnv);
+    const retryResult = await retried.json();
+    assert.equal(retried.status, 200);
+    assert.equal(retryResult.id, firstResult.id);
+    assert.deepEqual(retryResult.productCodes, firstResult.productCodes);
+    assert.equal(createCalls, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }

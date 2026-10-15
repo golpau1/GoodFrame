@@ -132,15 +132,28 @@ async function attachExistingCodeToRequest(database, row, unit, checkoutRequestI
   assertExistingUnitMatches(row, unit);
   row = await persistUnitDetails(database, row, unit);
   const existingRequestId = String(row.checkout_request_id || '');
-  if (!existingRequestId || existingRequestId === checkoutRequestId) return row;
+  if (existingRequestId === checkoutRequestId) return row;
+  if (!existingRequestId) {
+    await run(
+      database,
+      'UPDATE product_codes SET checkout_request_id = ? WHERE code = ? AND checkout_request_id IS NULL',
+      checkoutRequestId,
+      row.code
+    );
+    return { ...row, checkout_request_id:checkoutRequestId };
+  }
 
+  if (row.stripe_checkout_session_id) {
+    throw new ProductCodeError('A cart product is already attached to another Stripe Checkout session');
+  }
   const previousRequest = await first(
     database,
-    'SELECT stripe_checkout_session_id FROM checkout_requests WHERE request_id = ?',
+    'SELECT updated_at FROM checkout_requests WHERE request_id = ?',
     existingRequestId
   );
-  if (previousRequest?.stripe_checkout_session_id) {
-    throw new ProductCodeError('A cart product is already attached to another Stripe Checkout session');
+  const previousUpdatedAt = Date.parse(previousRequest?.updated_at || '');
+  if (Number.isFinite(previousUpdatedAt) && Date.now() - previousUpdatedAt < 25 * 60 * 60 * 1000) {
+    throw new ProductCodeError('Checkout is still being prepared. Please try again shortly');
   }
   await run(
     database,
@@ -150,6 +163,95 @@ async function attachExistingCodeToRequest(database, row, unit, checkoutRequestI
     existingRequestId
   );
   return { ...row, checkout_request_id:checkoutRequestId };
+}
+
+async function findCheckoutAttachment(database, units) {
+  requireDatabase(database);
+  if (!Array.isArray(units) || units.length === 0 || units.length > 99) {
+    throw new ProductCodeError('Checkout must contain between 1 and 99 physical products');
+  }
+  const rows = [];
+  for (const rawUnit of units) {
+    const unit = validateUnit(rawUnit);
+    const row = await first(
+      database,
+      'SELECT * FROM product_codes WHERE cart_item_id = ? AND unit_index = ?',
+      unit.cartItemId,
+      unit.unitIndex
+    );
+    if (!row) continue;
+    assertExistingUnitMatches(row, unit);
+    rows.push(row);
+  }
+  const attachedRows = rows.filter(row => row.checkout_request_id && row.stripe_checkout_session_id);
+  if (!attachedRows.length) return null;
+  const requestIds = new Set(attachedRows.map(row => String(row.checkout_request_id)));
+  const sessionIds = new Set(attachedRows.map(row => String(row.stripe_checkout_session_id)));
+  if (requestIds.size !== 1 || sessionIds.size !== 1) {
+    throw new ProductCodeError('Cart products are attached to conflicting Checkout sessions');
+  }
+  const requestId = [...requestIds][0];
+  const request = await first(database, 'SELECT * FROM checkout_requests WHERE request_id = ?', requestId);
+  if (!request || request.stripe_checkout_session_id !== [...sessionIds][0]) {
+    throw new ProductCodeError('Checkout session identity could not be verified');
+  }
+  return { request, rows };
+}
+
+async function moveReservedProductsToCheckoutRequest(
+  database,
+  previousRequestId,
+  nextRequestId,
+  sessionId,
+  productCodes
+) {
+  requireDatabase(database);
+  const previousId = normalizeCheckoutRequestId(previousRequestId);
+  const nextId = normalizeCheckoutRequestId(nextRequestId);
+  const stripeSessionId = String(sessionId || '');
+  const codes = Array.isArray(productCodes) ? productCodes.map(normalizeProductCode) : [];
+  if (
+    !previousId ||
+    !nextId ||
+    !/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(stripeSessionId) ||
+    !codes.length ||
+    codes.some(code => !code) ||
+    new Set(codes).size !== codes.length
+  ) {
+    throw new ProductCodeError('Checkout session release identity is invalid');
+  }
+  const placeholders = codes.map(() => '?').join(', ');
+  const released = await run(
+    database,
+    `UPDATE product_codes
+       SET checkout_request_id = CASE
+             WHEN code IN (${placeholders}) THEN ?
+             ELSE NULL
+           END,
+           stripe_checkout_session_id = NULL
+     WHERE checkout_request_id = ?
+       AND stripe_checkout_session_id = ?
+       AND status = 'reserved'`,
+    ...codes,
+    nextId,
+    previousId,
+    stripeSessionId
+  );
+  const moved = await first(
+    database,
+    `SELECT COUNT(*) AS count
+       FROM product_codes
+      WHERE checkout_request_id = ?
+        AND stripe_checkout_session_id IS NULL
+        AND status = 'reserved'
+        AND code IN (${placeholders})`,
+    nextId,
+    ...codes
+  );
+  if (Number(moved?.count || 0) !== codes.length) {
+    throw new ProductCodeError('Checkout products could not be released safely');
+  }
+  return changes(released);
 }
 
 async function reserveProductCodes(database, units, checkoutRequestId, options = {}) {
@@ -468,9 +570,11 @@ export {
   attachProductPdf,
   beginCheckoutRequest,
   completeCheckoutRequest,
+  findCheckoutAttachment,
   findProductCode,
   getProductCodeCapacity,
   markProductCodesPaid,
+  moveReservedProductsToCheckoutRequest,
   normalizeCartItemId,
   normalizeCheckoutRequestId,
   normalizeProductCode,

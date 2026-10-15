@@ -16,9 +16,11 @@ import {
   attachProductPdf,
   beginCheckoutRequest,
   completeCheckoutRequest,
+  findCheckoutAttachment,
   findProductCode,
   getProductCodeCapacity,
   markProductCodesPaid,
+  moveReservedProductsToCheckoutRequest,
   normalizeCartItemId,
   normalizeCheckoutRequestId,
   normalizeProductCode,
@@ -1801,6 +1803,131 @@ async function verifyUploadManifests(lineItems, env) {
   }
 }
 
+function createServerCheckoutRequestId() {
+  return `co_${crypto.randomUUID().replaceAll('-', '')}`;
+}
+
+function applyAttachedProductCodes(lineItems, rows) {
+  const codesByUnit = new Map(rows.map(row => [
+    `${row.cart_item_id}:${Number(row.unit_index)}`,
+    String(row.code)
+  ]));
+  return lineItems.map(item => {
+    if (!item.cartItemId) return item;
+    const productCode = codesByUnit.get(`${item.cartItemId}:${item.unitIndex}`);
+    return productCode ? { ...item, productCode } : item;
+  });
+}
+
+async function retrieveStripeSession(stripeConfiguration, sessionId) {
+  let response;
+  let session;
+  try {
+    response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+      headers:{ Authorization:`Bearer ${stripeConfiguration.secretKey}` }
+    });
+    session = await response.json();
+  } catch {
+    throw new ProductCodeError('Checkout status could not be confirmed. Please try again');
+  }
+  if (!response.ok || session?.id !== sessionId) {
+    throw new ProductCodeError('Checkout status could not be confirmed. Please try again');
+  }
+  return session;
+}
+
+async function expireStripeSession(stripeConfiguration, sessionId) {
+  let response;
+  let session;
+  try {
+    response = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`,
+      {
+        method:'POST',
+        headers:{
+          Authorization:`Bearer ${stripeConfiguration.secretKey}`,
+          'Content-Type':'application/x-www-form-urlencoded'
+        }
+      }
+    );
+    session = await response.json();
+  } catch {
+    throw new ProductCodeError('The previous checkout could not be refreshed safely. Please try again');
+  }
+  if (!response.ok || session?.id !== sessionId || session?.status !== 'expired') {
+    throw new ProductCodeError('The previous checkout could not be refreshed safely. Please try again');
+  }
+  return session;
+}
+
+async function reconcileCheckoutAttachment(
+  lineItems,
+  checkoutRequestId,
+  shippingCountry,
+  env,
+  stripeConfiguration
+) {
+  const physicalItems = lineItems.filter(item => item.cartItemId);
+  const attachment = await findCheckoutAttachment(env.PRODUCT_CODES_DB, physicalItems);
+  if (!attachment) return { lineItems, checkoutRequestId, reused:null };
+
+  const previousRequest = attachment.request;
+  const previousRequestId = String(previousRequest.request_id);
+  const sessionId = String(previousRequest.stripe_checkout_session_id);
+  const attachedLineItems = applyAttachedProductCodes(lineItems, attachment.rows);
+  const productCodes = attachedLineItems.map(item => item.productCode).filter(Boolean);
+  const attachedProductCodes = attachment.rows
+    .filter(row => row.checkout_request_id === previousRequestId && row.stripe_checkout_session_id === sessionId)
+    .map(row => String(row.code));
+  const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(attachedLineItems, shippingCountry));
+  const session = await retrieveStripeSession(stripeConfiguration, sessionId);
+  const isPaid = session.payment_status === 'paid' || attachment.rows.some(row => row.status === 'paid');
+
+  if (isPaid) {
+    if (stripeConfiguration.mode === 'live') {
+      await markProductCodesPaid(env.PRODUCT_CODES_DB, session);
+    }
+    throw new ProductCodeError('This cart has already been paid. Please refresh to view the confirmed order');
+  }
+  if (session.status === 'complete') {
+    throw new ProductCodeError('Payment for this cart is already being confirmed. Please wait a moment and refresh');
+  }
+
+  const samePayload = previousRequest.payload_hash === payloadHash &&
+    previousRequest.product_codes === JSON.stringify(productCodes);
+  if (session.status === 'open' && samePayload && previousRequest.stripe_checkout_url) {
+    return {
+      lineItems:attachedLineItems,
+      checkoutRequestId:previousRequestId,
+      reused:{
+        id:sessionId,
+        url:session.url || previousRequest.stripe_checkout_url,
+        stripeMode:stripeConfiguration.mode,
+        checkoutRequestId:previousRequestId,
+        productCodes
+      }
+    };
+  }
+
+  if (session.status === 'open') {
+    await expireStripeSession(stripeConfiguration, sessionId);
+  } else if (session.status !== 'expired') {
+    throw new ProductCodeError('The previous checkout cannot be replaced safely. Please contact support');
+  }
+
+  const nextRequestId = checkoutRequestId === previousRequestId
+    ? createServerCheckoutRequestId()
+    : checkoutRequestId;
+  await moveReservedProductsToCheckoutRequest(
+    env.PRODUCT_CODES_DB,
+    previousRequestId,
+    nextRequestId,
+    sessionId,
+    attachedProductCodes
+  );
+  return { lineItems:attachedLineItems, checkoutRequestId:nextRequestId, reused:null };
+}
+
 async function createCheckoutSession(request, env) {
   const stripeConfiguration = getStripeConfiguration(env);
   if (!stripeConfiguration) {
@@ -1855,6 +1982,18 @@ async function createCheckoutSession(request, env) {
   let capacity;
   try {
     lineItems = buildLineItems(checkoutItems);
+    const reconciliation = await reconcileCheckoutAttachment(
+      lineItems,
+      checkoutRequestId,
+      shippingCountry,
+      env,
+      stripeConfiguration
+    );
+    lineItems = reconciliation.lineItems;
+    checkoutRequestId = reconciliation.checkoutRequestId;
+    if (reconciliation.reused) {
+      return jsonResponse(request, env, reconciliation.reused);
+    }
     const physicalItems = lineItems.filter(item => item.cartItemId);
     const allocation = await reserveProductCodes(env.PRODUCT_CODES_DB, physicalItems, checkoutRequestId);
     capacity = allocation.capacity;
@@ -1872,6 +2011,7 @@ async function createCheckoutSession(request, env) {
         id:checkoutRequest.stripe_checkout_session_id,
         url:checkoutRequest.stripe_checkout_url,
         stripeMode:stripeConfiguration.mode,
+        checkoutRequestId,
         productCodes:allocation.units.map(item => item.productCode)
       });
     }
@@ -1926,6 +2066,7 @@ async function createCheckoutSession(request, env) {
     id: stripeResult.id,
     url: stripeResult.url,
     stripeMode:stripeConfiguration.mode,
+    checkoutRequestId,
     productCodes:lineItems.map(item => item.productCode).filter(Boolean)
   });
 }
