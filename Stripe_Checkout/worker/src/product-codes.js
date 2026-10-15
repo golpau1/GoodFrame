@@ -183,16 +183,25 @@ async function findCheckoutAttachment(database, units) {
     assertExistingUnitMatches(row, unit);
     rows.push(row);
   }
-  const attachedRows = rows.filter(row => row.checkout_request_id && row.stripe_checkout_session_id);
-  if (!attachedRows.length) return null;
-  const requestIds = new Set(attachedRows.map(row => String(row.checkout_request_id)));
-  const sessionIds = new Set(attachedRows.map(row => String(row.stripe_checkout_session_id)));
-  if (requestIds.size !== 1 || sessionIds.size !== 1) {
+  const requestIds = new Set(rows.map(row => String(row.checkout_request_id || '')).filter(Boolean));
+  const requests = [];
+  for (const requestId of requestIds) {
+    const request = await first(database, 'SELECT * FROM checkout_requests WHERE request_id = ?', requestId);
+    if (request) requests.push(request);
+  }
+  if (!requests.length) return null;
+  if (requests.length !== 1) {
     throw new ProductCodeError('Cart products are attached to conflicting Checkout sessions');
   }
-  const requestId = [...requestIds][0];
-  const request = await first(database, 'SELECT * FROM checkout_requests WHERE request_id = ?', requestId);
-  if (!request || request.stripe_checkout_session_id !== [...sessionIds][0]) {
+  const request = requests[0];
+  const attachedRows = rows.filter(row => row.stripe_checkout_session_id);
+  const sessionIds = new Set(attachedRows.map(row => String(row.stripe_checkout_session_id)));
+  if (
+    (request.stripe_checkout_session_id && (
+      sessionIds.size !== 1 || request.stripe_checkout_session_id !== [...sessionIds][0]
+    )) ||
+    (!request.stripe_checkout_session_id && sessionIds.size)
+  ) {
     throw new ProductCodeError('Checkout session identity could not be verified');
   }
   return { request, rows };

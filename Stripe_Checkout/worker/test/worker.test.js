@@ -626,6 +626,43 @@ test('a Stripe status network failure leaves the unpaid session safe to retry', 
   }
 });
 
+test('an interrupted session creation recovers the original Stripe idempotency key', async () => {
+  const originalFetch = globalThis.fetch;
+  const idempotencyKeys = [];
+  globalThis.fetch = async (_url, options = {}) => {
+    idempotencyKeys.push(options.headers['Idempotency-Key']);
+    if (idempotencyKeys.length === 1) {
+      return Response.json({ error:{ type:'api_error', code:'temporary_failure' } }, { status:500 });
+    }
+    return Response.json({ id:'cs_test_creationretry1', url:'https://checkout.stripe.test/creation-retry' });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_27500000000000000000000000000001';
+    const cartItemId = 'ci_27500000000000000000000000000001';
+    const originalRequestId = 'co_27500000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
+    const interrupted = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:originalRequestId, cartItemId, uploadReference
+    }), testEnv);
+    assert.equal(interrupted.status, 502);
+    const retried = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_27500000000000000000000000000002', cartItemId, uploadReference
+    }), testEnv);
+    const retryResult = await retried.json();
+    assert.equal(retried.status, 200);
+    assert.equal(retryResult.checkoutRequestId, originalRequestId);
+    assert.deepEqual(idempotencyKeys, [originalRequestId, originalRequestId]);
+    const count = testEnv.PRODUCT_CODES_DB.prepare(
+      'SELECT COUNT(*) AS count FROM product_codes WHERE cart_item_id = ?'
+    ).bind(cartItemId).first();
+    assert.equal(Number(count.count), 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('changing checkout details expires the old unpaid session before replacement', async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];

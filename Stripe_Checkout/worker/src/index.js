@@ -1873,13 +1873,22 @@ async function reconcileCheckoutAttachment(
 
   const previousRequest = attachment.request;
   const previousRequestId = String(previousRequest.request_id);
-  const sessionId = String(previousRequest.stripe_checkout_session_id);
   const attachedLineItems = applyAttachedProductCodes(lineItems, attachment.rows);
   const productCodes = attachedLineItems.map(item => item.productCode).filter(Boolean);
+  const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(attachedLineItems, shippingCountry));
+  const samePayload = previousRequest.payload_hash === payloadHash &&
+    previousRequest.product_codes === JSON.stringify(productCodes);
+  if (!previousRequest.stripe_checkout_session_id) {
+    if (!samePayload) {
+      throw new ProductCodeError('The previous checkout is still being recovered. Please try again shortly');
+    }
+    return { lineItems:attachedLineItems, checkoutRequestId:previousRequestId, reused:null };
+  }
+
+  const sessionId = String(previousRequest.stripe_checkout_session_id);
   const attachedProductCodes = attachment.rows
     .filter(row => row.checkout_request_id === previousRequestId && row.stripe_checkout_session_id === sessionId)
     .map(row => String(row.code));
-  const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(attachedLineItems, shippingCountry));
   const session = await retrieveStripeSession(stripeConfiguration, sessionId);
   const isPaid = session.payment_status === 'paid' || attachment.rows.some(row => row.status === 'paid');
 
@@ -1893,8 +1902,6 @@ async function reconcileCheckoutAttachment(
     throw new ProductCodeError('Payment for this cart is already being confirmed. Please wait a moment and refresh');
   }
 
-  const samePayload = previousRequest.payload_hash === payloadHash &&
-    previousRequest.product_codes === JSON.stringify(productCodes);
   if (session.status === 'open' && samePayload && previousRequest.stripe_checkout_url) {
     return {
       lineItems:attachedLineItems,
