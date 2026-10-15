@@ -91,6 +91,12 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /checkoutButton\.addEventListener\("click", showShippingConfirmation\)/);
   assert.match(html, /shippingCountrySelect\.addEventListener\("change", \(\) => \{\s*hideShippingConfirmation\(\);/);
   assert.match(html, /shippingConfirmationPriceElement\.textContent = `A\$\$\{shippingPrice\.toFixed\(2\)\}`/);
+  assert.match(html, /id="shipping-country-popover" popover="manual" role="listbox"/);
+  assert.match(html, /shippingCountryPopover\.showPopover\(\)/);
+  assert.match(html, /spaceBelow < desiredHeight && spaceAbove > spaceBelow/);
+  assert.match(html, /\.shipping-country-popover \{[^}]*overscroll-behavior:contain/);
+  assert.match(html, /event\.key === "ArrowDown"/);
+  assert.match(html, /document\.addEventListener\("pointerdown"/);
   assert.match(html, /clearPurchasedCartItems\(checkoutContext\)/);
   assert.match(html, /checkout_request_id:checkoutContext\.id/);
   assert.match(html, /title\.textContent = `\$\{item\.colour\} · Frame \+ 8 Pictures`;/);

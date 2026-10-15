@@ -428,11 +428,19 @@
     .cart-currency-select:disabled { cursor:wait; opacity:.55; }
     .cart-currency-note { margin:-7px 0 12px; color:var(--muted); font-size:8px; font-weight:400; letter-spacing:.055em; line-height:1.4; text-align:right; }
     .cart-country-picker { position:relative; display:inline-flex; min-width:0; max-width:62%; align-items:center; color:var(--brown); }
-    .cart-country-select { width:100%; min-height:24px; padding:2px 14px 2px 0; overflow:hidden; border:0; border-radius:0; outline:0; appearance:none; -webkit-appearance:none; background:transparent; color:inherit; font:inherit; font-size:9px; font-weight:500; letter-spacing:.045em; line-height:1; cursor:pointer; text-align:right; text-overflow:ellipsis; }
-    .cart-country-select:focus, .cart-country-select:focus-visible { outline:none; }
-    .cart-country-select:focus-visible { box-shadow:0 1px 0 var(--brown); }
+    .cart-country-button { width:100%; min-height:24px; padding:2px 14px 2px 0 !important; overflow:hidden; border:0 !important; border-radius:0; outline:0; background:transparent; color:inherit; font:inherit; font-size:9px; font-weight:500; letter-spacing:.045em; line-height:1; cursor:pointer; text-align:right; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
+    .cart-country-button:focus, .cart-country-button:focus-visible { outline:none; }
+    .cart-country-button:focus-visible { box-shadow:0 1px 0 var(--brown); }
     .cart-country-picker::after { position:absolute; top:50%; right:1px; width:4px; height:4px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
-    .cart-country-select:disabled { cursor:wait; opacity:.55; }
+    .cart-country-button:disabled { cursor:wait; opacity:.55; }
+    .shipping-country-native { display:none; }
+    .shipping-country-popover { position:fixed; inset:auto; box-sizing:border-box; margin:0; padding:6px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; border:1px solid var(--divider); border-radius:10px; background:var(--cream); box-shadow:0 12px 30px rgba(60,42,33,.16); color:var(--brown); scrollbar-color:rgba(91,61,46,.38) transparent; scrollbar-width:thin; }
+    .shipping-country-popover:not(:popover-open) { display:none; }
+    .shipping-country-option { display:flex; width:100%; min-width:0; min-height:40px; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px !important; border:0 !important; border-radius:6px; background:transparent; color:inherit; font:inherit; font-size:10px; font-weight:500; letter-spacing:.045em; line-height:1.35; text-align:left; text-transform:uppercase; cursor:pointer; }
+    .shipping-country-option:hover, .shipping-country-option:focus-visible { outline:none; background:rgba(91,61,46,.075); }
+    .shipping-country-option[aria-selected="true"] { background:rgba(91,61,46,.11); font-weight:600; }
+    .shipping-country-option[aria-selected="true"]::after { flex:0 0 auto; width:5px; height:9px; margin:0 3px 2px 0; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; transform:rotate(45deg); }
+    @media (pointer:coarse) { .shipping-country-option { min-height:44px; padding:12px 14px !important; font-size:11px; } }
     .shipping-confirmation { margin:4px 0 8px; padding:17px 0 12px; border-top:1px solid var(--divider); border-bottom:1px solid var(--divider); }
     .shipping-confirmation-title { margin:0 0 15px; font-family:var(--font-display); font-size:13px; font-weight:600; letter-spacing:.08em; line-height:1.25; text-transform:uppercase; }
     .shipping-confirmation-row { display:grid; grid-template-columns:minmax(0,1fr) max-content; align-items:center; gap:20px; margin:0 0 8px; color:var(--muted); font-size:9px; letter-spacing:.075em; line-height:1.35; text-transform:uppercase; }
@@ -953,7 +961,7 @@
         <section class="cart-items" id="cart-items" aria-label="Cart items"></section>
         <aside class="cart-summary" aria-label="Order summary">
           <div class="cart-summary-row"><span>Subtotal</span><span id="cart-subtotal">A$0.00</span></div>
-          <div class="cart-summary-row"><span>Shipping to</span><span class="cart-country-picker"><select class="cart-country-select" id="shipping-country" aria-label="Shipping country"><option value="AU">Australia</option></select></span></div>
+          <div class="cart-summary-row"><span>Shipping to</span><span class="cart-country-picker"><button class="cart-country-button" id="shipping-country-button" type="button" aria-label="Shipping country: Australia" aria-haspopup="listbox" aria-controls="shipping-country-popover" aria-expanded="false">Australia</button><select class="shipping-country-native" id="shipping-country" aria-hidden="true" tabindex="-1"><option value="AU">Australia</option></select></span></div>
           <div class="cart-summary-row"><span>Shipping</span><span id="cart-shipping">A$0.00</span></div>
           <div class="cart-summary-rule"></div>
           <div class="cart-total"><span>Total</span><span class="cart-total-value"><span id="cart-total">A$0.00</span><span class="cart-currency-picker"><select class="cart-currency-select" id="cart-currency" aria-label="Display currency" aria-describedby="cart-currency-note"><option value="AUD">AUD</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option><option value="NZD">NZD</option><option value="CAD">CAD</option></select></span></span></div>
@@ -972,6 +980,7 @@
         </aside>
       </div>
     </div>
+    <div class="shipping-country-popover" id="shipping-country-popover" popover="manual" role="listbox" aria-label="Shipping country" tabindex="-1"></div>
   </dialog>
   <dialog id="photo-preview-dialog" aria-labelledby="photo-preview-title">
     <div class="photo-preview-shell">
@@ -1683,6 +1692,8 @@
     const cartCurrencySelect = document.getElementById("cart-currency");
     const cartCurrencyNote = document.getElementById("cart-currency-note");
     const shippingCountrySelect = document.getElementById("shipping-country");
+    const shippingCountryButton = document.getElementById("shipping-country-button");
+    const shippingCountryPopover = document.getElementById("shipping-country-popover");
     const checkoutButton = document.getElementById("checkout-button");
     const shippingConfirmation = document.getElementById("shipping-confirmation");
     const shippingConfirmationCountryElement = document.getElementById("shipping-confirmation-country");
@@ -1710,11 +1721,11 @@
       checkoutButton.hidden = false;
       confirmCheckoutButton.disabled = false;
       confirmCheckoutButton.textContent = "CONFIRM & CHECKOUT";
-      if (focusCountry && !shippingCountrySelect.disabled) shippingCountrySelect.focus();
+      if (focusCountry && !shippingCountryButton.disabled) shippingCountryButton.focus();
     }
 
     function showShippingConfirmation() {
-      if (!cartItems.length || !shippingQuoteReady || shippingCountrySelect.disabled) return;
+      if (!cartItems.length || !shippingQuoteReady || shippingCountryButton.disabled) return;
       shippingConfirmationCountry = shippingCountry;
       shippingConfirmationCountryElement.textContent = shippingCountryName(shippingCountry);
       shippingConfirmationPriceElement.textContent = `A$${shippingPrice.toFixed(2)}`;
@@ -1734,12 +1745,94 @@
         option.textContent = name;
         return option;
       }));
+      renderShippingCountryOptions();
+    }
+
+    function shippingCountryPopoverIsOpen() {
+      return shippingCountryPopover.matches(":popover-open");
+    }
+
+    function updateShippingCountryControl() {
+      const name = shippingCountryName(shippingCountry);
+      shippingCountryButton.textContent = name;
+      shippingCountryButton.setAttribute("aria-label", `Shipping country: ${name}`);
+      shippingCountryPopover.querySelectorAll(".shipping-country-option").forEach((option) => {
+        const selected = option.dataset.country === shippingCountry;
+        option.setAttribute("aria-selected", String(selected));
+        option.tabIndex = selected ? 0 : -1;
+      });
+    }
+
+    function chooseShippingCountry(countryCode) {
+      if (!supportedShippingCountries.some(({ code }) => code === countryCode)) return;
+      shippingCountrySelect.value = countryCode;
+      closeShippingCountryPopover(true);
+      shippingCountrySelect.dispatchEvent(new Event("change", { bubbles:true }));
+    }
+
+    function renderShippingCountryOptions() {
+      shippingCountryPopover.replaceChildren(...supportedShippingCountries.map(({ code, name }) => {
+        const option = document.createElement("button");
+        option.className = "shipping-country-option";
+        option.type = "button";
+        option.role = "option";
+        option.dataset.country = code;
+        option.textContent = name;
+        option.addEventListener("click", () => chooseShippingCountry(code));
+        return option;
+      }));
+      updateShippingCountryControl();
+    }
+
+    function positionShippingCountryPopover() {
+      if (!shippingCountryPopoverIsOpen()) return;
+      const margin = 10;
+      const gap = 6;
+      const triggerRect = shippingCountryButton.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth;
+      const viewportHeight = document.documentElement.clientHeight;
+      const spaceBelow = viewportHeight - triggerRect.bottom - margin - gap;
+      const spaceAbove = triggerRect.top - margin - gap;
+      const desiredHeight = Math.min(shippingCountryPopover.scrollHeight, 360);
+      const openUpwards = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+      const availableHeight = Math.max(1, openUpwards ? spaceAbove : spaceBelow);
+      const maxHeight = Math.min(360, availableHeight);
+      const width = Math.min(Math.max(triggerRect.width, 220), viewportWidth - margin * 2);
+      const left = Math.min(Math.max(margin, triggerRect.right - width), viewportWidth - width - margin);
+      const top = openUpwards
+        ? Math.max(margin, triggerRect.top - gap - Math.min(desiredHeight, maxHeight))
+        : Math.min(viewportHeight - margin - Math.min(desiredHeight, maxHeight), triggerRect.bottom + gap);
+      shippingCountryPopover.style.left = `${Math.round(left)}px`;
+      shippingCountryPopover.style.top = `${Math.round(top)}px`;
+      shippingCountryPopover.style.width = `${Math.round(width)}px`;
+      shippingCountryPopover.style.maxHeight = `${Math.floor(maxHeight)}px`;
+      shippingCountryPopover.dataset.placement = openUpwards ? "top" : "bottom";
+    }
+
+    function openShippingCountryPopover(focusLast = false) {
+      if (shippingCountryButton.disabled || !supportedShippingCountries.length) return;
+      if (!shippingCountryPopoverIsOpen()) shippingCountryPopover.showPopover();
+      shippingCountryButton.setAttribute("aria-expanded", "true");
+      updateShippingCountryControl();
+      positionShippingCountryPopover();
+      const options = [...shippingCountryPopover.querySelectorAll(".shipping-country-option")];
+      const target = focusLast ? options.at(-1) : options.find((option) => option.dataset.country === shippingCountry) || options[0];
+      target?.focus({ preventScroll:true });
+      target?.scrollIntoView({ block:"nearest" });
+    }
+
+    function closeShippingCountryPopover(restoreFocus = false) {
+      if (shippingCountryPopoverIsOpen()) shippingCountryPopover.hidePopover();
+      shippingCountryButton.setAttribute("aria-expanded", "false");
+      if (restoreFocus && !shippingCountryButton.disabled) shippingCountryButton.focus({ preventScroll:true });
     }
 
     async function loadShippingQuote(country = "") {
       const requestSequence = ++shippingQuoteRequestSequence;
       shippingQuoteReady = false;
       shippingCountrySelect.disabled = true;
+      shippingCountryButton.disabled = true;
+      closeShippingCountryPopover();
       renderCart();
       try {
         const query = country ? `?country=${encodeURIComponent(country)}` : "";
@@ -1753,6 +1846,7 @@
         shippingCountry = result.shippingCountry;
         shippingPrice = result.amount / 100;
         shippingCountrySelect.value = shippingCountry;
+        updateShippingCountryControl();
         shippingQuoteReady = true;
         cartNotice = "";
       } catch (error) {
@@ -1762,6 +1856,7 @@
       } finally {
         if (requestSequence === shippingQuoteRequestSequence) {
           shippingCountrySelect.disabled = false;
+          shippingCountryButton.disabled = false;
           renderCart();
         }
       }
@@ -2670,6 +2765,7 @@
     }
 
     cart.addEventListener("close", () => {
+      closeShippingCountryPopover();
       hideShippingConfirmation();
       unlockPageForCart();
     });
@@ -2694,6 +2790,44 @@
     checkoutUnsuccessfulDialog.addEventListener("click", (event) => { if (event.target === checkoutUnsuccessfulDialog) checkoutUnsuccessfulDialog.close(); });
     cartLink.addEventListener("click", (event) => { event.preventDefault(); openCart(); });
     cartCurrencySelect.addEventListener("change", () => { void selectCartCurrency(cartCurrencySelect.value); });
+    shippingCountryButton.addEventListener("click", () => {
+      if (shippingCountryPopoverIsOpen()) closeShippingCountryPopover(true);
+      else openShippingCountryPopover();
+    });
+    shippingCountryButton.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      event.preventDefault();
+      openShippingCountryPopover(event.key === "ArrowUp");
+    });
+    shippingCountryPopover.addEventListener("keydown", (event) => {
+      const options = [...shippingCountryPopover.querySelectorAll(".shipping-country-option")];
+      const currentIndex = options.indexOf(document.activeElement);
+      let nextIndex = null;
+      if (event.key === "ArrowDown") nextIndex = Math.min(options.length - 1, currentIndex + 1);
+      if (event.key === "ArrowUp") nextIndex = Math.max(0, currentIndex - 1);
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = options.length - 1;
+      if (nextIndex !== null) {
+        event.preventDefault();
+        options[nextIndex]?.focus();
+        options[nextIndex]?.scrollIntoView({ block:"nearest" });
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeShippingCountryPopover(true);
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        closeShippingCountryPopover();
+        (event.shiftKey ? shippingCountryButton : cartCurrencySelect).focus({ preventScroll:true });
+      }
+    });
+    shippingCountryPopover.addEventListener("wheel", (event) => event.stopPropagation(), { passive:true });
+    shippingCountryPopover.addEventListener("touchmove", (event) => event.stopPropagation(), { passive:true });
+    document.addEventListener("pointerdown", (event) => {
+      if (!shippingCountryPopoverIsOpen() || shippingCountryPopover.contains(event.target) || shippingCountryButton.contains(event.target)) return;
+      closeShippingCountryPopover();
+    }, true);
+    window.addEventListener("resize", positionShippingCountryPopover);
+    window.addEventListener("scroll", positionShippingCountryPopover, true);
     shippingCountrySelect.addEventListener("change", () => {
       hideShippingConfirmation();
       void loadShippingQuote(shippingCountrySelect.value);
