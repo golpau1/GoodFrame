@@ -661,8 +661,38 @@ test('shipping quote accepts an active AUD rate in the matching Stripe mode', as
     assert.equal(quote.shippingCountry, 'US');
     assert.equal(quote.amount, 2500);
     assert.equal(quote.rateId, 'shr_test_international');
-    assert.equal(quote.supportedCountries.includes('NZ'), true);
-    assert.equal(quote.supportedCountries.includes('GB'), true);
+    assert.deepEqual(quote.supportedCountries, ['AU', 'NZ', 'US', 'CA', 'GB', 'JP', 'SG', 'DE', 'FR', 'NL']);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('unsupported shipping destinations are rejected before Stripe is contacted', async () => {
+  const originalFetch = globalThis.fetch;
+  let stripeWasCalled = false;
+  globalThis.fetch = async () => {
+    stripeWasCalled = true;
+    return Response.json({ id:'cs_test_unsupported', url:'https://checkout.stripe.test/unsupported' });
+  };
+  try {
+    const quote = await worker.fetch(new Request('https://worker.example/shipping-quote?country=BR', {
+      headers:{ Origin:ORIGIN }
+    }), env());
+    assert.equal(quote.status, 400);
+    assert.match((await quote.json()).error, /not supported/);
+
+    const checkout = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
+      method:'POST',
+      headers:{ Origin:ORIGIN, 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        checkoutRequestId:'co_00000000000000000000000000000010',
+        shippingCountry:'BR',
+        items:[{ cartItemId:'ci_00000000000000000000000000000010', size:'210x297mm', quantity:1 }]
+      })
+    }), env());
+    assert.equal(checkout.status, 400);
+    assert.match((await checkout.json()).error, /not supported/);
+    assert.equal(stripeWasCalled, false);
   } finally {
     globalThis.fetch = originalFetch;
   }
