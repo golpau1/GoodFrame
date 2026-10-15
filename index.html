@@ -702,6 +702,12 @@
       .showcase-control--next { right:8px; }
       .showcase-control svg { width:16px; height:16px; }
     }
+    @media (max-width:600px) and (orientation:landscape) {
+      .showcase-collage { --gallery-height:max(400px,min(112svh,90vw)); }
+    }
+    @media (min-width:601px) and (max-width:1100px) and (orientation:landscape) {
+      .showcase-collage { --gallery-height:clamp(600px,92svh,800px); }
+    }
     .header { position:sticky; top:0; z-index:20; width:100%; border-bottom:1px solid rgba(60,42,33,.25); background:var(--color-background); }
     .showcase-gallery { background:#FFF7E1; }
     a:focus-visible, button:focus-visible { outline-color:var(--brown); }
@@ -1086,6 +1092,61 @@
       const measure = () => {
         const width = viewport.clientWidth;
         const height = viewport.clientHeight;
+        if (width <= 1100) {
+          const mobile = width <= 600;
+          const order = [0, 3, 1, 2, 4];
+          const mobileComposition = [
+            { width:.68, height:.72, offset:-.035, gap:-18, rotation:-2 },
+            { width:.94, height:.66, offset:.04, gap:-28, rotation:1.5 },
+            { width:.64, height:.72, offset:.06, gap:-16, rotation:-1.2 },
+            { width:.90, height:.66, offset:-.05, gap:-25, rotation:2 },
+            { width:.66, height:.72, offset:.01, gap:0, rotation:-1.6 }
+          ];
+          const tabletComposition = [
+            { width:.58, height:.74, offset:-.045, gap:-34, rotation:-2.2 },
+            { width:.88, height:.80, offset:.05, gap:-42, rotation:1.7 },
+            { width:.56, height:.72, offset:.06, gap:-32, rotation:-1.4 },
+            { width:.90, height:.78, offset:-.055, gap:-38, rotation:2 },
+            { width:.60, height:.74, offset:.015, gap:0, rotation:-1.8 }
+          ];
+          const mobileLandscapeComposition = mobileComposition.map((config, index) => index % 2
+            ? { ...config, height:.86, offset:index === 1 ? .025 : -.025 }
+            : config);
+          const tabletLandscapeComposition = tabletComposition.map((config, index) => index % 2
+            ? { ...config, height:index === 1 ? .87 : .85, offset:index === 1 ? .025 : -.025 }
+            : config);
+          const responsiveComposition = mobile
+            ? height < width ? mobileLandscapeComposition : mobileComposition
+            : height < width ? tabletLandscapeComposition : tabletComposition;
+          const edge = mobile ? 20 : 34;
+          printStops = [];
+          let cursor = edge;
+          order.forEach((photoIndex, index) => {
+            const photo = photos[photoIndex];
+            const image = photo.querySelector("img");
+            const config = responsiveComposition[index];
+            const ratio = (image.naturalWidth || Number(image.width)) / (image.naturalHeight || Number(image.height));
+            const printWidth = Math.min(width * config.width, height * config.height * ratio);
+            const printHeight = printWidth / ratio;
+            const angle = Math.abs(config.rotation) * Math.PI / 180;
+            const cos = Math.cos(angle), sin = Math.sin(angle);
+            const boundsWidth = printWidth * cos + printHeight * sin;
+            const boundsHeight = printHeight * cos + printWidth * sin;
+            printStops.push(Math.max(0, cursor - edge));
+            photo.style.width = `${printWidth}px`;
+            photo.style.height = `${printHeight}px`;
+            photo.style.left = `${cursor + (boundsWidth - printWidth) / 2}px`;
+            photo.style.top = `${(height - boundsHeight) / 2 + config.offset * height + (boundsHeight - printHeight) / 2}px`;
+            photo.style.transform = `rotate(${config.rotation}deg)`;
+            photo.style.zIndex = String(index + 1);
+            cursor += boundsWidth + config.gap;
+          });
+          const last = responsiveComposition[responsiveComposition.length - 1];
+          track.style.width = `${Math.max(width, cursor - last.gap + edge)}px`;
+          updateControls();
+          return;
+        }
+        photos.forEach((photo) => photo.style.removeProperty("z-index"));
         const scale = width <= 600 ? .46 : width <= 1100 ? .72 : 1;
         const edge = width <= 600 ? 20 : 48;
         printStops = [];
@@ -1153,6 +1214,7 @@
       viewport.addEventListener("pointercancel", release);
       viewport.addEventListener("lostpointercapture", release);
       new ResizeObserver(measure).observe(viewport);
+      window.addEventListener("resize", measure, { passive:true });
       photos.forEach((photo) => photo.querySelector("img").addEventListener("load", measure));
       measure();
     });
