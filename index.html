@@ -433,6 +433,13 @@
     .cart-country-select:focus-visible { box-shadow:0 1px 0 var(--brown); }
     .cart-country-picker::after { position:absolute; top:50%; right:1px; width:4px; height:4px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; pointer-events:none; transform:translateY(-70%) rotate(45deg); }
     .cart-country-select:disabled { cursor:wait; opacity:.55; }
+    .shipping-confirmation { margin:4px 0 8px; padding:17px 0 12px; border-top:1px solid var(--divider); border-bottom:1px solid var(--divider); }
+    .shipping-confirmation-title { margin:0 0 15px; font-family:var(--font-display); font-size:13px; font-weight:600; letter-spacing:.08em; line-height:1.25; text-transform:uppercase; }
+    .shipping-confirmation-row { display:grid; grid-template-columns:minmax(0,1fr) max-content; align-items:center; gap:20px; margin:0 0 8px; color:var(--muted); font-size:9px; letter-spacing:.075em; line-height:1.35; text-transform:uppercase; }
+    .shipping-confirmation-row strong { color:var(--brown); font-weight:600; text-align:right; }
+    .shipping-confirmation-actions { display:grid; grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr); gap:8px; margin-top:15px; }
+    .shipping-confirmation-actions .cart-action { min-width:0; height:45px; min-height:45px; margin:0; padding:10px 9px !important; font-size:8.5px; }
+    .shipping-confirmation-actions .cart-action:not(.cart-action--primary) { border:1px solid var(--divider) !important; color:var(--brown); }
     .cart-action { width:100%; margin-top:7px; padding:13px 16px !important; border:1px solid var(--brown) !important; font:inherit; font-family:var(--font-display); font-size:10px; font-weight:600; letter-spacing:.15em; text-transform:uppercase; }
     .cart-action--primary { background:var(--brown); color:var(--cream); }
     .cart-action:not(.cart-action--primary) { margin-top:5px; padding:8px 12px !important; border:0 !important; color:var(--muted); font-size:9px; font-weight:500; }
@@ -497,6 +504,9 @@
       .cart-total-value { gap:5px; padding-right:5px; }
       .cart-currency-select { width:44px; max-width:44px; font-size:8.5px; }
       .cart-currency-note { margin-top:-6px; font-size:8px; }
+      .shipping-confirmation-title { font-size:16px; }
+      .shipping-confirmation-row { font-size:13px; }
+      .shipping-confirmation-actions .cart-action { height:49px; min-height:49px; font-size:12px; }
       .cart-action { padding:12px 14px !important; }
       #faq-dialog { width:calc(100% - 24px); max-height:calc(100vh - 32px); max-height:calc(100dvh - 32px); }
       .faq-shell { padding:20px; }
@@ -942,12 +952,21 @@
       <div class="cart-layout">
         <section class="cart-items" id="cart-items" aria-label="Cart items"></section>
         <aside class="cart-summary" aria-label="Order summary">
-          <div class="cart-summary-row"><span>Subtotal</span><span id="cart-subtotal">$0</span></div>
+          <div class="cart-summary-row"><span>Subtotal</span><span id="cart-subtotal">A$0.00</span></div>
           <div class="cart-summary-row"><span>Shipping to</span><span class="cart-country-picker"><select class="cart-country-select" id="shipping-country" aria-label="Shipping country"><option value="AU">Australia</option></select></span></div>
-          <div class="cart-summary-row"><span>Shipping</span><span id="cart-shipping">$0</span></div>
+          <div class="cart-summary-row"><span>Shipping</span><span id="cart-shipping">A$0.00</span></div>
           <div class="cart-summary-rule"></div>
-          <div class="cart-total"><span>Total</span><span class="cart-total-value"><span id="cart-total">$0.00</span><span class="cart-currency-picker"><select class="cart-currency-select" id="cart-currency" aria-label="Display currency" aria-describedby="cart-currency-note"><option value="AUD">AUD</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option><option value="NZD">NZD</option><option value="CAD">CAD</option></select></span></span></div>
+          <div class="cart-total"><span>Total</span><span class="cart-total-value"><span id="cart-total">A$0.00</span><span class="cart-currency-picker"><select class="cart-currency-select" id="cart-currency" aria-label="Display currency" aria-describedby="cart-currency-note"><option value="AUD">AUD</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option><option value="NZD">NZD</option><option value="CAD">CAD</option></select></span></span></div>
           <p class="cart-currency-note" id="cart-currency-note" role="status" aria-live="polite" hidden></p>
+          <section class="shipping-confirmation" id="shipping-confirmation" aria-labelledby="shipping-confirmation-title" hidden>
+            <h3 class="shipping-confirmation-title" id="shipping-confirmation-title">Confirm your shipping destination</h3>
+            <p class="shipping-confirmation-row"><span>Shipping to</span><strong id="shipping-confirmation-country">Australia</strong></p>
+            <p class="shipping-confirmation-row"><span>Shipping</span><strong id="shipping-confirmation-price">A$10.00</strong></p>
+            <div class="shipping-confirmation-actions">
+              <button class="cart-action" id="change-shipping-country" type="button">Change Country</button>
+              <button class="cart-action cart-action--primary" id="confirm-checkout" type="button">Confirm &amp; Checkout</button>
+            </div>
+          </section>
           <button class="cart-action cart-action--primary" id="checkout-button" type="button">Checkout</button>
           <button class="cart-action" id="continue-shopping" type="button">Continue Shopping</button>
         </aside>
@@ -1664,8 +1683,13 @@
     const cartCurrencySelect = document.getElementById("cart-currency");
     const cartCurrencyNote = document.getElementById("cart-currency-note");
     const shippingCountrySelect = document.getElementById("shipping-country");
+    const checkoutButton = document.getElementById("checkout-button");
+    const shippingConfirmation = document.getElementById("shipping-confirmation");
+    const shippingConfirmationCountryElement = document.getElementById("shipping-confirmation-country");
+    const shippingConfirmationPriceElement = document.getElementById("shipping-confirmation-price");
+    const confirmCheckoutButton = document.getElementById("confirm-checkout");
     const CART_CURRENCIES = Object.freeze(["AUD", "USD", "GBP", "EUR", "NZD", "CAD"]);
-    const CART_CURRENCY_SYMBOLS = Object.freeze({ AUD:"$", USD:"US$", GBP:"£", EUR:"€", NZD:"NZ$", CAD:"CA$" });
+    const CART_CURRENCY_SYMBOLS = Object.freeze({ AUD:"A$", USD:"US$", GBP:"£", EUR:"€", NZD:"NZ$", CAD:"CA$" });
     let cartDisplayCurrency = "AUD";
     let cartExchangeRates = Object.freeze({ AUD:1 });
     let cartExchangeRatesPromise = null;
@@ -1673,6 +1697,31 @@
     let shippingPrice = SHIPPING_PRICE;
     let shippingQuoteReady = false;
     let supportedShippingCountries = [];
+    let shippingQuoteRequestSequence = 0;
+    let shippingConfirmationCountry = "";
+
+    function shippingCountryName(countryCode) {
+      return supportedShippingCountries.find(({ code }) => code === countryCode)?.name || countryCode;
+    }
+
+    function hideShippingConfirmation(focusCountry = false) {
+      shippingConfirmationCountry = "";
+      shippingConfirmation.hidden = true;
+      checkoutButton.hidden = false;
+      confirmCheckoutButton.disabled = false;
+      confirmCheckoutButton.textContent = "CONFIRM & CHECKOUT";
+      if (focusCountry && !shippingCountrySelect.disabled) shippingCountrySelect.focus();
+    }
+
+    function showShippingConfirmation() {
+      if (!cartItems.length || !shippingQuoteReady || shippingCountrySelect.disabled) return;
+      shippingConfirmationCountry = shippingCountry;
+      shippingConfirmationCountryElement.textContent = shippingCountryName(shippingCountry);
+      shippingConfirmationPriceElement.textContent = `A$${shippingPrice.toFixed(2)}`;
+      shippingConfirmation.hidden = false;
+      checkoutButton.hidden = true;
+      confirmCheckoutButton.focus();
+    }
 
     function populateShippingCountries(countryCodes) {
       if (!Array.isArray(countryCodes) || !countryCodes.length || supportedShippingCountries.length) return;
@@ -1688,6 +1737,7 @@
     }
 
     async function loadShippingQuote(country = "") {
+      const requestSequence = ++shippingQuoteRequestSequence;
       shippingQuoteReady = false;
       shippingCountrySelect.disabled = true;
       renderCart();
@@ -1698,6 +1748,7 @@
         if (!response.ok || !Number.isInteger(result.amount) || result.currency !== "aud") {
           throw new Error(result.error || "Shipping could not be calculated.");
         }
+        if (requestSequence !== shippingQuoteRequestSequence) return false;
         populateShippingCountries(result.supportedCountries);
         shippingCountry = result.shippingCountry;
         shippingPrice = result.amount / 100;
@@ -1705,12 +1756,16 @@
         shippingQuoteReady = true;
         cartNotice = "";
       } catch (error) {
+        if (requestSequence !== shippingQuoteRequestSequence) return false;
         console.error("Shipping quote failed", error);
         cartNotice = `${error.message} Please try again.`;
       } finally {
-        shippingCountrySelect.disabled = false;
-        renderCart();
+        if (requestSequence === shippingQuoteRequestSequence) {
+          shippingCountrySelect.disabled = false;
+          renderCart();
+        }
       }
+      return shippingQuoteReady;
     }
 
     function money(value, currency = cartDisplayCurrency) {
@@ -2205,22 +2260,33 @@
       if (cartChanged) saveCart();
     }
     let cartNotice = "";
-    async function startCheckout() {
+    async function startCheckout(confirmedCountry) {
       if (!cartItems.length) return;
-      const checkoutButton = document.getElementById("checkout-button");
+      if (
+        !shippingConfirmationCountry ||
+        confirmedCountry !== shippingConfirmationCountry ||
+        confirmedCountry !== shippingCountry ||
+        confirmedCountry !== shippingCountrySelect.value
+      ) {
+        hideShippingConfirmation(true);
+        return;
+      }
+      hideShippingConfirmation();
       checkoutButton.disabled = true;
       checkoutButton.textContent = "OPENING CHECKOUT…";
       try {
         cartNotice = "";
-        await loadShippingQuote(shippingCountrySelect.value || shippingCountry);
-        if (!shippingQuoteReady) throw new Error("Shipping could not be confirmed.");
+        await loadShippingQuote(confirmedCountry);
+        if (!shippingQuoteReady || shippingCountry !== confirmedCountry) {
+          throw new Error("Shipping could not be confirmed.");
+        }
         await preparePictureOrdersForCheckout();
         const response = await fetch(`${checkoutApiBaseUrl}/create-checkout-session`, {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
           body:JSON.stringify({
             checkoutRequestId:getCheckoutRequestId(),
-            shippingCountry,
+            shippingCountry:confirmedCountry,
             items:cartItems.map((item) => ({
               productType:productIdFor(item.order),
               cartItemId:item.cartItemId,
@@ -2296,6 +2362,7 @@
         remove.setAttribute("aria-label", `Remove ${item.colour} Frame`);
         remove.addEventListener("click", () => {
           cartNotice = "";
+          hideShippingConfirmation();
           const index = cartItems.indexOf(item);
           if (index !== -1) cartItems.splice(index, 1);
           deleteCartPhotoPreviews(item.cartItemId);
@@ -2310,7 +2377,8 @@
       document.getElementById("cart-shipping").dataset.audPrice = String(shipping);
       document.getElementById("cart-total").dataset.audPrice = String(subtotal + shipping);
       updateCartPriceDisplay();
-      document.getElementById("checkout-button").disabled = !cartItems.length || !shippingQuoteReady;
+      checkoutButton.disabled = !cartItems.length || !shippingQuoteReady;
+      if (!cartItems.length) hideShippingConfirmation();
       cartLink.querySelector(".cart-count").textContent = String(cartItems.length);
       cartLink.setAttribute("aria-label", `Open cart, ${cartItems.length} ${cartItems.length === 1 ? "item" : "items"}`);
     }
@@ -2601,7 +2669,10 @@
       }
     }
 
-    cart.addEventListener("close", unlockPageForCart);
+    cart.addEventListener("close", () => {
+      hideShippingConfirmation();
+      unlockPageForCart();
+    });
     photoPreviewDialog.addEventListener("close", () => {
       clearPhotoPreviewUrls();
       if (photoPreviewReturnFocus?.isConnected) photoPreviewReturnFocus.focus({ preventScroll:true });
@@ -2623,7 +2694,16 @@
     checkoutUnsuccessfulDialog.addEventListener("click", (event) => { if (event.target === checkoutUnsuccessfulDialog) checkoutUnsuccessfulDialog.close(); });
     cartLink.addEventListener("click", (event) => { event.preventDefault(); openCart(); });
     cartCurrencySelect.addEventListener("change", () => { void selectCartCurrency(cartCurrencySelect.value); });
-    shippingCountrySelect.addEventListener("change", () => { void loadShippingQuote(shippingCountrySelect.value); });
+    shippingCountrySelect.addEventListener("change", () => {
+      hideShippingConfirmation();
+      void loadShippingQuote(shippingCountrySelect.value);
+    });
+    document.getElementById("change-shipping-country").addEventListener("click", () => hideShippingConfirmation(true));
+    confirmCheckoutButton.addEventListener("click", () => {
+      confirmCheckoutButton.disabled = true;
+      confirmCheckoutButton.textContent = "OPENING CHECKOUT…";
+      void startCheckout(shippingConfirmationCountry);
+    });
     document.getElementById("continue-shopping").addEventListener("click", () => { cart.close(); history.replaceState(null, "", location.pathname); });
     document.getElementById("checkout-confirmed-continue").addEventListener("click", () => checkoutConfirmedDialog.close());
     document.getElementById("checkout-unsuccessful-continue").addEventListener("click", () => checkoutUnsuccessfulDialog.close());
@@ -2631,7 +2711,7 @@
       checkoutUnsuccessfulDialog.close();
       window.setTimeout(openCart, 0);
     });
-    document.getElementById("checkout-button").addEventListener("click", startCheckout);
+    checkoutButton.addEventListener("click", showShippingConfirmation);
     renderCart();
     void loadShippingQuote();
     handleCheckoutReturn();

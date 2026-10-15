@@ -669,6 +669,12 @@ test('changing checkout details expires the old unpaid session before replacemen
   let createCalls = 0;
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url:String(url), method:options.method || 'GET' });
+    if (String(url).includes('/v1/shipping_rates/')) {
+      return Response.json({
+        id:'shr_test_international', active:true, livemode:false, type:'fixed_amount',
+        display_name:'International shipping', fixed_amount:{ amount:2995, currency:'aud' }
+      });
+    }
     if (String(url).endsWith('/expire')) {
       return Response.json({ id:'cs_test_changedretry1', status:'expired' });
     }
@@ -704,6 +710,65 @@ test('changing checkout details expires the old unpaid session before replacemen
     assert.equal(retryResult.id, 'cs_test_changedretry2');
     assert.deepEqual(retryResult.productCodes, firstResult.productCodes);
     assert.equal(calls.filter(call => call.url.endsWith('/expire')).length, 1);
+    assert.equal(createCalls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('checkout reuse requires the same backend-validated shipping rate', async () => {
+  const originalFetch = globalThis.fetch;
+  let createCalls = 0;
+  let expireCalls = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    const requestUrl = String(url);
+    if (requestUrl.includes('/v1/shipping_rates/')) {
+      const rateId = decodeURIComponent(requestUrl.split('/').at(-1));
+      return Response.json({
+        id:rateId, active:true, livemode:false, type:'fixed_amount',
+        display_name:'International shipping',
+        fixed_amount:{ amount:rateId.endsWith('2') ? 3095 : 2995, currency:'aud' }
+      });
+    }
+    if (requestUrl.endsWith('/expire')) {
+      expireCalls += 1;
+      return Response.json({ id:'cs_test_ratechange1', status:'expired' });
+    }
+    if (!options.method) {
+      return Response.json({
+        id:'cs_test_ratechange1', status:'open', payment_status:'unpaid',
+        url:'https://checkout.stripe.test/rate-change-1'
+      });
+    }
+    createCalls += 1;
+    return Response.json({
+      id:createCalls === 1 ? 'cs_test_ratechange1' : 'cs_test_ratechange2',
+      url:`https://checkout.stripe.test/rate-change-${createCalls}`
+    });
+  };
+  try {
+    const bucket = new MemoryBucket();
+    const uploadReference = 'tf_35000000000000000000000000000001';
+    const cartItemId = 'ci_35000000000000000000000000000001';
+    await seedPictureUpload(bucket, uploadReference);
+    const testEnv = env(bucket);
+    testEnv.STRIPE_TEST_INTERNATIONAL_SHIPPING_RATE_ID = 'shr_test_international1';
+    const first = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_35000000000000000000000000000001', cartItemId, uploadReference,
+      shippingCountry:'US'
+    }), testEnv);
+    const firstResult = await first.json();
+    testEnv.STRIPE_TEST_INTERNATIONAL_SHIPPING_RATE_ID = 'shr_test_international2';
+    const retried = await worker.fetch(pictureCheckoutRequest({
+      checkoutRequestId:'co_35000000000000000000000000000002', cartItemId, uploadReference,
+      shippingCountry:'US'
+    }), testEnv);
+    const retryResult = await retried.json();
+    assert.equal(first.status, 200);
+    assert.equal(retried.status, 200);
+    assert.equal(retryResult.id, 'cs_test_ratechange2');
+    assert.deepEqual(retryResult.productCodes, firstResult.productCodes);
+    assert.equal(expireCalls, 1);
     assert.equal(createCalls, 2);
   } finally {
     globalThis.fetch = originalFetch;

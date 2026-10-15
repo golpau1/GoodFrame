@@ -1623,9 +1623,10 @@ async function sha256Hex(value) {
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function createCheckoutPayloadFingerprint(lineItems, shippingCountry) {
+function createCheckoutPayloadFingerprint(lineItems, shippingCountry, shippingRateIdentity) {
   return JSON.stringify({
     shippingCountry,
+    shippingRateIdentity,
     lineItems:lineItems.map(item => ({
       cartItemId:item.cartItemId || '',
       unitIndex:Number.isInteger(item.unitIndex) ? item.unitIndex : -1,
@@ -1864,6 +1865,7 @@ async function reconcileCheckoutAttachment(
   lineItems,
   checkoutRequestId,
   shippingCountry,
+  shippingRateIdentity,
   env,
   stripeConfiguration
 ) {
@@ -1875,7 +1877,11 @@ async function reconcileCheckoutAttachment(
   const previousRequestId = String(previousRequest.request_id);
   const attachedLineItems = applyAttachedProductCodes(lineItems, attachment.rows);
   const productCodes = attachedLineItems.map(item => item.productCode).filter(Boolean);
-  const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(attachedLineItems, shippingCountry));
+  const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(
+    attachedLineItems,
+    shippingCountry,
+    shippingRateIdentity
+  ));
   const samePayload = previousRequest.payload_hash === payloadHash &&
     previousRequest.product_codes === JSON.stringify(productCodes);
   if (!previousRequest.stripe_checkout_session_id) {
@@ -1958,12 +1964,19 @@ async function createCheckoutSession(request, env) {
   if (!shippingCountry) {
     return jsonResponse(request, env, { error:'Shipping country is not supported' }, 400);
   }
-  const internationalShippingRateId = shippingCountry === 'AU'
-    ? ''
-    : getInternationalShippingRateId(env, stripeConfiguration.mode);
-  if (shippingCountry !== 'AU' && !internationalShippingRateId) {
-    return jsonResponse(request, env, { error:'International shipping is not configured' }, 503);
+  let shippingQuote;
+  try {
+    shippingQuote = await retrieveShippingQuote(env, stripeConfiguration, shippingCountry);
+  } catch (error) {
+    console.error('Stripe shipping-rate validation failed', { message:error.message });
+    return jsonResponse(request, env, { error:error.message }, 503);
   }
+  const internationalShippingRateId = shippingQuote.rateId || '';
+  const shippingRateIdentity = [
+    internationalShippingRateId || 'inline-australia',
+    shippingQuote.currency,
+    shippingQuote.amount
+  ].join(':');
   if (!checkoutRequestId) {
     const legacyRequestHash = await sha256Hex(JSON.stringify(checkoutItems));
     checkoutRequestId = `co_${legacyRequestHash.slice(0, 32)}`;
@@ -1993,6 +2006,7 @@ async function createCheckoutSession(request, env) {
       lineItems,
       checkoutRequestId,
       shippingCountry,
+      shippingRateIdentity,
       env,
       stripeConfiguration
     );
@@ -2006,7 +2020,11 @@ async function createCheckoutSession(request, env) {
     capacity = allocation.capacity;
     let physicalIndex = 0;
     lineItems = lineItems.map(item => item.cartItemId ? allocation.units[physicalIndex++] : item);
-    const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(lineItems, shippingCountry));
+    const payloadHash = await sha256Hex(createCheckoutPayloadFingerprint(
+      lineItems,
+      shippingCountry,
+      shippingRateIdentity
+    ));
     const checkoutRequest = await beginCheckoutRequest(
       env.PRODUCT_CODES_DB,
       checkoutRequestId,

@@ -84,6 +84,13 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /result\.outcome === "failed"/);
   assert.match(html, /checkoutState === "cancelled"\) \{\s*openCart\(\);/);
   assert.doesNotMatch(html, /checkoutState === "cancelled"\) \{\s*await showUnsuccessfulCheckout\(\);/);
+  assert.match(html, /id="shipping-confirmation"[^>]*hidden/);
+  assert.match(html, /Confirm your shipping destination/);
+  assert.match(html, /id="change-shipping-country"[^>]*>Change Country</);
+  assert.match(html, /id="confirm-checkout"[^>]*>Confirm &amp; Checkout</);
+  assert.match(html, /checkoutButton\.addEventListener\("click", showShippingConfirmation\)/);
+  assert.match(html, /shippingCountrySelect\.addEventListener\("change", \(\) => \{\s*hideShippingConfirmation\(\);/);
+  assert.match(html, /shippingConfirmationPriceElement\.textContent = `A\$\$\{shippingPrice\.toFixed\(2\)\}`/);
   assert.match(html, /clearPurchasedCartItems\(checkoutContext\)/);
   assert.match(html, /checkout_request_id:checkoutContext\.id/);
   assert.match(html, /title\.textContent = `\$\{item\.colour\} · Frame \+ 8 Pictures`;/);
