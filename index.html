@@ -1064,14 +1064,6 @@
       const next = gallery.querySelector(".showcase-control--next");
       const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
       // Each print retains its intrinsic proportions. Only size, placement and angle vary.
-      const composition = [
-        { height:.90, offset:-22, gap:54, rotation:0 },
-        { height:.84, offset:34, gap:106, rotation:.6 },
-        { height:.88, offset:-38, gap:38, rotation:0 },
-        { height:.70, offset:72, gap:84, rotation:-.7 },
-        { height:.86, offset:4, gap:64, rotation:0 },
-        { height:.89, offset:-28, gap:122, rotation:0 }
-      ];
       previous.parentElement.parentElement.append(previous, next);
       previous.setAttribute("aria-label", "Scroll photographs left");
       next.setAttribute("aria-label", "Scroll photographs right");
@@ -1146,33 +1138,41 @@
           updateControls();
           return;
         }
-        photos.forEach((photo) => photo.style.removeProperty("z-index"));
-        const scale = width <= 600 ? .46 : width <= 1100 ? .72 : 1;
-        const edge = width <= 600 ? 20 : 48;
+        // Desktop keeps the mobile/tablet scrapbook order and overlapping rhythm,
+        // scaled for a wider canvas without changing either smaller breakpoint.
+        const desktopOrder = [0, 3, 1, 2, 4];
+        const desktopComposition = [
+          { width:.44, height:.78, offset:-.045, gap:-42, rotation:-2.2 },
+          { width:.76, height:.82, offset:.045, gap:-54, rotation:1.7 },
+          { width:.42, height:.76, offset:.06, gap:-40, rotation:-1.4 },
+          { width:.78, height:.82, offset:-.05, gap:-50, rotation:2 },
+          { width:.46, height:.78, offset:.015, gap:0, rotation:-1.8 }
+        ];
+        const edge = Math.max(40, Math.min(64, width * .04));
         printStops = [];
         let cursor = edge;
-        photos.forEach((photo, index) => {
+        desktopOrder.forEach((photoIndex, index) => {
+          const photo = photos[photoIndex];
           const image = photo.querySelector("img");
-          const config = composition[index % composition.length];
+          const config = desktopComposition[index];
           const ratio = (image.naturalWidth || Number(image.width)) / (image.naturalHeight || Number(image.height));
+          const printWidth = Math.min(width * config.width, height * config.height * ratio);
+          const printHeight = printWidth / ratio;
           const angle = Math.abs(config.rotation) * Math.PI / 180;
           const cos = Math.cos(angle), sin = Math.sin(angle);
-          // Reserve space for the complete rotated rectangle, including every border.
-          const printHeight = Math.min(height * config.height,
-            (height - 24 - 2 * Math.abs(config.offset * scale)) / (cos + ratio * sin),
-            (width - edge * 2) * config.height / .90 / (ratio * cos + sin));
-          const printWidth = printHeight * ratio;
           const boundsWidth = printWidth * cos + printHeight * sin;
+          const boundsHeight = printHeight * cos + printWidth * sin;
           printStops.push(Math.max(0, cursor - edge));
           photo.style.width = `${printWidth}px`;
           photo.style.height = `${printHeight}px`;
           photo.style.left = `${cursor + (boundsWidth - printWidth) / 2}px`;
-          photo.style.top = `${(height - printHeight) / 2 + config.offset * scale}px`;
+          photo.style.top = `${(height - boundsHeight) / 2 + config.offset * height + (boundsHeight - printHeight) / 2}px`;
           photo.style.transform = `rotate(${config.rotation}deg)`;
-          cursor += boundsWidth + config.gap * scale;
+          photo.style.zIndex = String(index + 1);
+          cursor += boundsWidth + config.gap;
         });
-        const last = composition[(photos.length - 1) % composition.length];
-        track.style.width = `${cursor - last.gap * scale + edge}px`;
+        const last = desktopComposition[desktopComposition.length - 1];
+        track.style.width = `${Math.max(width, cursor - last.gap + edge)}px`;
         updateControls();
       };
       // Arrows reveal the neighboring print; free scrolling never snaps to these positions.

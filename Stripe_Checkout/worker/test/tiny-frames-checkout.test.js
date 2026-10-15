@@ -76,6 +76,11 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /\.showcase-gallery::before, \.showcase-gallery::after \{ display:none; \}/);
   assert.doesNotMatch(html, /\.showcase-gallery::before \{[^}]*background-size:23px 23px;/);
   assert.doesNotMatch(html, /\.showcase-gallery::before \{[^}]*background-size:46px 46px;/);
+  assert.match(html, /if \(width <= 1100\) \{/);
+  assert.match(html, /const desktopOrder = \[0, 3, 1, 2, 4\];/);
+  assert.match(html, /\{ width:\.76, height:\.82, offset:\.045, gap:-54, rotation:1\.7 \}/);
+  assert.match(html, /\{ width:\.78, height:\.82, offset:-\.05, gap:-50, rotation:2 \}/);
+  assert.match(html, /desktopOrder\.forEach\(\(photoIndex, index\) => \{/);
   assert.match(html, /id="checkout-confirmed-dialog"/);
   assert.match(html, /id="checkout-unsuccessful-dialog"/);
   assert.match(html, /Thank you for your order\. Your tiny frames are on their way to becoming something special\./);
