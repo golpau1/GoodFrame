@@ -39,7 +39,7 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
   tiny_frame_8_pictures: Object.freeze({
     orderType: 'frame-plus-pictures',
     name: 'Tiny Frame + 8 Pictures',
-    unitAmount: 7495,
+    unitAmount: 5995,
     requiresPictures: true
   })
 });
