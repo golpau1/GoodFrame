@@ -40,7 +40,7 @@ const priceBySize = Object.freeze({
     '841x1189mm': 70000
 })
 const tinyFramePriceByOrderType = Object.freeze({
-    'frame-plus-pictures': 5995
+    'frame-plus-pictures': 6495
 })
 const shippingAmount = 1000
 const canonicalSizeByDimensions = Object.freeze({
