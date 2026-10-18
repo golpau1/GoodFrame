@@ -40,7 +40,8 @@ const priceBySize = Object.freeze({
     '841x1189mm': 70000
 })
 const tinyFramePriceByOrderType = Object.freeze({
-    'frame-plus-pictures': 6495
+    'frame-only': 6495,
+    'frame-plus-pictures': 8495
 })
 const shippingAmount = 1000
 const canonicalSizeByDimensions = Object.freeze({
@@ -202,6 +203,9 @@ function getItemDescription(item) {
 
 function normalizeTinyFrameOrderType(value) {
     const normalized = String(value || '').trim().toLowerCase()
+    if (normalized === 'frame-only' || normalized === 'frame only') {
+        return 'frame-only'
+    }
     if (['frame-plus-pictures', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
         return 'frame-plus-pictures'
     }

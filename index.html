@@ -170,10 +170,12 @@
           "name": "Australia"
         },
         "offers": {
-          "@type": "Offer",
+          "@type": "AggregateOffer",
           "url": "https://goodframe.com.au/",
           "priceCurrency": "AUD",
-          "price": "64.95",
+          "lowPrice": "64.95",
+          "highPrice": "84.95",
+          "offerCount": "2",
           "availability": "https://schema.org/InStock"
         }
       }
@@ -257,17 +259,19 @@
     .configurator-heading { margin:0 0 14px; font-size:13px; letter-spacing:.07em; line-height:1.15; text-transform:uppercase; }
     .option-row { border-top:1px solid var(--divider); }
     .option-row[data-option="order"] { border-top:0; border-bottom:1px solid var(--divider); }
-    .option-row[data-option="order"] .option-choices { display:grid; grid-template-columns:max-content; align-items:center; justify-content:center; width:100%; height:74px; max-height:none; padding:0; overflow:visible; opacity:1; }
+    .option-row[data-option="order"] .option-choices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:center; justify-content:center; gap:16px; width:100%; height:74px; max-height:none; padding:0; overflow:visible; opacity:1; }
     .option-label { font-size:12px; font-weight:500; letter-spacing:.07em; line-height:1.2; text-transform:uppercase; }
     .option-value { color:var(--muted); font-weight:400; }
     .option-choices { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 14px; max-height:0; padding:0; overflow:hidden; opacity:0; transition:max-height 240ms ease, padding 240ms ease, opacity 180ms ease; }
     .choice { padding:0; border:0; background:none; color:var(--muted); font:inherit; font-size:10px; letter-spacing:.1em; text-align:left; text-transform:uppercase; cursor:pointer; }
-    .order-choice { margin:0; font-family:var(--font-display); font-size:10px; text-align:center; }
+    .order-choice { justify-self:center; margin:0; font-family:var(--font-display); font-size:10px; text-align:center; }
     .order-choice--with-plus { position:relative; display:inline-flex; align-items:center; justify-content:center; justify-self:center; white-space:nowrap; }
     .order-choice-content { position:relative; display:inline-flex; align-items:baseline; gap:.22em; white-space:nowrap; }
-    .order-choice-content::after { position:absolute; right:0; bottom:-6px; left:0; height:1px; background:var(--accent); content:""; pointer-events:none; }
+    .order-choice-content::after { position:absolute; right:0; bottom:-6px; left:0; height:1px; background:var(--accent); content:""; opacity:0; pointer-events:none; transition:opacity 180ms ease; }
     .order-choice-plus { display:inline-block; flex:none; color:currentColor; font-family:"Goudy Bookletter 1911"; font-size:1em; font-weight:400; letter-spacing:0; line-height:1; text-decoration:none; }
     .choice:hover, .choice.is-selected { color:var(--brown); text-decoration:underline; text-underline-offset:5px; text-decoration-thickness:1px; }
+    .choice.order-choice:hover, .choice.order-choice.is-selected { text-decoration:none; }
+    .order-choice:hover .order-choice-content::after, .order-choice.is-selected .order-choice-content::after { opacity:1; }
     .purchase-row { display:flex; flex-direction:column; align-items:stretch; margin-top:32px; padding:6px 0 clamp(48px,6vw,72px); border-top:1px solid var(--divider); }
     .upload-section[hidden] + .purchase-row { margin-top:0; border-top:0; }
     .purchase-button { display:block; width:100%; min-height:48px; padding:5px 0; border:0; background:none; color:var(--brown); font:inherit; font-family:var(--font-body); font-size:var(--checkout-meta-size); font-weight:400; letter-spacing:.13em; line-height:1.1; cursor:pointer; text-transform:uppercase; }
@@ -733,7 +737,7 @@
       .swatch:not(.is-selected) .swatch-label { color:rgba(60,42,33,.78); font-weight:500; }
       .configurator-heading { color:var(--brown); font-size:16px; line-height:1.3; }
       .option-label, .option-value { color:var(--brown); font-size:14px; font-weight:500; line-height:1.4; }
-      .option-row[data-option="order"] .option-choices { grid-template-columns:max-content; align-content:center; align-items:center; justify-content:center; height:72px; }
+      .option-row[data-option="order"] .option-choices { grid-template-columns:repeat(2,minmax(0,1fr)); align-content:center; align-items:center; justify-content:center; height:72px; }
       .choice { min-height:46px; color:rgba(60,42,33,.76); font-size:14px; font-weight:500; line-height:1.3; }
       .order-choice { position:relative; display:inline-flex; align-items:center; justify-content:center; justify-self:center; font-size:clamp(15px,3.8vw,16px); letter-spacing:.02em; line-height:1.25; text-decoration:none !important; white-space:nowrap; }
       .choice.is-selected { color:var(--brown); font-weight:600; text-decoration-color:var(--brown); text-decoration-thickness:2px; text-underline-offset:7px; }
@@ -871,9 +875,9 @@
       </div>
       <div class="configurator" id="configurator" aria-hidden="true">
         <div class="option-row" data-option="order">
-          <div class="option-choices"><p class="order-choice order-choice--with-plus"><span class="order-choice-content"><span>Frame</span><span class="order-choice-plus" aria-hidden="true">+</span><span>Eight Pictures</span></span></p></div>
+          <div class="option-choices"><button class="choice order-choice is-selected" type="button" data-order-type="frame-only" data-choice="Frame Only" data-price="64.95" aria-pressed="true"><span class="order-choice-content"><span>Frame Only</span></span></button><button class="choice order-choice order-choice--with-plus" type="button" data-order-type="frame-plus-pictures" data-choice="Frame + 8 Pictures" data-price="84.95" aria-pressed="false" aria-label="Frame plus eight pictures"><span class="order-choice-content"><span>Frame</span><span class="order-choice-plus" aria-hidden="true">+</span><span>8 Pictures</span></span></button></div>
         </div>
-        <div class="upload-section" id="upload-section">
+        <div class="upload-section" id="upload-section" hidden aria-hidden="true">
           <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 8 Added</span></p>
           <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
           <div class="upload-grid" aria-label="Upload up to eight pictures">
@@ -1220,26 +1224,35 @@
     });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
-    const PRODUCT_PRICE = 64.95;
-    const PRODUCT_ID = "tiny_frame_8_pictures";
+    const PRODUCT_PRICE_BY_ORDER_TYPE = Object.freeze({
+      "frame-only":64.95,
+      "frame-plus-pictures":84.95
+    });
+    const PRODUCT_ID_BY_ORDER_TYPE = Object.freeze({
+      "frame-only":"tiny_frame_only",
+      "frame-plus-pictures":"tiny_frame_8_pictures"
+    });
     const SHIPPING_PRICE = 10;
     function normalizeOrderType(value) {
       const normalized = String(value || "").trim().toLowerCase();
+      if (normalized === "frame-only" || normalized === "frame only") return "frame-only";
       if (["frame-plus-pictures", "frame + 8 pictures", "frame plus 8 pictures"].includes(normalized)) return "frame-plus-pictures";
       return "";
     }
     function productPriceFor(value) {
-      return normalizeOrderType(value) ? PRODUCT_PRICE : null;
+      const normalized = normalizeOrderType(value);
+      return normalized ? PRODUCT_PRICE_BY_ORDER_TYPE[normalized] : null;
     }
     function productIdFor(value) {
-      return normalizeOrderType(value) ? PRODUCT_ID : "";
+      const normalized = normalizeOrderType(value);
+      return normalized ? PRODUCT_ID_BY_ORDER_TYPE[normalized] : "";
     }
-    const selections = { colour: "Oak", order: "Frame + 8 Pictures" };
-    const orderType = "frame-plus-pictures";
-    const orderPrice = PRODUCT_PRICE;
+    const selections = { colour: "Oak", order: "Frame Only" };
+    let orderType = "frame-only";
+    let orderPrice = PRODUCT_PRICE_BY_ORDER_TYPE[orderType];
 
     function updatePrice() {
-      document.getElementById("config-price").textContent = orderPrice;
+      document.getElementById("config-price").textContent = orderPrice.toFixed(2);
     }
 
     function selectColour(colour, reveal = true) {
@@ -1257,6 +1270,59 @@
     }
 
     swatchButtons.forEach((button) => button.addEventListener("click", () => selectColour(button.dataset.colour)));
+    let paletteResizeAnimation = null;
+    function updatePalettePanelState(update) {
+      const panel = configurator.closest(".palette-panel");
+      paletteResizeAnimation?.cancel();
+      paletteResizeAnimation = null;
+      panel.style.overflow = "";
+      const startHeight = panel.getBoundingClientRect().height;
+      const startStyle = getComputedStyle(panel);
+      const startPaddingTop = startStyle.paddingTop;
+      const startPaddingBottom = startStyle.paddingBottom;
+
+      update();
+
+      const endHeight = panel.getBoundingClientRect().height;
+      const endStyle = getComputedStyle(panel);
+      if (Math.abs(endHeight - startHeight) < 1 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      panel.style.overflow = "clip";
+      const animation = panel.animate([
+        { height:`${startHeight}px`, paddingTop:startPaddingTop, paddingBottom:startPaddingBottom },
+        { height:`${endHeight}px`, paddingTop:endStyle.paddingTop, paddingBottom:endStyle.paddingBottom }
+      ], { duration:360, easing:"cubic-bezier(.22,.75,.2,1)" });
+      paletteResizeAnimation = animation;
+      animation.onfinish = () => {
+        if (paletteResizeAnimation !== animation) return;
+        paletteResizeAnimation = null;
+        panel.style.overflow = "";
+      };
+    }
+    function setOrderType(nextOrderType, choice) {
+      orderType = nextOrderType;
+      selections.order = choice.dataset.choice;
+      orderPrice = productPriceFor(nextOrderType) ?? Number(choice.dataset.price || 0);
+      document.querySelectorAll(".order-choice").forEach((option) => {
+        const selected = option === choice;
+        option.classList.toggle("is-selected", selected);
+        option.setAttribute("aria-pressed", String(selected));
+      });
+      const uploadSection = document.getElementById("upload-section");
+      const withPictures = orderType === "frame-plus-pictures";
+      updatePalettePanelState(() => {
+        uploadSection.hidden = !withPictures;
+        uploadSection.setAttribute("aria-hidden", String(!withPictures));
+        uploadSection.closest(".palette-panel").classList.toggle("has-pictures", withPictures);
+      });
+      updatePrice();
+      updateAddToCartState();
+    }
+
+    const frameOnlyChoice = document.querySelector('[data-order-type="frame-only"]');
+    const framePlusPicturesChoice = document.querySelector('[data-order-type="frame-plus-pictures"]');
+    frameOnlyChoice.addEventListener("click", () => setOrderType("frame-only", frameOnlyChoice));
+    framePlusPicturesChoice.addEventListener("click", () => setOrderType("frame-plus-pictures", framePlusPicturesChoice));
     const overlay = document.getElementById("cropperOverlay");
     const cropImage = document.getElementById("cropperImage");
     const uploadedImages = Array(8).fill(null);
@@ -1359,7 +1425,7 @@
       cropImage.removeAttribute("src");
     }
     function canAddToCart() {
-      return uploadedImages.filter(Boolean).length === 8;
+      return orderType === "frame-only" || (orderType === "frame-plus-pictures" && uploadedImages.filter(Boolean).length === 8);
     }
     function updateAddToCartState() {
       const enabled = canAddToCart();
@@ -1698,8 +1764,7 @@
     });
     updateUploadProgress();
     selectColour("Oak", true);
-    document.querySelector(".palette-panel").classList.add("has-pictures");
-    updatePrice();
+    setOrderType("frame-only", frameOnlyChoice);
 
     const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
     const checkoutApiBaseUrl = (
@@ -1731,7 +1796,7 @@
       try {
         const stored = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
         return Array.isArray(stored) ? stored.filter((item) => {
-          const keep = normalizeOrderType(item?.order) === "frame-plus-pictures";
+          const keep = Boolean(normalizeOrderType(item?.order));
           if (!keep) cartIdentityWasMigrated = true;
           return keep;
         }).slice(0, 10).map((item) => {
@@ -2590,7 +2655,7 @@
         details.className = "cart-item-details";
         const title = document.createElement("h3");
         title.className = "cart-item-title";
-        title.textContent = `${item.colour} · Frame + 8 Pictures`;
+        title.textContent = `${item.colour} · ${normalizeOrderType(item.order) === "frame-plus-pictures" ? "Frame + 8 Pictures" : "Frame Only"}`;
         const titleRow = document.createElement("div");
         titleRow.className = "cart-item-title-row";
         titleRow.append(title);
@@ -2709,45 +2774,61 @@
       cartNotice = "";
       showPurchaseError();
       purchaseButton.disabled = true;
-      openUploadProgressOverlay();
-      document.getElementById("purchase-label").textContent = "PREPARING PRINTS…";
+      const withPictures = orderType === "frame-plus-pictures";
+      if (withPictures) openUploadProgressOverlay();
+      document.getElementById("purchase-label").textContent = withPictures ? "PREPARING PRINTS…" : "ADDING…";
       try {
-        document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
-        const uploadSession = await uploadPrintSheet(uploadedImages, selections.colour, updateUploadProgressOverlay);
-        await saveCartPhotoPreviews(uploadSession.cartItemId, uploadedImages);
-        if (cartItems.some((item) => item.uploadSessionId === uploadSession.uploadSessionId)) {
-          await new Promise((resolve) => window.setTimeout(resolve, 180));
-          await closeUploadProgressOverlay();
-          openCart();
-          return;
+        let uploadSession = null;
+        let cartItemId = createCartItemId();
+        let productCode = "";
+        if (withPictures) {
+          document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
+          uploadSession = await uploadPrintSheet(uploadedImages, selections.colour, updateUploadProgressOverlay);
+          await saveCartPhotoPreviews(uploadSession.cartItemId, uploadedImages);
+          if (cartItems.some((item) => item.uploadSessionId === uploadSession.uploadSessionId)) {
+            await new Promise((resolve) => window.setTimeout(resolve, 180));
+            await closeUploadProgressOverlay();
+            openCart();
+            return;
+          }
+          cartItemId = uploadSession.cartItemId;
+          productCode = uploadSession.productCode;
         }
         const cartItem = {
           id:Date.now(),
-          cartItemId:uploadSession.cartItemId,
-          productCode:uploadSession.productCode,
+          cartItemId,
+          productCode,
           colour:selections.colour,
           order:selections.order,
           price:orderPrice,
           quantity:1,
-          productType:"frame_8_pictures",
-          frameColour:selections.colour.toLowerCase(),
-          uploadSessionId:uploadSession.uploadSessionId,
-          printSheetReference:uploadSession.printSheetReference
+          ...(uploadSession ? {
+            productType:"frame_8_pictures",
+            frameColour:selections.colour.toLowerCase(),
+            uploadSessionId:uploadSession.uploadSessionId,
+            printSheetReference:uploadSession.printSheetReference
+          } : {})
         };
         cartItems.push(cartItem);
         saveCart();
         window.goodFrameCartItem = cartItem;
         renderCart();
-        await new Promise((resolve) => window.setTimeout(resolve, 180));
-        await closeUploadProgressOverlay();
+        if (withPictures) {
+          await new Promise((resolve) => window.setTimeout(resolve, 180));
+          await closeUploadProgressOverlay();
+        }
         openCart();
       } catch (error) {
         console.error("Add to cart failed", {
-          stage:"picture_upload",
+          stage:withPictures ? "picture_upload" : "cart_update",
           code:String(error?.code || "ADD_TO_CART_FAILED"),
           errorName:String(error?.name || "Error")
         });
-        showUploadProgressError(String(error?.message || "Upload failed — please try again."));
+        if (withPictures) {
+          showUploadProgressError(String(error?.message || "Upload failed — please try again."));
+        } else {
+          showPurchaseError(`${error.message} Please try again.`);
+        }
       } finally {
         addToCartInFlight = false;
         if (!uploadProgressDialog.open) uploadOverlayBusy = false;

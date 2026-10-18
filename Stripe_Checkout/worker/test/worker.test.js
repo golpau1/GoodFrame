@@ -350,7 +350,7 @@ test('webhooks reject events from the opposite Stripe mode', async () => {
   assert.equal(response.status, 400);
 });
 
-test('Australian checkout charges $64.95 plus one $10 shipping option for a $74.95 total', async () => {
+test('Australian picture checkout charges $84.95 plus one $10 shipping option for a $94.95 total', async () => {
   const originalFetch = globalThis.fetch;
   let stripeBody;
   globalThis.fetch = async (_url, options) => {
@@ -392,7 +392,7 @@ test('Australian checkout charges $64.95 plus one $10 shipping option for a $74.
     );
     assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME + 8 PICTURES');
     assert.equal(stripeBody.has('line_items[0][price_data][product_data][description]'), false);
-    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '6495');
+    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '8495');
     assert.equal(
       stripeBody.get('line_items[0][price_data][product_data][metadata][upload_reference]'),
       uploadReference
@@ -402,21 +402,24 @@ test('Australian checkout charges $64.95 plus one $10 shipping option for a $74.
     assert.equal(stripeBody.get('shipping_address_collection[allowed_countries][0]'), 'AU');
     assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
     assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][currency]'), 'aud');
-    assert.equal(Number(stripeBody.get('line_items[0][price_data][unit_amount]')) + Number(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]')), 7495);
+    assert.equal(Number(stripeBody.get('line_items[0][price_data][unit_amount]')) + Number(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]')), 9495);
     assert.equal(stripeBody.get('metadata[shipping_country]'), 'AU');
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test('checkout rejects the removed Frame Only product before contacting Stripe', async () => {
+test('Frame Only checkout charges $64.95 and never creates artwork or print sheets', async () => {
   const originalFetch = globalThis.fetch;
   let stripeWasCalled = false;
-  globalThis.fetch = async () => {
+  let stripeBody;
+  globalThis.fetch = async (_url, options) => {
     stripeWasCalled = true;
+    stripeBody = new URLSearchParams(options.body);
     return Response.json({ id: 'cs_test_frameonly1', url: 'https://checkout.stripe.test/frame-only' });
   };
   try {
+    const testEnv = env();
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',
       headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
@@ -429,10 +432,17 @@ test('checkout rejects the removed Frame Only product before contacting Stripe',
         quantity: 1,
         artworkObjectKeys: []
       }] })
-    }), env());
-    assert.equal(response.status, 400);
-    assert.match((await response.json()).error, /invalid product type/);
-    assert.equal(stripeWasCalled, false);
+    }), testEnv);
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(stripeWasCalled, true);
+    assert.equal(result.productCodes.length, 1);
+    assert.match(result.productCodes[0], /^[1-9][0-9]{4}$/);
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'WALNUT · FRAME ONLY');
+    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '6495');
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_only');
+    assert.equal(stripeBody.has('line_items[0][price_data][product_data][metadata][upload_reference]'), false);
+    assert.equal(testEnv.ARTWORK_BUCKET.objects.size, 0);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -487,15 +497,15 @@ test('quantity creates one unique five-digit code per physical frame and retries
     )), firstResult.productCodes);
     assert.deepEqual([0, 1, 2].map(index => (
       stripeBody.get(`line_items[${index}][price_data][unit_amount]`)
-    )), ['6495', '6495', '6495']);
+    )), ['8495', '8495', '8495']);
     assert.equal(stripeBody.has('line_items[3][price_data][unit_amount]'), false);
     assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
     assert.equal([0, 1, 2].reduce((total, index) => (
       total + Number(stripeBody.get(`line_items[${index}][price_data][unit_amount]`))
-    ), Number(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'))), 20485);
+    ), Number(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'))), 26485);
     const paymentProductMap = stripeBody.get('payment_intent_data[metadata][product_map]');
     firstResult.productCodes.forEach((code, index) => {
-      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| OAK · FRAME \\+ 8 PICTURES \\| AUD 64\\.95`));
+      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| OAK · FRAME \\+ 8 PICTURES \\| AUD 84\\.95`));
     });
 
     const retry = await worker.fetch(makeRequest(), testEnv);
@@ -902,7 +912,7 @@ test('authorized order management can find the Stripe relationship by product co
     assert.equal(record.stripeCheckoutSessionId, 'cs_test_searchable1');
     assert.equal(record.productType, 'tiny_frame_8_pictures');
     assert.equal(record.frameColour, 'Walnut');
-    assert.equal(record.unitAmount, 6495);
+    assert.equal(record.unitAmount, 8495);
     assert.equal(record.currency, 'aud');
     const capacity = await worker.fetch(new Request(
       'https://worker.example/admin/product-code-capacity',
@@ -1021,8 +1031,8 @@ test('checkout adds one $10 shipping option for multiple Tiny Frames', async () 
     const firstResult = await response.json();
     assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME + 8 PICTURES');
     assert.equal(stripeBody.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
-    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '6495');
-    assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '6495');
+    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '8495');
+    assert.equal(stripeBody.get('line_items[1][price_data][unit_amount]'), '8495');
     assert.equal(stripeBody.has('line_items[2][price_data][product_data][name]'), false);
     assert.equal(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
     assert.equal([...stripeBody.keys()].filter(key => key.startsWith('shipping_options[')).every(key => key.startsWith('shipping_options[0]')), true);
@@ -1044,7 +1054,7 @@ test('checkout adds one $10 shipping option for multiple Tiny Frames', async () 
 for (const shippingCountry of ['US', 'NZ', 'GB']) {
   test(`${shippingCountry} checkout is locked to its destination and uses only the live international rate`, () => {
     const payload = createStripePayload(
-      [{ name:'OAK · FRAME + 8 PICTURES', unitAmount:6495, quantity:1 }],
+      [{ name:'OAK · FRAME + 8 PICTURES', unitAmount:8495, quantity:1 }],
       ORIGIN,
       'live',
       'co_00000000000000000000000000000009',
