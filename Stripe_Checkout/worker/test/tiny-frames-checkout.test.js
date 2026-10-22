@@ -33,7 +33,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /\/tiny-frame-pdf\/status/);
   assert.match(html, /recoverCompletedUpload/);
   assert.match(html, /id="upload-progress-dialog"/);
-  assert.match(html, /Uploading your pictures\.\.\./);
+  assert.match(html, /Uploading your photos\.\.\./);
   assert.match(html, /request\.upload\.addEventListener\("progress"/);
   assert.match(html, /event\.lengthComputable/);
   assert.match(html, /Math\.min\(99, Math\.floor/);
@@ -42,7 +42,7 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /if \(addToCartInFlight \|\| !canAddToCart\(\)\) return;/);
   assert.match(html, /phase === "preparing" \|\| phase === "uploading-indeterminate" \|\| phase === "confirming"/);
   assert.match(html, /id="photo-preview-dialog"/);
-  assert.match(html, /Your Pictures/);
+  assert.match(html, /Your Photos/);
   assert.match(html, /className = "cart-photo-preview-button"/);
   assert.match(html, /normalizeOrderType\(item\.order\) === "frame-plus-pictures"/);
   assert.match(html, /saveCartPhotoPreviews\(uploadSession\.cartItemId, uploadedImages\)/);
@@ -108,13 +108,14 @@ test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', as
   assert.match(html, /document\.addEventListener\("pointerdown"/);
   assert.match(html, /clearPurchasedCartItems\(checkoutContext\)/);
   assert.match(html, /checkout_request_id:checkoutContext\.id/);
-  assert.match(html, /title\.textContent = `\$\{item\.colour\} · \$\{normalizeOrderType\(item\.order\) === "frame-plus-pictures" \? "Frame \+ 8 Pictures" : "Frame Only"\}`;/);
-  assert.match(html, /data-order-type="frame-only"[^>]*data-price="64\.95"/);
-  assert.match(html, /data-order-type="frame-plus-pictures"[^>]*data-price="84\.95"/);
-  assert.match(html, /id="upload-section" hidden aria-hidden="true"/);
-  assert.match(html, /"frame-only":64\.95/);
-  assert.match(html, /"frame-plus-pictures":84\.95/);
-  assert.match(html, /return orderType === "frame-only" \|\| \(orderType === "frame-plus-pictures" && uploadedImages\.filter\(Boolean\)\.length === 8\);/);
+  assert.match(html, /title\.textContent = `\$\{item\.colour\} · Frame \+ Eight Photos`;/);
+  assert.match(html, /class="product-name">Frame \+ Eight Photos</);
+  assert.doesNotMatch(html, /data-order-type=/);
+  assert.doesNotMatch(html, /Frame Only/);
+  assert.match(html, /id="upload-section" aria-hidden="false"/);
+  assert.match(html, /const PRODUCT_PRICE = 64\.95;/);
+  assert.match(html, /return uploadedImages\.filter\(Boolean\)\.length === 8;/);
+  assert.match(html, /hero-mobile-DSCF1619\.jpg/);
   assert.match(html, /if \(withPictures\) openUploadProgressOverlay\(\);/);
   assert.match(html, /id="config-price">64\.95</);
   assert.doesNotMatch(html, /title\.textContent[^;]+item\.productCode/);
@@ -290,55 +291,48 @@ function frameWithPictures(overrides = {}) {
   };
 }
 
-test('Tiny Frame prices are authoritative and client-supplied shipping is ignored', () => {
+test('the only Tiny Frame product is $64.95 and client-supplied shipping is ignored', () => {
   const lineItems = buildLineItems([
-    frameOnly(),
     frameWithPictures(),
     { price_data: { product_data: { name: 'Shipping' } }, quantity: 99 }
   ]);
 
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [6495, 8495]);
-  assert.deepEqual(lineItems.map(item => item.name), ['OAK · FRAME ONLY', 'WALNUT · FRAME + 8 PICTURES']);
-  assert.equal(lineItems[0].uploadReference, '');
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [6495]);
+  assert.deepEqual(lineItems.map(item => item.name), ['Frame + Eight Photos']);
   assert.equal(lineItems.filter(item => item.name === 'Shipping').length, 0);
+  assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
 });
 
 test('picture products require a valid upload reference', () => {
   assert.throws(
     () => buildLineItems([frameWithPictures({ uploadReference: '' })]),
-    /completed picture upload reference/
+    /completed photo upload reference/
   );
 });
 
 test('Stripe payload contains safe Tiny Frame metadata and storefront return URLs', () => {
-  let productIndex = 0;
-  const lineItems = buildLineItems([frameOnly(), frameWithPictures()]).map(item => (
-    item.cartItemId ? { ...item, productCode:['58321', '19472'][productIndex++] } : item
+  const lineItems = buildLineItems([frameWithPictures()]).map(item => (
+    item.cartItemId ? { ...item, productCode:'19472' } : item
   ));
   const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
 
   assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '6495');
-  assert.equal(payload.get('line_items[1][price_data][unit_amount]'), '8495');
-  assert.equal(payload.has('line_items[2][price_data][unit_amount]'), false);
+  assert.equal(payload.has('line_items[1][price_data][unit_amount]'), false);
   assert.equal(payload.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'), '1000');
   assert.equal(payload.get('shipping_address_collection[allowed_countries][0]'), 'AU');
-  assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'OAK · FRAME ONLY');
-  assert.equal(payload.get('line_items[1][price_data][product_data][name]'), 'WALNUT · FRAME + 8 PICTURES');
+  assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'Frame + Eight Photos');
   assert.equal(payload.has('line_items[0][price_data][product_data][description]'), false);
-  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_only');
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_type]'), 'tiny_frame_8_pictures');
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][frame_colour]'), 'Walnut');
-  assert.equal(payload.has('line_items[0][price_data][product_data][metadata][upload_reference]'), false);
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][upload_reference]'), uploadReference);
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][upload_session_id]'), uploadReference);
-  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '58321');
-  assert.equal(payload.get('line_items[1][price_data][product_data][metadata][product_code]'), '19472');
-  assert.equal(payload.get('metadata[product_codes]'), '58321,19472');
-  assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '58321,19472');
-  const productMap = '1:58321 | Oak | OAK · FRAME ONLY | AUD 64.95; 2:19472 | Walnut | WALNUT · FRAME + 8 PICTURES | AUD 84.95 | PDF 19472/19472-print-sheet.pdf';
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_8_pictures');
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][frame_colour]'), 'Walnut');
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_reference]'), uploadReference);
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_session_id]'), uploadReference);
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '19472');
+  assert.equal(payload.get('metadata[product_codes]'), '19472');
+  assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '19472');
+  const productMap = '1:19472 | Walnut | Frame + Eight Photos | AUD 64.95 | PDF 19472/19472-print-sheet.pdf';
   assert.equal(payload.get('metadata[product_map]'), productMap);
   assert.equal(payload.get('payment_intent_data[metadata][product_map]'), productMap);
-  assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Oak,Walnut');
+  assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Walnut');
   assert.equal(payload.get('payment_intent_data[description]'), 'Good Frame Order');
   assert.equal(payload.get('metadata[upload_references]'), uploadReference);
   assert.equal(payload.get('metadata[upload_session_ids]'), uploadReference);
@@ -505,7 +499,7 @@ test('two products receive different five-digit R2 folders and code-named PDFs',
   database.close();
 });
 
-test('frame-only products receive unique persistent codes in one assignment request', async () => {
+test('photo products receive unique persistent codes in one assignment request', async () => {
   const database = createProductCodeDatabase();
   const env = {
     PRODUCT_CODES_DB:database,
@@ -513,9 +507,9 @@ test('frame-only products receive unique persistent codes in one assignment requ
   };
   const firstId = 'ci_cccccccccccccccccccccccccccccccc';
   const secondId = 'ci_dddddddddddddddddddddddddddddddd';
-  const first = await (await worker.fetch(assignProductCodeRequest(firstId, 'tiny_frame_only', '58321'), env)).json();
-  const firstRetry = await (await worker.fetch(assignProductCodeRequest(firstId, 'tiny_frame_only', '58321'), env)).json();
-  const second = await (await worker.fetch(assignProductCodeRequest(secondId, 'tiny_frame_only', '19472'), env)).json();
+  const first = await (await worker.fetch(assignProductCodeRequest(firstId, 'tiny_frame_8_pictures', '58321'), env)).json();
+  const firstRetry = await (await worker.fetch(assignProductCodeRequest(firstId, 'tiny_frame_8_pictures', '58321'), env)).json();
+  const second = await (await worker.fetch(assignProductCodeRequest(secondId, 'tiny_frame_8_pictures', '19472'), env)).json();
   assert.match(first.productCode, /^[1-9][0-9]{4}$/);
   assert.equal(firstRetry.productCode, first.productCode);
   assert.notEqual(second.productCode, first.productCode);

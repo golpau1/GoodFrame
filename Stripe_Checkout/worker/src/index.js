@@ -36,16 +36,10 @@ const PRICE_BY_SIZE = Object.freeze({
   '841x1189mm': 70000
 });
 const TINY_FRAME_PRODUCTS = Object.freeze({
-  tiny_frame_only: Object.freeze({
-    orderType: 'frame-only',
-    name: 'Tiny Frame - Frame Only',
-    unitAmount: 6495,
-    requiresPictures: false
-  }),
   tiny_frame_8_pictures: Object.freeze({
     orderType: 'frame-plus-pictures',
-    name: 'Tiny Frame + 8 Pictures',
-    unitAmount: 8495,
+    name: 'Frame + Eight Photos',
+    unitAmount: 6495,
     requiresPictures: true
   })
 });
@@ -270,7 +264,7 @@ function inspectPrintSheetPdf(bytes, expectedProductCode = '') {
     return { valid:false, error:'The print sheet must be an exact portrait A4 page' };
   }
   if (countAscii(bytes, '/Subtype /Image') !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-    return { valid:false, error:'The print sheet must contain exactly 8 embedded pictures' };
+    return { valid:false, error:'The print sheet must contain exactly eight embedded photos' };
   }
   const placements = getA4PrintLayout();
   for (const [index, placement] of placements.entries()) {
@@ -395,7 +389,7 @@ async function uploadTinyFrameOriginal(request, env) {
     return jsonResponse(request, env, { error:'An original photograph is required' }, 400);
   }
   if (!SUPPORTED_TINY_FRAME_IMAGE_TYPES.includes(file.type)) {
-    return jsonResponse(request, env, { error:'Pictures must be JPEG, PNG, or GIF files' }, 400);
+    return jsonResponse(request, env, { error:'Photos must be JPEG, PNG, or GIF files' }, 400);
   }
   if (!file.size || file.size > MAX_TINY_FRAME_ORIGINAL_BYTES) {
     return jsonResponse(request, env, { error:'Each original picture must be 20 MB or smaller' }, 413);
@@ -661,7 +655,7 @@ async function finalizeTinyFrameUpload(request, env) {
     return jsonResponse(request, env, {
       error:error instanceof TinyFrameInputError
         ? error.message
-        : 'We could not prepare your pictures. Your uploaded originals are safe, so please try again.',
+        : 'We could not prepare your photos. Your uploaded originals are safe, so please try again.',
       code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_INPUT' : 'UPLOAD_PROCESSING_FAILED',
       stage:uploadStage,
       picture_number:pictureNumber,
@@ -719,13 +713,13 @@ async function uploadTinyFramePrintSheet(request, env) {
     return jsonResponse(request, env, { error: 'All 8 original photographs are required' }, 400);
   }
   if (originals.some(file => !SUPPORTED_TINY_FRAME_IMAGE_TYPES.includes(file.type))) {
-    return jsonResponse(request, env, { error: 'Pictures must be JPEG, PNG, or GIF files' }, 400);
+    return jsonResponse(request, env, { error: 'Photos must be JPEG, PNG, or GIF files' }, 400);
   }
   if (originals.some(file => !file.size || file.size > MAX_TINY_FRAME_ORIGINAL_BYTES)) {
     return jsonResponse(request, env, { error: 'Each original picture must be 20 MB or smaller' }, 413);
   }
   if (originals.reduce((sum, file) => sum + file.size, 0) > MAX_TINY_FRAME_UPLOAD_BYTES) {
-    return jsonResponse(request, env, { error: 'The combined original pictures exceed the 96 MB upload limit' }, 413);
+    return jsonResponse(request, env, { error: 'The combined original photos exceed the 96 MB upload limit' }, 413);
   }
 
   const manifestKey = getUploadManifestKey(uploadSessionId);
@@ -978,7 +972,7 @@ async function uploadTinyFramePrintSheet(request, env) {
       message:String(error?.message || 'Unknown upload failure')
     });
     return jsonResponse(request, env, {
-      error:'We could not prepare your pictures. Your selections are still here, so please try again.',
+      error:'We could not prepare your photos. Your selections are still here, so please try again.',
       code:'UPLOAD_PROCESSING_FAILED',
       stage:uploadStage,
       diagnostic_id:diagnosticId
@@ -1136,7 +1130,7 @@ async function uploadTinyFrameProductPdf(request, env) {
     });
     const expected = error instanceof TinyFrameInputError || error instanceof ProductCodeError;
     return jsonResponse(request, env, {
-      error:expected ? error.message : 'We could not store the print sheet. Your pictures are still selected, so please try again.',
+      error:expected ? error.message : 'We could not store the print sheet. Your photos are still selected, so please try again.',
       code:String(error?.code || (expected ? 'INVALID_PRINT_SHEET' : 'PDF_STORAGE_FAILED')),
       stage:expected ? 'pdf_validation' : 'pdf_storage',
       diagnostic_id:diagnosticId
@@ -1283,7 +1277,7 @@ async function createArtworkManifest(request, env) {
 
   for (const objectKey of artworkObjectKeys) {
     if (!await env.ARTWORK_BUCKET.head(objectKey)) {
-      return jsonResponse(request, env, { error: 'One or more uploaded pictures could not be found' }, 400);
+      return jsonResponse(request, env, { error: 'One or more uploaded photos could not be found' }, 400);
     }
   }
 
@@ -1329,10 +1323,7 @@ function cleanText(value, fallback) {
 
 function normalizeTinyFrameOrderType(value) {
   const normalized = cleanText(value, '').toLowerCase();
-  if (normalized === 'frame-only' || normalized === 'frame only') {
-    return 'frame-only';
-  }
-  if (['frame-plus-pictures', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
+  if (['frame-plus-pictures', 'frame + eight photos', 'frame plus eight photos', 'frame + 8 photos', 'frame plus 8 photos', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
     return 'frame-plus-pictures';
   }
   return '';
@@ -1344,7 +1335,6 @@ function normalizeTinyFrameProductType(item) {
     return explicitProductType;
   }
   const orderType = normalizeTinyFrameOrderType(item?.orderType);
-  if (orderType === 'frame-only') return 'tiny_frame_only';
   if (orderType === 'frame-plus-pictures') return 'tiny_frame_8_pictures';
   return '';
 }
@@ -1453,10 +1443,10 @@ function buildLineItems(items) {
       throw new Error('One or more cart products has an invalid product code');
     }
     if (tinyFrameProduct?.requiresPictures && !uploadReference) {
-      throw new Error('Frame + 8 Pictures requires a completed picture upload reference');
+      throw new Error('Frame + Eight Photos requires a completed photo upload reference');
     }
     const customerFacingName = tinyFrameProduct
-      ? `${frameColour.toUpperCase()} · ${tinyFrameProduct.requiresPictures ? 'FRAME + 8 PICTURES' : 'FRAME ONLY'}`
+      ? tinyFrameProduct.name
       : `Print & Frame - ${size}`;
 
     for (let unitIndex = 0; unitIndex < quantity; unitIndex += 1) {

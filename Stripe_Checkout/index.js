@@ -40,8 +40,7 @@ const priceBySize = Object.freeze({
     '841x1189mm': 70000
 })
 const tinyFramePriceByOrderType = Object.freeze({
-    'frame-only': 6495,
-    'frame-plus-pictures': 8495
+    'frame-plus-pictures': 6495
 })
 const shippingAmount = 1000
 const canonicalSizeByDimensions = Object.freeze({
@@ -203,10 +202,7 @@ function getItemDescription(item) {
 
 function normalizeTinyFrameOrderType(value) {
     const normalized = String(value || '').trim().toLowerCase()
-    if (normalized === 'frame-only' || normalized === 'frame only') {
-        return 'frame-only'
-    }
-    if (['frame-plus-pictures', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
+    if (['frame-plus-pictures', 'frame + eight photos', 'frame plus eight photos', 'frame + 8 photos', 'frame plus 8 photos', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
         return 'frame-plus-pictures'
     }
     return ''
@@ -256,7 +252,7 @@ function buildStripeLineItems(items) {
         }
 
         const productData = {
-            name: size === '80x80mm' ? 'Tiny Frame - 80x80mm' : `Print & Frame - ${size}`,
+            name: size === '80x80mm' ? 'Frame + Eight Photos' : `Print & Frame - ${size}`,
             description: getItemDescription(item)
         }
 
