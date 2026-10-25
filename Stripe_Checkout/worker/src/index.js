@@ -36,6 +36,13 @@ const PRICE_BY_SIZE = Object.freeze({
   '841x1189mm': 70000
 });
 const TINY_FRAME_PRODUCTS = Object.freeze({
+  tiny_frame_photo_sets: Object.freeze({
+    orderType: 'photo-sets',
+    name: 'Frame',
+    baseUnitAmount: 5000,
+    photoSetUnitAmount: 600,
+    requiresPictures: false
+  }),
   tiny_frame_8_pictures: Object.freeze({
     orderType: 'frame-plus-pictures',
     name: 'Frame + Eight Photos',
@@ -49,10 +56,19 @@ const STRIPE_SHIPPING_COUNTRIES = Object.freeze(['AU', 'NZ', 'US', 'CA', 'GB', '
 const STRIPE_SHIPPING_COUNTRY_SET = new Set(STRIPE_SHIPPING_COUNTRIES);
 const TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
 const TINY_FRAME_UPLOAD_IMAGE_COUNT = 8;
+const TINY_FRAME_PHOTOS_PER_SET = 3;
+const TINY_FRAME_PHOTOS_PER_PAGE = 9;
 const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
+const MAX_TINY_FRAME_PHOTOS_PER_PRODUCT = 300;
+const INDIVIDUAL_PHOTO_STORAGE_VERSION = 2;
 const MAX_TINY_FRAME_UPLOAD_BYTES = 96 * 1024 * 1024;
 // Keep the multipart request safely below Cloudflare's 100 MB request limit.
 const MAX_TINY_FRAME_PDF_BYTES = 95 * 1024 * 1024;
+// Larger, already-generated PDFs are transferred to R2 in uniform 8 MiB parts.
+// This is a guardrail rather than an encoding limit: the A4 PDF bytes are not changed.
+const MAX_TINY_FRAME_MULTIPART_PDF_BYTES = 512 * 1024 * 1024;
+const TINY_FRAME_PDF_PART_BYTES = 8 * 1024 * 1024;
+const MAX_TINY_FRAME_PDF_PARTS = Math.ceil(MAX_TINY_FRAME_MULTIPART_PDF_BYTES / TINY_FRAME_PDF_PART_BYTES);
 const A4_WIDTH_POINTS = 595.275591;
 const A4_HEIGHT_POINTS = 841.889764;
 const TINY_FRAME_PHOTO_WIDTH_POINTS = 54 * 72 / 25.4;
@@ -64,6 +80,29 @@ const SUPPORTED_TINY_FRAME_IMAGE_TYPES = Object.freeze(['image/jpeg', 'image/png
 const DEFAULT_PENDING_UPLOAD_TTL_DAYS = 10;
 
 class TinyFrameInputError extends Error {}
+function normalizePhotoSetCount(value) {
+  const count = Number(value);
+  return Number.isInteger(count) && count >= 0 && count <= (MAX_TINY_FRAME_PHOTOS_PER_PRODUCT / TINY_FRAME_PHOTOS_PER_SET) ? count : null;
+}
+
+function getTinyFramePhotoCount(productType, photoSetCount) {
+  return productType === 'tiny_frame_8_pictures'
+    ? TINY_FRAME_UPLOAD_IMAGE_COUNT
+    : photoSetCount * TINY_FRAME_PHOTOS_PER_SET;
+}
+
+function getTinyFrameUnitAmount(productType, photoSetCount = 0) {
+  if (productType === 'tiny_frame_8_pictures') return TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.unitAmount;
+  if (productType !== 'tiny_frame_photo_sets' || normalizePhotoSetCount(photoSetCount) === null) return undefined;
+  const product = TINY_FRAME_PRODUCTS.tiny_frame_photo_sets;
+  return product.baseUnitAmount + (photoSetCount * product.photoSetUnitAmount);
+}
+
+function tinyFrameNameFor(productType, photoCount) {
+  if (productType === 'tiny_frame_8_pictures') return TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.name;
+  return photoCount ? `Frame + ${photoCount} Photos` : 'Frame Only';
+}
+
 const CANONICAL_SIZE_BY_DIMENSIONS = Object.freeze({
   '80x80': '80x80mm',
   '210x297': '210x297mm',
@@ -148,8 +187,8 @@ function getAllowedOrigin(request, env) {
 
 function createCorsHeaders(request, env) {
   const headers = new Headers({
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Upload-Token',
     'Content-Type': 'application/json'
   });
   const allowedOrigin = getAllowedOrigin(request, env);
@@ -188,6 +227,30 @@ function getTinyFrameUploadPrefix(uploadSessionId) {
 
 function getUploadManifestKey(uploadSessionId) {
   return `${getTinyFrameUploadPrefix(uploadSessionId)}manifest.json`;
+}
+
+function normalizeUploadToken(value) {
+  const token = String(value || '').trim().toLowerCase();
+  return /^ut_[a-f0-9]{64}$/.test(token) ? token : '';
+}
+
+function normalizePhotoId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return /^ph_[a-f0-9]{32}$/.test(id) ? id : '';
+}
+
+function getIndividualPhotoKey(uploadSessionId, photoId) {
+  const sessionId = normalizeUploadReference(uploadSessionId);
+  const normalizedPhotoId = normalizePhotoId(photoId);
+  return sessionId && normalizedPhotoId
+    ? `${getTinyFrameUploadPrefix(sessionId)}photos/${normalizedPhotoId}.jpg`
+    : '';
+}
+
+function isValidIndividualPhotoKey(value, uploadSessionId = '') {
+  const key = String(value || '');
+  const match = key.match(/^tinyframes\/(tf_[a-f0-9]{32})\/photos\/(ph_[a-f0-9]{32})\.jpg$/);
+  return Boolean(match && (!uploadSessionId || match[1] === uploadSessionId));
 }
 
 function getLegacyUploadManifestKey(uploadReference) {
@@ -253,22 +316,25 @@ function pdfNumber(value) {
   return Number(value).toFixed(6).replace(/\.?0+$/, '');
 }
 
-function inspectPrintSheetPdf(bytes, expectedProductCode = '') {
-  if (!(bytes instanceof Uint8Array) || bytes.length < 5) {
+function inspectPrintSheetPdfStructure(structuralPrefix, imageCount, expectedProductCode = '', expectedPhotoCount = TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+  if (!structuralPrefix.startsWith('%PDF-')) {
     return { valid:false, error:'The print sheet is not a PDF' };
   }
-  const structuralPrefix = new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length, 64 * 1024)));
-  if (!structuralPrefix.startsWith('%PDF-')) return { valid:false, error:'The print sheet is not a PDF' };
   const mediaBox = `/MediaBox [0 0 ${pdfNumber(A4_WIDTH_POINTS)} ${pdfNumber(A4_HEIGHT_POINTS)}]`;
-  if (!structuralPrefix.includes(mediaBox)) {
+  const expectedPageCount = Math.ceil(expectedPhotoCount / TINY_FRAME_PHOTOS_PER_PAGE);
+  if (countAscii(new TextEncoder().encode(structuralPrefix), mediaBox) !== expectedPageCount) {
     return { valid:false, error:'The print sheet must be an exact portrait A4 page' };
   }
-  if (countAscii(bytes, '/Subtype /Image') !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-    return { valid:false, error:'The print sheet must contain exactly eight embedded photos' };
+  if (
+    !Number.isInteger(expectedPhotoCount) || expectedPhotoCount < 1 ||
+    (expectedPhotoCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT && expectedPhotoCount % TINY_FRAME_PHOTOS_PER_SET !== 0) ||
+    imageCount !== expectedPhotoCount
+  ) {
+    return { valid:false, error:'The print sheet photo count does not match the selected photo sets' };
   }
-  const placements = getA4PrintLayout();
-  for (const [index, placement] of placements.entries()) {
-    const command = `q ${pdfNumber(TINY_FRAME_PHOTO_WIDTH_POINTS)} 0 0 ${pdfNumber(TINY_FRAME_PHOTO_HEIGHT_POINTS)} ${pdfNumber(placement.xMm * 72 / 25.4)} ${pdfNumber(placement.yMm * 72 / 25.4)} cm /Im${index + 1} Do Q`;
+  const placements = getA4PrintLayout(expectedPhotoCount);
+  for (const placement of placements) {
+    const command = `q ${pdfNumber(TINY_FRAME_PHOTO_WIDTH_POINTS)} 0 0 ${pdfNumber(TINY_FRAME_PHOTO_HEIGHT_POINTS)} ${pdfNumber(placement.xMm * 72 / 25.4)} ${pdfNumber(placement.yMm * 72 / 25.4)} cm /Im${placement.index + 1} Do Q`;
     if (!structuralPrefix.includes(command)) {
       return { valid:false, error:'The print-sheet picture placements could not be verified' };
     }
@@ -286,6 +352,77 @@ function inspectPrintSheetPdf(bytes, expectedProductCode = '') {
     return { valid:false, error:'The print sheet does not contain the matching product code' };
   }
   return { valid:true };
+}
+
+function inspectPrintSheetPdf(bytes, expectedProductCode = '', expectedPhotoCount = TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 5) {
+    return { valid:false, error:'The print sheet is not a PDF' };
+  }
+  const structuralPrefix = new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length, 512 * 1024)));
+  return inspectPrintSheetPdfStructure(
+    structuralPrefix,
+    countAscii(bytes, '/Subtype /Image'),
+    expectedProductCode,
+    expectedPhotoCount
+  );
+}
+
+async function readR2Range(bucket, objectKey, offset, length) {
+  const object = await bucket.get(objectKey, { range:{ offset, length } });
+  if (!object?.body) throw new Error('The uploaded print sheet could not be read');
+  const bytes = new Uint8Array(await new Response(object.body).arrayBuffer());
+  if (bytes.length !== length) throw new Error('The uploaded print sheet range is incomplete');
+  return bytes;
+}
+
+async function inspectStoredPrintSheetPdf(bucket, objectKey, expectedSize, expectedProductCode, expectedPhotoCount = TINY_FRAME_UPLOAD_IMAGE_COUNT) {
+  try {
+    const rangeLength = Math.min(expectedSize, 512 * 1024);
+    const tailOffset = expectedSize - rangeLength;
+    const [prefix, tail] = await Promise.all([
+      readR2Range(bucket, objectKey, 0, rangeLength),
+      tailOffset === 0
+        ? readR2Range(bucket, objectKey, 0, rangeLength)
+        : readR2Range(bucket, objectKey, tailOffset, rangeLength)
+    ]);
+    const tailText = new TextDecoder('latin1').decode(tail);
+    const xrefIndex = tailText.lastIndexOf('\nxref\n');
+    const startXrefMatch = tailText.match(/startxref\n(\d+)\n%%EOF\s*$/);
+    if (xrefIndex < 0 || !startXrefMatch || Number(startXrefMatch[1]) !== tailOffset + xrefIndex + 1) {
+      return { valid:false, error:'The uploaded print sheet cross-reference is invalid' };
+    }
+    const xrefLines = tailText.slice(xrefIndex + 1).split('\n');
+    const sectionMatch = xrefLines[1]?.match(/^0 (\d+)$/);
+    const objectCount = Number(sectionMatch?.[1] || 0);
+    if (!Number.isInteger(objectCount) || objectCount < 2 || objectCount > 10000 || xrefLines.length < objectCount + 2) {
+      return { valid:false, error:'The uploaded print sheet cross-reference is invalid' };
+    }
+    const offsets = [];
+    for (let index = 1; index < objectCount; index += 1) {
+      const entry = xrefLines[index + 2]?.match(/^(\d{10}) 00000 n $/);
+      const objectOffset = Number(entry?.[1]);
+      if (!entry || !Number.isSafeInteger(objectOffset) || objectOffset < 0 || objectOffset >= expectedSize) {
+        return { valid:false, error:'The uploaded print sheet cross-reference is invalid' };
+      }
+      offsets.push(objectOffset);
+    }
+    const objectHeaders = await Promise.all(offsets.map((objectOffset, index) => {
+      const nextOffset = index + 1 < offsets.length ? offsets[index + 1] : Number(startXrefMatch[1]);
+      return readR2Range(bucket, objectKey, objectOffset, Math.min(512, nextOffset - objectOffset));
+    }));
+    const imageCount = objectHeaders.reduce(
+      (sum, bytes) => sum + countAscii(bytes, '/Subtype /Image'),
+      0
+    );
+    return inspectPrintSheetPdfStructure(
+      new TextDecoder('latin1').decode(prefix),
+      imageCount,
+      expectedProductCode,
+      expectedPhotoCount
+    );
+  } catch (error) {
+    return { valid:false, error:String(error?.message || 'The uploaded print sheet could not be read') };
+  }
 }
 
 function getOriginalExtension(contentType) {
@@ -461,6 +598,263 @@ async function uploadTinyFrameOriginal(request, env) {
       picture_number:pictureNumber,
       diagnostic_id:diagnosticId
     }, error instanceof TinyFrameInputError ? 400 : 500);
+  }
+}
+
+async function requireIndividualUploadSession(request, env, uploadSessionId) {
+  const sessionId = normalizeUploadReference(uploadSessionId);
+  const token = normalizeUploadToken(request.headers.get('X-Upload-Token'));
+  if (!sessionId || !token) throw new TinyFrameInputError('Upload session credentials are invalid');
+  const manifestKey = getUploadManifestKey(sessionId);
+  const object = await env.ARTWORK_BUCKET.get(manifestKey);
+  const manifest = await readR2Json(object);
+  if (
+    !manifest || manifest.storage_version !== INDIVIDUAL_PHOTO_STORAGE_VERSION ||
+    manifest.upload_session_id !== sessionId ||
+    manifest.upload_token_hash !== await sha256Hex(token)
+  ) {
+    throw new TinyFrameInputError('Upload session could not be authenticated');
+  }
+  if (manifest.status === 'paid') throw new TinyFrameInputError('Paid order photos cannot be changed');
+  return { manifestKey, manifest };
+}
+
+async function enforceIndividualUploadRateLimit(env, uploadSessionId) {
+  if (!env.UPLOAD_RATE_LIMITER?.limit) return;
+  const result = await env.UPLOAD_RATE_LIMITER.limit({ key:uploadSessionId });
+  if (!result?.success) {
+    const error = new TinyFrameInputError('Too many upload requests. Please wait a moment and retry.');
+    error.status = 429;
+    throw error;
+  }
+}
+
+async function createIndividualUploadSession(request, env) {
+  if (!env.ARTWORK_BUCKET) return jsonResponse(request, env, { error:'Artwork storage is not configured' }, 503);
+  if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  let body;
+  try { body = await request.json(); }
+  catch { return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400); }
+  const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
+  const uploadToken = normalizeUploadToken(body?.uploadToken);
+  if (!uploadSessionId || !uploadToken) {
+    return jsonResponse(request, env, { error:'Upload session credentials are invalid' }, 400);
+  }
+  try {
+    await enforceIndividualUploadRateLimit(env, `create:${request.headers.get('CF-Connecting-IP') || 'unknown'}`);
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message }, Number(error?.status) || 429);
+  }
+  const manifestKey = getUploadManifestKey(uploadSessionId);
+  const existing = await env.ARTWORK_BUCKET.get(manifestKey);
+  if (existing) {
+    const manifest = await readR2Json(existing);
+    if (
+      manifest?.storage_version !== INDIVIDUAL_PHOTO_STORAGE_VERSION ||
+      manifest?.upload_token_hash !== await sha256Hex(uploadToken)
+    ) return jsonResponse(request, env, { error:'This upload session is already in use' }, 409);
+    return jsonResponse(request, env, { success:true, uploadSessionId, recovered:true });
+  }
+  const createdAt = new Date().toISOString();
+  const stored = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
+    storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
+    upload_session_id:uploadSessionId,
+    upload_token_hash:await sha256Hex(uploadToken),
+    product_type:'tiny_frame_photo_sets',
+    photos:[],
+    files:[],
+    status:'draft',
+    created_at:createdAt,
+    updated_at:createdAt,
+    uploaded_at:createdAt
+  }), {
+    httpMetadata:{ contentType:'application/json' },
+    onlyIf:{ etagDoesNotMatch:'*' }
+  });
+  if (stored === null) return jsonResponse(request, env, { error:'Upload session could not be created' }, 409);
+  return jsonResponse(request, env, { success:true, uploadSessionId });
+}
+
+async function uploadIndividualTinyFramePhoto(request, env) {
+  if (!env.ARTWORK_BUCKET || !env.IMAGES) {
+    return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  let formData;
+  try { formData = await request.formData(); }
+  catch { return jsonResponse(request, env, { error:'Upload must use multipart form data' }, 400); }
+  const uploadSessionId = normalizeUploadReference(formData.get('upload_session_id'));
+  const photoId = normalizePhotoId(formData.get('photo_id'));
+  const revision = String(formData.get('revision') || '').trim().toLowerCase();
+  const position = Number(formData.get('position'));
+  const file = formData.get('file');
+  if (
+    !uploadSessionId || !photoId || !/^[a-f0-9-]{32,36}$/.test(revision) ||
+    !Number.isInteger(position) || position < 1 || position > MAX_TINY_FRAME_PHOTOS_PER_PRODUCT
+  ) return jsonResponse(request, env, { error:'Photo upload details are invalid' }, 400);
+  if (!file || typeof file.arrayBuffer !== 'function' || file.type !== 'image/jpeg') {
+    return jsonResponse(request, env, { error:'Cropped photos must be high-quality JPEG files' }, 400);
+  }
+  if (!file.size || file.size > MAX_TINY_FRAME_ORIGINAL_BYTES) {
+    return jsonResponse(request, env, { error:'Each cropped photo must be 20 MB or smaller' }, 413);
+  }
+  try {
+    await requireIndividualUploadSession(request, env, uploadSessionId);
+    await enforceIndividualUploadRateLimit(env, `${request.headers.get('CF-Connecting-IP') || 'unknown'}:${uploadSessionId}`);
+    const bytes = await file.arrayBuffer();
+    const info = await env.IMAGES.info(bytes);
+    const width = Number(info?.width);
+    const height = Number(info?.height);
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+      throw new TinyFrameInputError('The cropped photo dimensions could not be read');
+    }
+    if (Math.abs((width / height) - (54 / 86)) > 0.015) {
+      throw new TinyFrameInputError('The cropped photo does not match the 54 × 86 mm print ratio');
+    }
+    const objectKey = getIndividualPhotoKey(uploadSessionId, photoId);
+    const existing = await env.ARTWORK_BUCKET.head(objectKey);
+    if (existing) {
+      const sameRevision = existing.customMetadata?.revision === revision && Number(existing.size || 0) === file.size;
+      if (!sameRevision) return jsonResponse(request, env, { error:'This photo identity is already in use' }, 409);
+      return jsonResponse(request, env, { success:true, recovered:true, photo:{ photoId, objectKey, position, width, height, size:file.size } });
+    }
+    await env.ARTWORK_BUCKET.put(objectKey, bytes, {
+      httpMetadata:{ contentType:'image/jpeg' },
+      customMetadata:{
+        upload_session_id:uploadSessionId,
+        photo_id:photoId,
+        revision,
+        position:String(position),
+        width_px:String(width),
+        height_px:String(height),
+        effective_ppi:String(Number(calculateEffectivePpi(width, height).toFixed(1))),
+        status:'draft',
+        created_at:new Date().toISOString()
+      },
+      onlyIf:{ etagDoesNotMatch:'*' }
+    });
+    return jsonResponse(request, env, { success:true, photo:{ photoId, objectKey, position, width, height, size:file.size } });
+  } catch (error) {
+    const status = Number(error?.status) || (error instanceof TinyFrameInputError ? 400 : 500);
+    return jsonResponse(request, env, {
+      error:error instanceof TinyFrameInputError ? error.message : 'The cropped photo could not be uploaded. Please retry.',
+      code:error instanceof TinyFrameInputError ? 'INVALID_PHOTO_UPLOAD' : 'PHOTO_UPLOAD_FAILED'
+    }, status);
+  }
+}
+
+async function deleteIndividualTinyFramePhoto(request, env) {
+  if (!env.ARTWORK_BUCKET) return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
+  if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  let body;
+  try { body = await request.json(); }
+  catch { return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400); }
+  const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
+  const photoId = normalizePhotoId(body?.photoId);
+  try {
+    await requireIndividualUploadSession(request, env, uploadSessionId);
+    const objectKey = getIndividualPhotoKey(uploadSessionId, photoId);
+    if (!objectKey) throw new TinyFrameInputError('Photo identity is invalid');
+    await env.ARTWORK_BUCKET.delete(objectKey);
+    return jsonResponse(request, env, { success:true });
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message || 'Photo could not be removed' }, error instanceof TinyFrameInputError ? 400 : 500);
+  }
+}
+
+async function finalizeIndividualTinyFrameUpload(request, env) {
+  if (!env.ARTWORK_BUCKET) return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
+  if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  let body;
+  try { body = await request.json(); }
+  catch { return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400); }
+  const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
+  const cartItemId = normalizeCartItemId(body?.cartItemId);
+  const frameColour = normalizeFrameColour(body?.frameColour);
+  const photoSetCount = normalizePhotoSetCount(body?.photoSetCount);
+  const photos = Array.isArray(body?.photos) ? body.photos : [];
+  const expectedPhotoCount = Number(photoSetCount) * TINY_FRAME_PHOTOS_PER_SET;
+  if (
+    !uploadSessionId || !cartItemId || !frameColour || !photoSetCount ||
+    expectedPhotoCount > MAX_TINY_FRAME_PHOTOS_PER_PRODUCT || photos.length !== expectedPhotoCount
+  ) return jsonResponse(request, env, { error:'Every selected photo set must contain three uploaded photos' }, 400);
+  try {
+    const { manifestKey, manifest } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    const normalizedPhotos = photos.map((photo, index) => ({
+      photo_id:normalizePhotoId(photo?.photoId),
+      objectKey:String(photo?.objectKey || ''),
+      position:index + 1,
+      revision:String(photo?.revision || '')
+    }));
+    if (
+      normalizedPhotos.some((photo, index) => !photo.photo_id || photo.objectKey !== getIndividualPhotoKey(uploadSessionId, photo.photo_id) || Number(photos[index]?.position) !== index + 1) ||
+      new Set(normalizedPhotos.map(photo => photo.objectKey)).size !== normalizedPhotos.length
+    ) throw new TinyFrameInputError('Photo order information is invalid');
+    const stored = await Promise.all(normalizedPhotos.map(photo => env.ARTWORK_BUCKET.head(photo.objectKey)));
+    if (stored.some((object, index) => !object || object.customMetadata?.revision !== normalizedPhotos[index].revision)) {
+      throw new TinyFrameInputError('One or more cropped photos has not finished uploading');
+    }
+    const updatedAt = new Date().toISOString();
+    const finalized = {
+      ...manifest,
+      cart_item_id:cartItemId,
+      frame_colour:frameColour,
+      photo_set_count:photoSetCount,
+      photo_count:expectedPhotoCount,
+      photos:normalizedPhotos,
+      files:normalizedPhotos.map(photo => ({ ...photo, contentType:'image/jpeg' })),
+      status:'finalized',
+      finalized_at:updatedAt,
+      updated_at:updatedAt,
+      uploaded_at:updatedAt
+    };
+    await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(finalized), { httpMetadata:{ contentType:'application/json' } });
+    return jsonResponse(request, env, { success:true, uploadSessionId, cartItemId, photoCount:expectedPhotoCount });
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message || 'Photo upload could not be finalized' }, error instanceof TinyFrameInputError ? 400 : 500);
+  }
+}
+
+async function getIndividualTinyFrameUploadStatus(request, env) {
+  if (!env.ARTWORK_BUCKET) return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
+  if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  const uploadSessionId = normalizeUploadReference(new URL(request.url).searchParams.get('upload_session_id'));
+  try {
+    const { manifest } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    const storedPhotos = [];
+    let cursor;
+    do {
+      const page = await env.ARTWORK_BUCKET.list({
+        prefix:`${getTinyFrameUploadPrefix(uploadSessionId)}photos/`,
+        ...(cursor ? { cursor } : {})
+      });
+      const objects = Array.isArray(page?.objects) ? page.objects : [];
+      const details = await Promise.all(objects.map(object => env.ARTWORK_BUCKET.head(object.key)));
+      details.forEach((object, index) => {
+        const metadata = object?.customMetadata || {};
+        const photoId = normalizePhotoId(metadata.photo_id);
+        if (!photoId || !isValidIndividualPhotoKey(objects[index].key, uploadSessionId)) return;
+        storedPhotos.push({
+          photoId,
+          objectKey:objects[index].key,
+          position:Number(metadata.position || 0),
+          revision:String(metadata.revision || '')
+        });
+      });
+      cursor = page?.truncated ? page.cursor : undefined;
+    } while (cursor);
+    storedPhotos.sort((a, b) => a.position - b.position);
+    return jsonResponse(request, env, {
+      success:true,
+      uploadSessionId,
+      status:manifest.status,
+      photoCount:Number(manifest.photo_count || 0),
+      photos:storedPhotos.length
+        ? storedPhotos
+        : (Array.isArray(manifest.photos) ? manifest.photos : []).map(({ photo_id, objectKey, position, revision }) => ({ photoId:photo_id, objectKey, position, revision }))
+    });
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message || 'Upload session could not be read' }, error instanceof TinyFrameInputError ? 400 : 500);
   }
 }
 
@@ -872,7 +1266,7 @@ async function uploadTinyFramePrintSheet(request, env) {
     uploadStage = 'generating_pdf';
     const pdfBytes = createA4PrintSheetPdf(processedImages);
     if (pdfBytes.length > MAX_TINY_FRAME_PDF_BYTES) {
-      throw new Error('The generated PDF exceeds the 160 MB storage limit');
+      throw new Error('The generated PDF exceeds the 95 MB storage limit');
     }
     const pdfInspection = inspectPrintSheetPdf(pdfBytes);
     if (!pdfInspection.valid) throw new Error(pdfInspection.error);
@@ -998,7 +1392,8 @@ async function reserveTinyFrameProductPdf(request, env) {
   const productType = TINY_FRAME_PRODUCTS[body?.productType]
     ? body.productType
     : 'tiny_frame_8_pictures';
-  if (!cartItemId || !frameColour) {
+  const photoSetCount = productType === 'tiny_frame_8_pictures' ? 0 : normalizePhotoSetCount(body?.photoSetCount);
+  if (!cartItemId || !frameColour || photoSetCount === null) {
     return jsonResponse(request, env, { error:'Cart product identity or frame colour is invalid' }, 400);
   }
   try {
@@ -1006,7 +1401,7 @@ async function reserveTinyFrameProductPdf(request, env) {
       cartItemId,
       productType,
       frameColour,
-      unitAmount:TINY_FRAME_PRODUCTS[productType].unitAmount
+      unitAmount:getTinyFrameUnitAmount(productType, photoSetCount)
     }, body?.productCode ? { preferredCode:body.productCode } : {});
     if (reservation.capacity?.low) {
       console.warn('Five-digit product code capacity is running low', reservation.capacity);
@@ -1043,8 +1438,17 @@ async function uploadTinyFrameProductPdf(request, env) {
   const cartItemId = normalizeCartItemId(formData.get('cart_item_id'));
   const requestedProductCode = normalizeProductCode(formData.get('product_code'));
   const frameColour = normalizeFrameColour(formData.get('frame_colour'));
+  const submittedPhotoSetCount = formData.get('photo_set_count');
+  const submittedPhotoCount = formData.get('photo_count');
+  const legacyUpload = submittedPhotoSetCount === null && submittedPhotoCount === null;
+  const photoSetCount = legacyUpload ? 0 : normalizePhotoSetCount(submittedPhotoSetCount);
+  const photoCount = legacyUpload ? TINY_FRAME_UPLOAD_IMAGE_COUNT : Number(submittedPhotoCount);
+  const productType = legacyUpload ? 'tiny_frame_8_pictures' : 'tiny_frame_photo_sets';
   const pdf = formData.get('pdf');
-  if (!cartItemId || !pdf || typeof pdf.arrayBuffer !== 'function') {
+  if (
+    !cartItemId || !pdf || typeof pdf.arrayBuffer !== 'function' ||
+    (!legacyUpload && (photoSetCount === null || photoSetCount < 1 || photoCount !== photoSetCount * TINY_FRAME_PHOTOS_PER_SET))
+  ) {
     return jsonResponse(request, env, { error:'Cart identity and print-sheet PDF are required' }, 400);
   }
   const submittedFilename = String(pdf.name || '');
@@ -1055,16 +1459,19 @@ async function uploadTinyFrameProductPdf(request, env) {
     return jsonResponse(request, env, { error:'The print-sheet PDF filename or file type is invalid' }, 400);
   }
   if (!pdf.size || pdf.size > MAX_TINY_FRAME_PDF_BYTES) {
-    return jsonResponse(request, env, { error:'The print-sheet PDF is empty or exceeds the storage limit' }, 413);
+    return jsonResponse(request, env, {
+      error:'This print-sheet PDF must use the multipart upload endpoint',
+      code:'MULTIPART_UPLOAD_REQUIRED'
+    }, 413);
   }
 
   const diagnosticId = crypto.randomUUID().slice(0, 8);
   try {
     const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
       cartItemId,
-      productType:'tiny_frame_8_pictures',
+      productType,
       frameColour,
-      unitAmount:TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.unitAmount
+      unitAmount:getTinyFrameUnitAmount(productType, photoSetCount)
     }, requestedProductCode ? { preferredCode:requestedProductCode } : {});
     const productCode = reservation.productCode;
     if (reservation.capacity?.low) {
@@ -1079,6 +1486,8 @@ async function uploadTinyFrameProductPdf(request, env) {
     if (existing) {
       const sameUpload = existing.customMetadata?.product_code === productCode &&
         existing.customMetadata?.cart_item_id === cartItemId &&
+        existing.customMetadata?.product_type === productType &&
+        Number(existing.customMetadata?.image_count || 0) === photoCount &&
         Number(existing.size || existing.contentLength || 0) === pdf.size;
       if (!sameUpload) throw new TinyFrameInputError('A different PDF is already stored for this product');
       await attachProductPdf(env.PRODUCT_CODES_DB, productCode, cartItemId, objectKey);
@@ -1091,7 +1500,7 @@ async function uploadTinyFrameProductPdf(request, env) {
     }
 
     const bytes = new Uint8Array(await pdf.arrayBuffer());
-    const inspection = inspectPrintSheetPdf(bytes, requestedProductCode ? productCode : '');
+    const inspection = inspectPrintSheetPdf(bytes, requestedProductCode ? productCode : '', photoCount);
     if (!inspection.valid) throw new TinyFrameInputError(inspection.error);
     const createdAt = new Date().toISOString();
     const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
@@ -1099,9 +1508,10 @@ async function uploadTinyFrameProductPdf(request, env) {
       customMetadata:{
         product_code:productCode,
         cart_item_id:cartItemId,
-        product_type:'tiny_frame_8_pictures',
+        product_type:productType,
         ...(frameColour ? { frame_colour:frameColour.toLowerCase() } : {}),
-        image_count:String(TINY_FRAME_UPLOAD_IMAGE_COUNT),
+        photo_set_count:String(photoSetCount),
+        image_count:String(photoCount),
         photo_width_mm:'54',
         photo_height_mm:'86',
         status:'pending',
@@ -1138,6 +1548,243 @@ async function uploadTinyFrameProductPdf(request, env) {
   }
 }
 
+function normalizeMultipartUploadId(value) {
+  const uploadId = String(value || '');
+  return uploadId.length > 0 && uploadId.length <= 1024 && !/[\u0000-\u001f\u007f]/.test(uploadId)
+    ? uploadId
+    : '';
+}
+
+function normalizeMultipartPdfSize(value) {
+  const size = Number(value);
+  return Number.isSafeInteger(size) && size > 0 && size <= MAX_TINY_FRAME_MULTIPART_PDF_BYTES ? size : 0;
+}
+
+async function getCompletedProductPdf(env, { cartItemId, productCode, fileSize }) {
+  const objectKey = getProductPdfKey(productCode);
+  const stored = await env.ARTWORK_BUCKET.head(objectKey);
+  const storedSize = Number(stored?.size || stored?.contentLength || 0);
+  if (!stored) return null;
+  const productType = String(stored.customMetadata?.product_type || '');
+  const photoCount = Number(stored.customMetadata?.image_count || (productType === 'tiny_frame_8_pictures' ? TINY_FRAME_UPLOAD_IMAGE_COUNT : 0));
+  const storedPhotoSetCount = Number(stored.customMetadata?.photo_set_count || 0);
+  if (
+    storedSize !== fileSize ||
+    stored.customMetadata?.product_code !== productCode ||
+    stored.customMetadata?.cart_item_id !== cartItemId ||
+    !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(productType) ||
+    (productType === 'tiny_frame_8_pictures' && photoCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) ||
+    (productType === 'tiny_frame_photo_sets' && (
+      !Number.isInteger(storedPhotoSetCount) || storedPhotoSetCount < 1 ||
+      photoCount !== storedPhotoSetCount * TINY_FRAME_PHOTOS_PER_SET
+    ))
+  ) {
+    throw new TinyFrameInputError('A different PDF is already stored for this product');
+  }
+  const inspection = await inspectStoredPrintSheetPdf(env.ARTWORK_BUCKET, objectKey, fileSize, productCode, photoCount);
+  if (!inspection.valid) throw new TinyFrameInputError(inspection.error);
+  await attachProductPdf(env.PRODUCT_CODES_DB, productCode, cartItemId, objectKey);
+  return {
+    success:true,
+    retry_recovered:true,
+    productCode,
+    pdf:{ filename:`${productCode}-print-sheet.pdf`, objectKey, size:fileSize }
+  };
+}
+
+async function createTinyFrameProductPdfMultipart(request, env) {
+  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400);
+  }
+  const cartItemId = normalizeCartItemId(body?.cartItemId);
+  const productCode = normalizeProductCode(body?.productCode);
+  const frameColour = normalizeFrameColour(body?.frameColour);
+  const legacyUpload = body?.photoSetCount === undefined && body?.photoCount === undefined;
+  const photoSetCount = legacyUpload ? 0 : normalizePhotoSetCount(body?.photoSetCount);
+  const photoCount = legacyUpload ? TINY_FRAME_UPLOAD_IMAGE_COUNT : Number(body?.photoCount);
+  const productType = legacyUpload ? 'tiny_frame_8_pictures' : 'tiny_frame_photo_sets';
+  const fileSize = normalizeMultipartPdfSize(body?.fileSize);
+  if (!cartItemId || !productCode || !frameColour || !fileSize || (!legacyUpload && (photoSetCount === null || photoSetCount < 1 || photoCount !== photoSetCount * TINY_FRAME_PHOTOS_PER_SET))) {
+    return jsonResponse(request, env, { error:'Multipart print-sheet details are invalid' }, 400);
+  }
+
+  try {
+    const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
+      cartItemId,
+      productType,
+      frameColour,
+      unitAmount:getTinyFrameUnitAmount(productType, photoSetCount)
+    }, { preferredCode:productCode });
+    if (reservation.productCode !== productCode) {
+      throw new TinyFrameInputError('The reserved product code does not belong to this cart product');
+    }
+    const completed = await getCompletedProductPdf(env, { cartItemId, productCode, fileSize });
+    if (completed) return jsonResponse(request, env, completed);
+
+    const objectKey = getProductPdfKey(productCode);
+    const createdAt = new Date().toISOString();
+    const multipart = await env.ARTWORK_BUCKET.createMultipartUpload(objectKey, {
+      httpMetadata:{ contentType:'application/pdf' },
+      customMetadata:{
+        product_code:productCode,
+        cart_item_id:cartItemId,
+        product_type:productType,
+        frame_colour:frameColour.toLowerCase(),
+        photo_set_count:String(photoSetCount),
+        image_count:String(photoCount),
+        photo_width_mm:'54',
+        photo_height_mm:'86',
+        expected_size:String(fileSize),
+        status:'pending',
+        created_at:createdAt
+      }
+    });
+    return jsonResponse(request, env, {
+      success:true,
+      productCode,
+      uploadId:multipart.uploadId,
+      partSize:TINY_FRAME_PDF_PART_BYTES,
+      partCount:Math.ceil(fileSize / TINY_FRAME_PDF_PART_BYTES)
+    });
+  } catch (error) {
+    const expected = error instanceof TinyFrameInputError || error instanceof ProductCodeError;
+    return jsonResponse(request, env, {
+      error:expected ? error.message : 'The large print-sheet upload could not be started',
+      code:String(error?.code || (expected ? 'INVALID_PRINT_SHEET' : 'MULTIPART_CREATE_FAILED'))
+    }, expected ? 400 : 500);
+  }
+}
+
+async function uploadTinyFrameProductPdfPart(request, env) {
+  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+  const url = new URL(request.url);
+  const cartItemId = normalizeCartItemId(url.searchParams.get('cart_item_id'));
+  const productCode = normalizeProductCode(url.searchParams.get('product_code'));
+  const uploadId = normalizeMultipartUploadId(url.searchParams.get('upload_id'));
+  const fileSize = normalizeMultipartPdfSize(url.searchParams.get('file_size'));
+  const partNumber = Number(url.searchParams.get('part_number'));
+  const partCount = fileSize ? Math.ceil(fileSize / TINY_FRAME_PDF_PART_BYTES) : 0;
+  if (
+    !cartItemId || !productCode || !uploadId || !fileSize ||
+    !Number.isInteger(partNumber) || partNumber < 1 ||
+    partNumber > partCount || partCount > MAX_TINY_FRAME_PDF_PARTS
+  ) {
+    return jsonResponse(request, env, { error:'Multipart upload part details are invalid' }, 400);
+  }
+
+  const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
+  if (!record || record.cart_item_id !== cartItemId || !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(record.product_type)) {
+    return jsonResponse(request, env, { error:'This multipart upload does not belong to the cart product' }, 403);
+  }
+  let bytes;
+  try {
+    bytes = await request.arrayBuffer();
+  } catch {
+    return jsonResponse(request, env, { error:'The upload part could not be read' }, 400);
+  }
+  const expectedPartSize = partNumber === partCount
+    ? fileSize - ((partCount - 1) * TINY_FRAME_PDF_PART_BYTES)
+    : TINY_FRAME_PDF_PART_BYTES;
+  if (bytes.byteLength !== expectedPartSize) {
+    return jsonResponse(request, env, { error:'The upload part size is invalid' }, 400);
+  }
+
+  try {
+    const multipart = env.ARTWORK_BUCKET.resumeMultipartUpload(getProductPdfKey(productCode), uploadId);
+    const uploaded = await multipart.uploadPart(partNumber, bytes);
+    return jsonResponse(request, env, {
+      success:true,
+      partNumber:uploaded.partNumber,
+      etag:uploaded.etag
+    });
+  } catch (error) {
+    console.error('Tiny Frame multipart part upload failed', {
+      productCode,
+      partNumber,
+      errorName:String(error?.name || 'Error')
+    });
+    return jsonResponse(request, env, {
+      error:'This part of the print sheet could not be uploaded. Please retry.',
+      code:'MULTIPART_PART_FAILED'
+    }, 503);
+  }
+}
+
+async function completeTinyFrameProductPdfMultipart(request, env) {
+  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
+    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) {
+    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400);
+  }
+  const cartItemId = normalizeCartItemId(body?.cartItemId);
+  const productCode = normalizeProductCode(body?.productCode);
+  const uploadId = normalizeMultipartUploadId(body?.uploadId);
+  const fileSize = normalizeMultipartPdfSize(body?.fileSize);
+  const partCount = fileSize ? Math.ceil(fileSize / TINY_FRAME_PDF_PART_BYTES) : 0;
+  const parts = Array.isArray(body?.parts) ? body.parts.map((part) => ({
+    partNumber:Number(part?.partNumber),
+    etag:String(part?.etag || '')
+  })) : [];
+  const validParts = parts.length === partCount && partCount > 0 && partCount <= MAX_TINY_FRAME_PDF_PARTS &&
+    parts.every((part, index) => (
+      part.partNumber === index + 1 && part.etag.length > 0 && part.etag.length <= 256 &&
+      !/[\u0000-\u001f\u007f]/.test(part.etag)
+    ));
+  if (!cartItemId || !productCode || !uploadId || !fileSize || !validParts) {
+    return jsonResponse(request, env, { error:'Multipart completion details are invalid' }, 400);
+  }
+
+  const diagnosticId = crypto.randomUUID().slice(0, 8);
+  const objectKey = getProductPdfKey(productCode);
+  try {
+    const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
+    if (!record || record.cart_item_id !== cartItemId || !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(record.product_type)) {
+      return jsonResponse(request, env, { error:'This multipart upload does not belong to the cart product' }, 403);
+    }
+    const recovered = await getCompletedProductPdf(env, { cartItemId, productCode, fileSize });
+    if (recovered) return jsonResponse(request, env, recovered);
+
+    const multipart = env.ARTWORK_BUCKET.resumeMultipartUpload(objectKey, uploadId);
+    await multipart.complete(parts);
+    const completed = await getCompletedProductPdf(env, { cartItemId, productCode, fileSize });
+    if (!completed) throw new TinyFrameInputError('The uploaded print sheet could not be found');
+    return jsonResponse(request, env, { ...completed, retry_recovered:false });
+  } catch (error) {
+    const expected = error instanceof TinyFrameInputError || error instanceof ProductCodeError;
+    console.error('Tiny Frame multipart completion failed', {
+      diagnosticId,
+      productCode,
+      errorName:String(error?.name || 'Error')
+    });
+    return jsonResponse(request, env, {
+      error:expected ? error.message : 'The print sheet could not be completed. Your pictures are still selected, so please try again.',
+      code:String(error?.code || (expected ? 'INVALID_PRINT_SHEET' : 'MULTIPART_COMPLETE_FAILED')),
+      diagnostic_id:diagnosticId
+    }, expected ? 400 : 503);
+  }
+}
+
 async function getTinyFrameProductPdfStatus(request, env) {
   if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
     return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
@@ -1157,7 +1804,7 @@ async function getTinyFrameProductPdfStatus(request, env) {
     if (
       !record ||
       record.cart_item_id !== cartItemId ||
-      record.product_type !== 'tiny_frame_8_pictures' ||
+      !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(record.product_type) ||
       record.upload_session_id !== objectKey
     ) {
       return jsonResponse(request, env, { error:'The print sheet has not finished uploading', code:'PDF_NOT_READY' }, 404);
@@ -1326,6 +1973,7 @@ function normalizeTinyFrameOrderType(value) {
   if (['frame-plus-pictures', 'frame + eight photos', 'frame plus eight photos', 'frame + 8 photos', 'frame plus 8 photos', 'frame + 8 pictures', 'frame plus 8 pictures'].includes(normalized)) {
     return 'frame-plus-pictures';
   }
+  if (normalized === 'frame-only' || normalized === 'frame only' || /^frame \+ [0-9]+ photos$/.test(normalized)) return 'photo-sets';
   return '';
 }
 
@@ -1336,6 +1984,7 @@ function normalizeTinyFrameProductType(item) {
   }
   const orderType = normalizeTinyFrameOrderType(item?.orderType);
   if (orderType === 'frame-plus-pictures') return 'tiny_frame_8_pictures';
+  if (orderType === 'photo-sets') return 'tiny_frame_photo_sets';
   return '';
 }
 
@@ -1360,7 +2009,8 @@ function getUnitAmount(item, size, productType) {
   if (size !== '80x80mm') {
     return PRICE_BY_SIZE[size];
   }
-  return TINY_FRAME_PRODUCTS[productType]?.unitAmount;
+  const photoSetCount = productType === 'tiny_frame_8_pictures' ? 0 : normalizePhotoSetCount(item?.photoSetCount);
+  return getTinyFrameUnitAmount(productType, photoSetCount);
 }
 
 function getLegacyProductName(item) {
@@ -1412,9 +2062,13 @@ function buildLineItems(items) {
     const size = getRequestedSize(item);
     const productType = size === '80x80mm' ? normalizeTinyFrameProductType(item) : '';
     const tinyFrameProduct = TINY_FRAME_PRODUCTS[productType];
+    const photoSetCount = productType === 'tiny_frame_8_pictures' ? 0 : normalizePhotoSetCount(item?.photoSetCount);
+    const photoCount = tinyFrameProduct && photoSetCount !== null
+      ? getTinyFramePhotoCount(productType, photoSetCount)
+      : 0;
     const unitAmount = getUnitAmount(item, size, productType);
 
-    if (!unitAmount) {
+    if (!unitAmount || (productType === 'tiny_frame_photo_sets' && photoSetCount === null)) {
       throw new Error(size === '80x80mm'
         ? 'One or more Tiny Frames has an invalid product type'
         : 'One or more cart items has an invalid frame size');
@@ -1445,8 +2099,19 @@ function buildLineItems(items) {
     if (tinyFrameProduct?.requiresPictures && !uploadReference) {
       throw new Error('Frame + Eight Photos requires a completed photo upload reference');
     }
+    if (productType === 'tiny_frame_photo_sets') {
+      if (Number(item.photoCount) !== photoCount) {
+        throw new Error('The photo count does not match the selected photo sets');
+      }
+      if (photoCount > 0 && !uploadReference) {
+        throw new Error('Every photo set requires a completed photo upload reference');
+      }
+      if (photoCount === 0 && uploadReference) {
+        throw new Error('A frame-only product cannot include a photo upload reference');
+      }
+    }
     const customerFacingName = tinyFrameProduct
-      ? tinyFrameProduct.name
+      ? tinyFrameNameFor(productType, photoCount)
       : `Print & Frame - ${size}`;
 
     for (let unitIndex = 0; unitIndex < quantity; unitIndex += 1) {
@@ -1460,6 +2125,8 @@ function buildLineItems(items) {
         productType:productType || 'print_frame',
         frameColour,
         uploadReference,
+        photoSetCount:productType === 'tiny_frame_8_pictures' ? 0 : photoSetCount,
+        photoCount,
         originalObjectKey: isValidArtworkObjectKey(item.originalObjectKey) ? item.originalObjectKey : '',
         thumbnailObjectKey: isValidArtworkObjectKey(item.thumbnailObjectKey) ? item.thumbnailObjectKey : '',
         artworkObjectKeys,
@@ -1501,10 +2168,12 @@ function createStripeProductMapping(lineItems) {
     .filter(item => item.productCode)
     .map((item, index) => {
       const price = `AUD ${(item.unitAmount / 100).toFixed(2)}`;
-      const pdf = item.productType === 'tiny_frame_8_pictures'
+      const artwork = item.productType === 'tiny_frame_8_pictures' || isValidProductPdfKey(item.uploadReference)
         ? ` | PDF ${getProductPdfKey(item.productCode)}`
-        : '';
-      return `${index + 1}:${item.productCode} | ${item.frameColour} | ${item.name} | ${price}${pdf}`;
+        : item.photoCount > 0
+          ? ` | ${item.photoCount} photos | Upload ${item.uploadReference}`
+          : '';
+      return `${index + 1}:${item.productCode} | ${item.frameColour} | ${item.name} | ${price}${artwork}`;
     });
   return chunkStripeMetadataEntries(entries);
 }
@@ -1591,6 +2260,8 @@ function createStripePayload(
       payload.set(`${prefix}[price_data][product_data][metadata][product_code]`, item.productCode);
       payload.set(`${prefix}[price_data][product_data][metadata][cart_item_id]`, item.cartItemId);
       payload.set(`${prefix}[price_data][product_data][metadata][unit_index]`, String(item.unitIndex));
+      payload.set(`${prefix}[price_data][product_data][metadata][photo_set_count]`, String(item.photoSetCount || 0));
+      payload.set(`${prefix}[price_data][product_data][metadata][photo_count]`, String(item.photoCount || 0));
       if (item.uploadReference) {
         payload.set(`${prefix}[price_data][product_data][metadata][upload_reference]`, item.uploadReference);
         payload.set(`${prefix}[price_data][product_data][metadata][upload_session_id]`, item.uploadReference);
@@ -1635,6 +2306,8 @@ function createCheckoutPayloadFingerprint(lineItems, shippingCountry, shippingRa
       size:item.size || '',
       frameColour:item.frameColour || '',
       uploadReference:item.uploadReference || '',
+      photoSetCount:item.photoSetCount || 0,
+      photoCount:item.photoCount || 0,
       unitAmount:item.unitAmount,
       quantity:item.quantity
     }))
@@ -1780,21 +2453,51 @@ async function ensureProductCodePrintSheets(uploadReference, productCodes, env) 
 }
 
 async function verifyUploadManifests(lineItems, env) {
-  const pictureItems = lineItems.filter(item => item.productType === 'tiny_frame_8_pictures');
+  const pictureItems = lineItems.filter(item => item.productType === 'tiny_frame_8_pictures' || (item.productType === 'tiny_frame_photo_sets' && item.photoCount > 0));
   if (!pictureItems.length) return;
   if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
   const codesByUpload = new Map();
   for (const item of pictureItems) {
+    if (normalizeUploadReference(item.uploadReference)) {
+      const manifestKey = getUploadManifestKey(item.uploadReference);
+      const manifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
+      const manifest = await readR2Json(manifestObject);
+      if (manifest?.storage_version === INDIVIDUAL_PHOTO_STORAGE_VERSION) {
+        const photos = Array.isArray(manifest.photos) ? manifest.photos : [];
+        if (
+          manifest.status !== 'finalized' || manifest.cart_item_id !== item.cartItemId ||
+          manifest.frame_colour !== item.frameColour || Number(manifest.photo_set_count) !== item.photoSetCount ||
+          Number(manifest.photo_count) !== item.photoCount || photos.length !== item.photoCount
+        ) throw new Error('One or more individual-photo manifests could not be verified');
+        const storedPhotos = await Promise.all(photos.map(photo => env.ARTWORK_BUCKET.head(String(photo?.objectKey || ''))));
+        if (storedPhotos.some((photo, index) => !photo || !isValidIndividualPhotoKey(photos[index]?.objectKey, item.uploadReference))) {
+          throw new Error('One or more cropped photos could not be verified');
+        }
+        const productCodes = [...new Set([...(Array.isArray(manifest.product_codes) ? manifest.product_codes : []), item.productCode].map(normalizeProductCode).filter(Boolean))];
+        await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({ ...manifest, product_codes:productCodes, updated_at:new Date().toISOString() }), {
+          httpMetadata:{ contentType:'application/json' }
+        });
+        continue;
+      }
+    }
     if (isValidProductPdfKey(item.uploadReference)) {
       if (!isValidProductPdfKey(item.uploadReference, item.productCode)) {
         throw new Error('The uploaded PDF does not match its product code');
       }
       const object = await env.ARTWORK_BUCKET.head(item.uploadReference);
-      if (!object || object.customMetadata?.product_code !== item.productCode || object.customMetadata?.cart_item_id !== item.cartItemId) {
+      if (
+        !object ||
+        object.customMetadata?.product_code !== item.productCode ||
+        object.customMetadata?.cart_item_id !== item.cartItemId ||
+        object.customMetadata?.product_type !== item.productType ||
+        Number(object.customMetadata?.image_count || 0) !== item.photoCount ||
+        (item.productType === 'tiny_frame_photo_sets' && Number(object.customMetadata?.photo_set_count || 0) !== item.photoSetCount)
+      ) {
         throw new Error('One or more print-sheet PDFs could not be verified');
       }
       continue;
     }
+    if (item.productType === 'tiny_frame_photo_sets') throw new Error('Variable photo sets require completed individual photo uploads');
     const codes = codesByUpload.get(item.uploadReference) || [];
     codes.push(item.productCode);
     codesByUpload.set(item.uploadReference, codes);
@@ -2437,6 +3140,59 @@ async function markUploadSessionsPaid(session, env) {
     if (!manifest) throw new Error(`Upload session ${uploadSessionId} has an invalid manifest`);
     if (manifest.status === 'paid') continue;
     const paidAt = new Date().toISOString();
+    if (manifest.storage_version === INDIVIDUAL_PHOTO_STORAGE_VERSION) {
+      const productCodes = (Array.isArray(manifest.product_codes) ? manifest.product_codes : []).map(normalizeProductCode).filter(Boolean);
+      const photos = Array.isArray(manifest.photos) ? manifest.photos : [];
+      if (!stripeCheckoutSessionId || !productCodes.length || !photos.length) {
+        throw new Error(`Upload session ${uploadSessionId} is missing paid-order relationships`);
+      }
+      const finalProducts = [];
+      for (const productCode of productCodes) {
+        const finalPhotos = [];
+        for (const photo of photos) {
+          const sourceKey = String(photo?.objectKey || '');
+          const source = await env.ARTWORK_BUCKET.get(sourceKey);
+          if (!source || !isValidIndividualPhotoKey(sourceKey, uploadSessionId)) {
+            throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
+          }
+          const finalKey = `orders/${stripeCheckoutSessionId}/product-${productCode}/photo-${String(photo.position).padStart(3, '0')}.jpg`;
+          await env.ARTWORK_BUCKET.put(finalKey, source.body, {
+            httpMetadata:{ contentType:'image/jpeg' },
+            customMetadata:{
+              ...(source.customMetadata || {}),
+              product_code:productCode,
+              status:'paid',
+              paid_at:paidAt,
+              stripe_checkout_session_id:stripeCheckoutSessionId
+            }
+          });
+          finalPhotos.push({ position:photo.position, objectKey:finalKey, contentType:'image/jpeg' });
+        }
+        const finalManifestKey = `orders/${stripeCheckoutSessionId}/product-${productCode}/manifest.json`;
+        await env.ARTWORK_BUCKET.put(finalManifestKey, JSON.stringify({
+          storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
+          stripe_checkout_session_id:stripeCheckoutSessionId,
+          product_code:productCode,
+          cart_item_id:manifest.cart_item_id,
+          frame_colour:manifest.frame_colour,
+          product_type:manifest.product_type,
+          photo_count:manifest.photo_count,
+          photo_set_count:manifest.photo_set_count,
+          photos:finalPhotos,
+          status:'paid',
+          paid_at:paidAt
+        }), { httpMetadata:{ contentType:'application/json' } });
+        finalProducts.push({ product_code:productCode, manifest_key:finalManifestKey, photos:finalPhotos });
+      }
+      await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
+        ...manifest,
+        status:'paid',
+        stripe_checkout_session_id:stripeCheckoutSessionId,
+        paid_at:paidAt,
+        final_products:finalProducts
+      }), { httpMetadata:{ contentType:'application/json' } });
+      continue;
+    }
     const relatedFiles = [
       ...(manifest.print_sheet_object_key ? [{ objectKey:manifest.print_sheet_object_key, contentType:'application/pdf' }] : []),
       ...(Array.isArray(manifest.print_sheets) ? manifest.print_sheets : []),
@@ -2490,13 +3246,19 @@ async function cleanupPendingUploads(env, now = Date.now()) {
       const object = await env.ARTWORK_BUCKET.get(listedManifest.key);
       const manifest = await readR2Json(object);
       const uploadedAt = Date.parse(manifest?.uploaded_at || '');
-      if (!manifest || manifest.status !== 'pending' || !Number.isFinite(uploadedAt) || uploadedAt >= cutoff) continue;
+      if (!manifest || !['draft', 'finalized', 'pending'].includes(manifest.status) || !Number.isFinite(uploadedAt) || uploadedAt >= cutoff) continue;
       const uploadSessionId = normalizeUploadReference(manifest.upload_session_id);
       if (!uploadSessionId) continue;
       const prefix = getTinyFrameUploadPrefix(uploadSessionId);
       const storedFileKeys = Array.isArray(manifest.files)
         ? manifest.files.map(file => String(file?.objectKey || '')).filter(key => key.startsWith(prefix))
         : [];
+      let sessionCursor;
+      do {
+        const sessionObjects = await env.ARTWORK_BUCKET.list({ prefix, ...(sessionCursor ? { cursor:sessionCursor } : {}) });
+        await deleteObjectKeys(env.ARTWORK_BUCKET, sessionObjects.objects.map(item => item.key));
+        sessionCursor = sessionObjects.truncated ? sessionObjects.cursor : undefined;
+      } while (sessionCursor);
       await deleteObjectKeys(env.ARTWORK_BUCKET, [...new Set([...storedFileKeys, listedManifest.key])]);
       deletedSessions += 1;
     }
@@ -2625,6 +3387,121 @@ async function getProductCodeRecord(request, env, productCode) {
   }
 }
 
+async function getAdminProductAssets(request, env, productCode) {
+  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET || !env.ADMIN_API_KEY) {
+    return jsonResponse(request, env, { error:'Order management is not configured' }, 503);
+  }
+  if (!isAuthorizedAdminRequest(request, env)) {
+    return jsonResponse(request, env, { error:'Unauthorized' }, 401);
+  }
+  const normalizedCode = normalizeProductCode(productCode);
+  if (!normalizedCode) return jsonResponse(request, env, { error:'Product code is invalid' }, 400);
+  try {
+    const record = await findProductCode(env.PRODUCT_CODES_DB, normalizedCode);
+    if (!record) return jsonResponse(request, env, { error:'Product code was not found' }, 404);
+    const checkoutSessionId = cleanText(record.stripe_checkout_session_id, '');
+    if (checkoutSessionId) {
+      const manifestKey = `orders/${checkoutSessionId}/product-${normalizedCode}/manifest.json`;
+      const object = await env.ARTWORK_BUCKET.get(manifestKey);
+      const manifest = object ? await readR2Json(object) : null;
+      if (manifest?.storage_version === INDIVIDUAL_PHOTO_STORAGE_VERSION) {
+        const photos = (Array.isArray(manifest.photos) ? manifest.photos : []).map((photo, index) => ({
+          position:Number(photo.position || index + 1),
+          filename:`${normalizedCode}-photo-${String(photo.position || index + 1).padStart(3, '0')}.jpg`,
+          downloadUrl:`/admin/product-assets/${normalizedCode}/photo/${Number(photo.position || index + 1)}`
+        }));
+        return jsonResponse(request, env, {
+          productCode:normalizedCode,
+          status:record.status,
+          frameColour:manifest.frame_colour || record.frame_colour,
+          photoSetCount:Number(manifest.photo_set_count || 0),
+          photoCount:photos.length,
+          photos,
+          legacyPdf:null
+        });
+      }
+    }
+    for (const objectKey of getProductPdfKeyCandidates(normalizedCode)) {
+      if (await env.ARTWORK_BUCKET.head(objectKey)) {
+        return jsonResponse(request, env, {
+          productCode:normalizedCode,
+          status:record.status,
+          frameColour:record.frame_colour,
+          photoCount:record.product_type === 'tiny_frame_8_pictures' ? 8 : 0,
+          photos:[],
+          legacyPdf:{
+            filename:`${normalizedCode}-print-sheet.pdf`,
+            downloadUrl:`/admin/product-assets/${normalizedCode}/legacy-pdf`
+          }
+        });
+      }
+    }
+    return jsonResponse(request, env, {
+      productCode:normalizedCode,
+      status:record.status,
+      frameColour:record.frame_colour,
+      photoCount:0,
+      photos:[],
+      legacyPdf:null
+    });
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message || 'Product assets could not be loaded' }, 400);
+  }
+}
+
+async function downloadAdminProductAsset(request, env, productCode, assetType, position = '') {
+  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET || !env.ADMIN_API_KEY) {
+    return jsonResponse(request, env, { error:'Order management is not configured' }, 503);
+  }
+  if (!isAuthorizedAdminRequest(request, env)) {
+    return jsonResponse(request, env, { error:'Unauthorized' }, 401);
+  }
+  const normalizedCode = normalizeProductCode(productCode);
+  if (!normalizedCode) return jsonResponse(request, env, { error:'Product code is invalid' }, 400);
+  const record = await findProductCode(env.PRODUCT_CODES_DB, normalizedCode);
+  if (!record) return jsonResponse(request, env, { error:'Product code was not found' }, 404);
+  let objectKey = '';
+  let contentType = 'application/octet-stream';
+  let filename = '';
+  if (assetType === 'photo') {
+    const photoPosition = Number(position);
+    const checkoutSessionId = cleanText(record.stripe_checkout_session_id, '');
+    if (!checkoutSessionId || !Number.isInteger(photoPosition) || photoPosition < 1 || photoPosition > MAX_TINY_FRAME_PHOTOS_PER_PRODUCT) {
+      return jsonResponse(request, env, { error:'Photo reference is invalid' }, 400);
+    }
+    const manifestObject = await env.ARTWORK_BUCKET.get(`orders/${checkoutSessionId}/product-${normalizedCode}/manifest.json`);
+    const manifest = manifestObject ? await readR2Json(manifestObject) : null;
+    const photo = Array.isArray(manifest?.photos) ? manifest.photos.find(item => Number(item?.position) === photoPosition) : null;
+    const expectedPrefix = `orders/${checkoutSessionId}/product-${normalizedCode}/`;
+    if (!photo || !String(photo.objectKey || '').startsWith(expectedPrefix)) {
+      return jsonResponse(request, env, { error:'Photo was not found' }, 404);
+    }
+    objectKey = String(photo.objectKey);
+    contentType = 'image/jpeg';
+    filename = `${normalizedCode}-photo-${String(photoPosition).padStart(3, '0')}.jpg`;
+  } else if (assetType === 'legacy-pdf') {
+    for (const candidate of getProductPdfKeyCandidates(normalizedCode)) {
+      if (await env.ARTWORK_BUCKET.head(candidate)) {
+        objectKey = candidate;
+        break;
+      }
+    }
+    contentType = 'application/pdf';
+    filename = `${normalizedCode}-print-sheet.pdf`;
+  }
+  if (!objectKey) return jsonResponse(request, env, { error:'Product file was not found' }, 404);
+  const object = await env.ARTWORK_BUCKET.get(objectKey);
+  if (!object) return jsonResponse(request, env, { error:'Product file was not found' }, 404);
+  return new Response(object.body, {
+    headers:{
+      'Content-Type':contentType,
+      'Content-Disposition':`attachment; filename="${filename}"`,
+      'Cache-Control':'private, no-store',
+      'X-Content-Type-Options':'nosniff'
+    }
+  });
+}
+
 async function getProductCodeCapacityRecord(request, env) {
   if (!env.PRODUCT_CODES_DB || !env.ADMIN_API_KEY) {
     return jsonResponse(request, env, { error:'Order management is not configured' }, 503);
@@ -2732,12 +3609,44 @@ export default {
       return getProductCodeCapacityRecord(request, env);
     }
 
+    const adminAssetMatch = url.pathname.match(/^\/admin\/product-assets\/(\d{5})(?:\/(photo)\/(\d+)|\/(legacy-pdf))?$/);
+    if (request.method === 'GET' && adminAssetMatch) {
+      if (!adminAssetMatch[2] && !adminAssetMatch[4]) return getAdminProductAssets(request, env, adminAssetMatch[1]);
+      return downloadAdminProductAsset(
+        request,
+        env,
+        adminAssetMatch[1],
+        adminAssetMatch[4] || adminAssetMatch[2],
+        adminAssetMatch[3]
+      );
+    }
+
     if (request.method === 'GET' && url.pathname.startsWith('/admin/product-code/')) {
       return getProductCodeRecord(request, env, decodeURIComponent(url.pathname.slice('/admin/product-code/'.length)));
     }
 
     if (request.method === 'POST' && url.pathname === '/create-checkout-session') {
       return createCheckoutSession(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/session') {
+      return createIndividualUploadSession(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/photo') {
+      return uploadIndividualTinyFramePhoto(request, env);
+    }
+
+    if (request.method === 'DELETE' && url.pathname === '/tiny-frame-upload/photo') {
+      return deleteIndividualTinyFramePhoto(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/finalize') {
+      return finalizeIndividualTinyFrameUpload(request, env);
+    }
+
+    if (request.method === 'GET' && url.pathname === '/tiny-frame-upload/status') {
+      return getIndividualTinyFrameUploadStatus(request, env);
     }
 
     if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/reserve') {
@@ -2750,6 +3659,18 @@ export default {
 
     if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/upload') {
       return uploadTinyFrameProductPdf(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/multipart/create') {
+      return createTinyFrameProductPdfMultipart(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/multipart/part') {
+      return uploadTinyFrameProductPdfPart(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/multipart/complete') {
+      return completeTinyFrameProductPdfMultipart(request, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/tiny-frame-pdf/status') {

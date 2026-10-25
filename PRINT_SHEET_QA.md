@@ -24,12 +24,13 @@ The command must report:
 
 ## Image-quality pipeline
 
-- The browser canvas is used only for the on-screen preview.
-- Each untouched original file and its crop coordinates are uploaded to the Worker.
-- Originals are stored under the same upload-session prefix as the generated PDF and manifest.
-- Cloudflare Images applies the saved crop to the original pixels, keeps JPEG metadata where supported, and creates one quality-100 JPEG encoding for PDF embedding.
-- The Worker never enlarges a low-resolution crop. Any crop below 200 PPI at 54 x 86 mm is recorded in the manifest and returned as a warning.
-- The Worker-generated PDF is stored as `print-sheet-a4.pdf` and remains downloadable through its returned private artwork URL.
+- The browser saves each selected crop at its full cropped pixel dimensions and creates a separate reduced on-screen preview.
+- The PDF embeds all eight full-resolution crop JPEGs once, without rasterising or rescaling the A4 page.
+- PDFs up to 95 MiB use the existing single request. Larger PDFs use resumable, sequential 8 MiB R2 multipart uploads, so the generated PDF bytes are unchanged and every request stays below the edge request limit.
+- Failed multipart parts are retried independently. A retry continues from the completed parts while all eight browser selections remain available.
+- After multipart completion, the Worker verifies the exact byte length, A4 page box, eight image objects, placement matrices, cut lines, and matching product code using bounded R2 range reads.
+- The code-named PDF is associated with its cart product only after validation succeeds. Checkout cannot begin without that stored reference.
+- The stored PDF remains available through the private artwork route and is promoted from pending to paid only after Stripe confirms payment.
 
 ## Required physical sign-off
 

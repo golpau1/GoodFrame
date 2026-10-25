@@ -15,111 +15,130 @@ await import('../../../print-sheet.js');
 
 const uploadReference = 'tf_0123456789abcdef0123456789abcdef';
 
-test('storefront cropper, eight previews, and FAQ use the 54 x 86 mm format', async () => {
+test('storefront uploads cropped photos individually in the background', async () => {
   const html = await readFile(new URL('../../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const frameAspectRatio = 54 \/ 86;/);
-  assert.equal((html.match(/class="image-slot"/g) || []).length, 8);
-  assert.equal((html.match(/class="upload-input"[^>]+multiple/g) || []).length, 8);
-  assert.equal((html.match(/aspect-ratio:54 \/ 86/g) || []).length, 4);
-  assert.match(html, /\.slot-preview[^}]+object-fit:cover;/);
-  assert.match(html, /photos measuring 54 × 86 mm/);
-  assert.match(html, /let printUploadAttempt = null;/);
-  assert.match(html, /if \(printUploadAttempt\.promise\) return printUploadAttempt\.promise;/);
-  assert.match(html, /cartItems\.some\(\(item\) => item\.uploadSessionId === uploadSession\.uploadSessionId\)/);
-  assert.match(html, /controller\.abort\(\), 600000/);
-  assert.match(html, /good-frame-checkout\.loganwallace049\.workers\.dev/);
-  assert.doesNotMatch(html, /requestUploadStage\("\/tiny-frame-pdf\/reserve/);
-  assert.match(html, /\/tiny-frame-pdf\/upload/);
-  assert.match(html, /\/tiny-frame-pdf\/status/);
-  assert.match(html, /recoverCompletedUpload/);
-  assert.match(html, /id="upload-progress-dialog"/);
-  assert.match(html, /Uploading your photos\.\.\./);
-  assert.match(html, /request\.upload\.addEventListener\("progress"/);
-  assert.match(html, /event\.lengthComputable/);
-  assert.match(html, /Math\.min\(99, Math\.floor/);
-  assert.match(html, /phase:"complete", percent:100/);
-  assert.match(html, /id="upload-progress-retry"/);
-  assert.match(html, /if \(addToCartInFlight \|\| !canAddToCart\(\)\) return;/);
-  assert.match(html, /phase === "preparing" \|\| phase === "uploading-indeterminate" \|\| phase === "confirming"/);
-  assert.match(html, /id="photo-preview-dialog"/);
-  assert.match(html, /Your Photos/);
-  assert.match(html, /className = "cart-photo-preview-button"/);
-  assert.match(html, /normalizeOrderType\(item\.order\) === "frame-plus-pictures"/);
-  assert.match(html, /saveCartPhotoPreviews\(uploadSession\.cartItemId, uploadedImages\)/);
+  assert.match(html, /const uploadedImages = Array\(3\)\.fill\(null\);/);
+  assert.match(html, /for \(let offset = 0; offset < 3; offset \+= 1\)/);
+  assert.match(html, /input\.multiple = true;/);
+  assert.match(html, /MAX_CONCURRENT_PHOTO_UPLOADS = 2/);
+  assert.match(html, /\/tiny-frame-upload\/session/);
+  assert.match(html, /\/tiny-frame-upload\/photo/);
+  assert.match(html, /\/tiny-frame-upload\/finalize/);
+  assert.match(html, /uploadState:\"queued\"/);
+  assert.match(html, /Upload failed · Retry/);
+  assert.match(html, /entry\?\.uploadState === \"complete\"/);
+  assert.match(html, /finalizeIndividualUploads\(uploadedImages, selections\.colour\)/);
+  assert.match(html, /photoFiles:uploadSession\.photos/);
+  assert.doesNotMatch(html, /<script src=\"print-sheet\.js\"><\/script>/);
+  assert.doesNotMatch(html, /GoodFramePrintSheet/);
+  assert.doesNotMatch(html, /\/tiny-frame-pdf\/upload/);
   assert.match(html, /entry\?\.previewBlob instanceof Blob \? entry\.previewBlob : entry\?\.printBlob/);
-  assert.match(html, /bytes:await blob\.arrayBuffer\(\)/);
-  assert.match(html, /getCartPhotoPreviews\(item\.cartItemId\)/);
-  assert.match(html, /database\.createObjectStore\(CART_PREVIEW_STORE_NAME, \{ keyPath:"cartItemId" \}\)/);
-  assert.match(html, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.doesNotMatch(html, /\/product-code\/assign/);
-  assert.doesNotMatch(html, /\/tiny-frame-upload\/original/);
-  assert.doesNotMatch(html, /\/tiny-frame-upload\/finalize/);
-  assert.match(html, /createFullResolutionPrintCrop/);
-  assert.match(html, /printBlob,/);
-  assert.match(html, /return entry\.printBlob/);
-  assert.match(html, /revision:crypto\.randomUUID\(\)/);
-  assert.doesNotMatch(html, /no longer matches its saved crop/);
   assert.match(html, /cropFrameIsPortrait \? croppedCanvas : rotateCanvasClockwise\(croppedCanvas\)/);
-  assert.match(html, /id="cropper-progress-label">Photo 1 of 1/);
-  assert.match(html, /id="backCrop"[^>]*>Back</);
-  assert.match(html, /saveCropButton\.textContent = current === total \? "Finish" : "Next Photo"/);
+  assert.match(html, /id=\"cropper-progress-label\">Photo 1 of 1/);
   assert.match(html, /function startCropBatch\(files, slotIndices, returnFocus\)/);
   assert.match(html, /selectedFiles\.slice\(0, targetSlots\.length\)/);
-  assert.match(html, /zoomOnTouch:true/);
-  assert.match(html, /item\.draft = \{ crop, entry \}/);
-  assert.match(html, /cropBatch\.items\.forEach\(\(item\) => \{/);
-  assert.doesNotMatch(html, /pond\.removeFiles\(\)\.then\(\(\) => pond\.addFile/);
-  assert.doesNotMatch(html, /FilePond/);
-  assert.match(html, /productCode:attempt\.productCode/);
-  assert.match(html, /\.image-remove-button \{[^}]*top:4px; right:4px;[^}]*transform:none;/);
-  assert.doesNotMatch(html, /\.image-remove-button \{[^}]*translate\(50%,-50%\)/);
-  assert.match(html, /\.showcase-gallery::before, \.showcase-gallery::after \{ display:none; \}/);
-  assert.doesNotMatch(html, /\.showcase-gallery::before \{[^}]*background-size:23px 23px;/);
-  assert.doesNotMatch(html, /\.showcase-gallery::before \{[^}]*background-size:46px 46px;/);
-  assert.match(html, /if \(width <= 1100\) \{/);
-  assert.match(html, /const desktopOrder = \[0, 3, 1, 2, 4\];/);
-  assert.match(html, /\{ width:\.76, height:\.82, offset:\.045, gap:-54, rotation:1\.7 \}/);
-  assert.match(html, /\{ width:\.78, height:\.82, offset:-\.05, gap:-50, rotation:2 \}/);
-  assert.match(html, /desktopOrder\.forEach\(\(photoIndex, index\) => \{/);
-  assert.match(html, /id="checkout-confirmed-dialog"/);
-  assert.match(html, /id="checkout-unsuccessful-dialog"/);
-  assert.match(html, /Thank you for your order\. Your tiny frames are on their way to becoming something special\./);
-  assert.match(html, /Your payment wasn't completed\. Your items are still waiting in your cart\./);
-  assert.match(html, /result\.outcome === "confirmed"/);
-  assert.match(html, /result\.outcome === "failed"/);
-  assert.match(html, /checkoutState === "cancelled"\) \{\s*openCart\(\);/);
-  assert.doesNotMatch(html, /checkoutState === "cancelled"\) \{\s*await showUnsuccessfulCheckout\(\);/);
-  assert.doesNotMatch(html, /<div class="cart-summary-row"><span>Shipping to<\/span>/);
-  assert.match(html, /id="shipping-confirmation-dialog"[^>]*aria-labelledby="shipping-confirmation-title"/);
-  assert.match(html, /Confirm Shipping Country/);
-  assert.match(html, /Select your delivery country:/);
-  assert.match(html, /id="shipping-confirmation-back"[^>]*>Back to Cart</);
-  assert.match(html, /id="confirm-checkout"[^>]*>Confirm &amp; Checkout</);
-  assert.match(html, /checkoutButton\.addEventListener\("click", showShippingConfirmation\)/);
-  assert.match(html, /loadShippingConfirmationQuote\(countryCode\)/);
-  assert.match(html, /shippingConfirmationPriceElement\.textContent = `A\$\$\{shippingConfirmationPrice\.toFixed\(2\)\}`/);
-  assert.match(html, /shippingConfirmationTotalElement\.textContent/);
-  assert.match(html, /shippingAmount:Math\.round\(shippingPrice \* 100\)/);
-  assert.match(html, /id="shipping-country-popover" popover="manual" role="listbox"/);
-  assert.match(html, /shippingCountryPopover\.showPopover\(\)/);
-  assert.match(html, /spaceBelow < desiredHeight && spaceAbove > spaceBelow/);
-  assert.match(html, /\.shipping-country-popover \{[^}]*overscroll-behavior:contain/);
-  assert.match(html, /event\.key === "ArrowDown"/);
-  assert.match(html, /document\.addEventListener\("pointerdown"/);
-  assert.match(html, /clearPurchasedCartItems\(checkoutContext\)/);
-  assert.match(html, /checkout_request_id:checkoutContext\.id/);
-  assert.match(html, /title\.textContent = `\$\{item\.colour\} · Frame \+ Eight Photos`;/);
-  assert.match(html, /class="product-name">Frame \+ Eight Photos</);
-  assert.doesNotMatch(html, /data-order-type=/);
-  assert.doesNotMatch(html, /Frame Only/);
-  assert.match(html, /id="upload-section" aria-hidden="false"/);
-  assert.match(html, /const PRODUCT_PRICE = 64\.95;/);
-  assert.match(html, /return uploadedImages\.filter\(Boolean\)\.length === 8;/);
+  assert.match(html, /function appendPhotoSet\(setIndex\)/);
+  assert.match(html, /function preserveScrollDuringLayoutChange/);
+  assert.match(html, /id=\"product-name\">Frame &amp; Photos</);
+  assert.match(html, /<h2 class=\"palette-title\">FRAME COLOUR<\/h2>/);
+  assert.match(html, /const BASE_FRAME_PRICE = 50;/);
+  assert.match(html, /const PHOTO_SET_PRICE = 6;/);
+  assert.match(html, /id=\"config-price\">56\.00</);
+  assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$6</);
+  assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
+  assert.match(html, /\.configurator\.is-open \{ height:auto; max-height:none;[^}]*overflow:visible/);
   assert.match(html, /hero-mobile-DSCF1619\.jpg/);
-  assert.match(html, /if \(withPictures\) openUploadProgressOverlay\(\);/);
-  assert.match(html, /id="config-price">64\.95</);
-  assert.doesNotMatch(html, /title\.textContent[^;]+item\.productCode/);
-  assert.doesNotMatch(html, /product identification code could not be verified/i);
+});
+
+test('individual cropped photos are authenticated, resumable, finalized, and promoted after payment', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ADMIN_API_KEY:'admin-key-that-is-at-least-24-characters',
+    ALLOWED_ORIGINS:'https://goodframe.com.au',
+    IMAGES:{ info:async () => ({ width:1080, height:1720 }) }
+  };
+  const uploadSessionId = 'tf_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const uploadToken = `ut_${'b'.repeat(64)}`;
+  const cartItemId = 'ci_cccccccccccccccccccccccccccccccc';
+  const headers = { Origin:'https://goodframe.com.au', 'X-Upload-Token':uploadToken };
+  const sessionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ uploadSessionId, uploadToken })
+  }), env);
+  assert.equal(sessionResponse.status, 200);
+
+  const photos = [];
+  for (let index = 0; index < 3; index += 1) {
+    const photoId = `ph_${String(index + 1).repeat(32)}`;
+    const revision = `${String(index + 4).repeat(8)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(12)}`;
+    const form = new FormData();
+    form.append('upload_session_id', uploadSessionId);
+    form.append('photo_id', photoId);
+    form.append('revision', revision);
+    form.append('position', String(index + 1));
+    form.append('file', new File([fakeJpeg()], `${photoId}.jpg`, { type:'image/jpeg' }));
+    const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
+      method:'POST', headers, body:form
+    }), env);
+    assert.equal(response.status, 200);
+    photos.push((await response.json()).photo);
+    photos[index].revision = revision;
+  }
+
+  const statusResponse = await worker.fetch(new Request(`https://worker.example/tiny-frame-upload/status?upload_session_id=${uploadSessionId}`, { headers }), env);
+  const status = await statusResponse.json();
+  assert.equal(status.photos.length, 3);
+  assert.deepEqual(status.photos.map(photo => photo.position), [1, 2, 3]);
+
+  const finalizeResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/finalize', {
+    method:'POST',
+    headers:{ ...headers, 'Content-Type':'application/json' },
+    body:JSON.stringify({
+      uploadSessionId,
+      cartItemId,
+      frameColour:'Oak',
+      photoSetCount:1,
+      photos:photos.map((photo, index) => ({
+        photoId:photo.photoId,
+        objectKey:photo.objectKey,
+        revision:photo.revision,
+        position:index + 1
+      }))
+    })
+  }), env);
+  assert.equal(finalizeResponse.status, 200);
+
+  const manifestKey = `tinyframes/${uploadSessionId}/manifest.json`;
+  const manifest = await (await bucket.get(manifestKey)).json();
+  await bucket.put(manifestKey, JSON.stringify({ ...manifest, product_codes:['58321'] }), { httpMetadata:{ contentType:'application/json' } });
+  await markUploadSessionsPaid({
+    id:'cs_live_individual_photos',
+    metadata:{ upload_session_ids:uploadSessionId }
+  }, env);
+  const finalManifest = await (await bucket.get('orders/cs_live_individual_photos/product-58321/manifest.json')).json();
+  assert.equal(finalManifest.photo_count, 3);
+  assert.equal(finalManifest.photos.length, 3);
+
+  database.prepare(`INSERT INTO product_codes
+    (code, cart_item_id, unit_index, product_type, upload_session_id, stripe_checkout_session_id, status, created_at, paid_at, frame_colour, unit_amount, currency)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind('58321', cartItemId, 0, 'tiny_frame_photo_sets', uploadSessionId, 'cs_live_individual_photos', 'paid', new Date().toISOString(), new Date().toISOString(), 'Oak', 5600, 'aud')
+    .run();
+  const adminHeaders = { Authorization:'Bearer admin-key-that-is-at-least-24-characters' };
+  const assetResponse = await worker.fetch(new Request('https://worker.example/admin/product-assets/58321', { headers:adminHeaders }), env);
+  const assets = await assetResponse.json();
+  assert.equal(assets.photoCount, 3);
+  assert.equal(assets.photos[0].downloadUrl, '/admin/product-assets/58321/photo/1');
+  const downloadResponse = await worker.fetch(new Request('https://worker.example/admin/product-assets/58321/photo/1', { headers:adminHeaders }), env);
+  assert.equal(downloadResponse.status, 200);
+  assert.equal(downloadResponse.headers.get('Content-Type'), 'image/jpeg');
+  assert.equal((await downloadResponse.arrayBuffer()).byteLength, fakeJpeg().byteLength);
+  database.close();
 });
 
 test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () => {
@@ -158,9 +177,22 @@ test('product code label sits in the A4 margin without changing image or cut geo
   assert.match(text, /1 0 0 1 232\.440945 14\.173228 Tm \(PRODUCT 58321\)/);
 });
 
+test('variable print sheets add A4 pages after every nine photos', () => {
+  const pdf = createA4PrintSheetPdf(
+    Array.from({ length:12 }, () => ({ bytes:fakeJpeg() })),
+    { productCode:'58321' }
+  );
+  const text = new TextDecoder('latin1').decode(pdf);
+  assert.match(text, /\/Type \/Pages \/Kids \[[^\]]+\] \/Count 2/);
+  assert.equal((text.match(/\/MediaBox \[0 0 595\.275591 841\.889764\]/g) || []).length, 2);
+  assert.equal((text.match(/\/Subtype \/Image/g) || []).length, 12);
+  assert.equal((text.match(/\(PRODUCT 58321\) Tj/g) || []).length, 2);
+});
+
 class MemoryR2Bucket {
   constructor() {
     this.objects = new Map();
+    this.multipartUploads = new Map();
   }
   async head(key) {
     const stored = this.objects.get(key);
@@ -176,14 +208,65 @@ class MemoryR2Bucket {
     });
     return { key };
   }
-  async get(key) {
+  async get(key, options = {}) {
     const stored = this.objects.get(key);
     if (!stored) return null;
+    const source = new Uint8Array(stored.bytes);
+    const range = options.range;
+    const bytes = range
+      ? source.slice(range.offset, range.offset + range.length).buffer
+      : stored.bytes;
     return {
-      body:stored.bytes,
+      body:bytes,
       customMetadata:{ ...stored.customMetadata },
-      text:async () => new TextDecoder().decode(stored.bytes),
-      json:async () => JSON.parse(new TextDecoder().decode(stored.bytes))
+      text:async () => new TextDecoder().decode(bytes),
+      json:async () => JSON.parse(new TextDecoder().decode(bytes))
+    };
+  }
+  createMultipartUpload(key, options = {}) {
+    const uploadId = `upload-${this.multipartUploads.size + 1}`;
+    this.multipartUploads.set(uploadId, { key, options, parts:new Map() });
+    return this.resumeMultipartUpload(key, uploadId);
+  }
+  resumeMultipartUpload(key, uploadId) {
+    const bucket = this;
+    return {
+      key,
+      uploadId,
+      async uploadPart(partNumber, value) {
+        const upload = bucket.multipartUploads.get(uploadId);
+        if (!upload || upload.key !== key) throw new Error('No such multipart upload');
+        const bytes = new Uint8Array(await new Response(value).arrayBuffer());
+        const etag = `etag-${partNumber}-${bytes.byteLength}`;
+        upload.parts.set(partNumber, { bytes, etag });
+        return { partNumber, etag };
+      },
+      async complete(parts) {
+        const upload = bucket.multipartUploads.get(uploadId);
+        if (!upload || upload.key !== key) throw new Error('No such multipart upload');
+        const chunks = parts.map(({ partNumber, etag }) => {
+          const part = upload.parts.get(partNumber);
+          if (!part || part.etag !== etag) throw new Error('Invalid multipart part');
+          return part.bytes;
+        });
+        const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const bytes = new Uint8Array(length);
+        let offset = 0;
+        chunks.forEach((chunk) => {
+          bytes.set(chunk, offset);
+          offset += chunk.length;
+        });
+        bucket.objects.set(key, {
+          bytes:bytes.buffer,
+          contentType:upload.options.httpMetadata?.contentType || 'application/octet-stream',
+          customMetadata:{ ...(upload.options.customMetadata || {}) }
+        });
+        bucket.multipartUploads.delete(uploadId);
+        return { key, size:length };
+      },
+      async abort() {
+        bucket.multipartUploads.delete(uploadId);
+      }
     };
   }
   async delete(key) {
@@ -260,6 +343,34 @@ function oneStepProductPdfRequest(cartItemId = pictureCartItemId, productCode = 
   });
 }
 
+function variableProductPdfRequest(photoSetCount, cartItemId = 'ci_33333333333333333333333333333333', productCode = '73194') {
+  const photoCount = photoSetCount * 3;
+  const bytes = createA4PrintSheetPdf(
+    Array.from({ length:photoCount }, () => ({ bytes:fakeJpeg() })),
+    { productCode }
+  );
+  const form = new FormData();
+  form.append('cart_item_id', cartItemId);
+  form.append('product_code', productCode);
+  form.append('frame_colour', 'Walnut');
+  form.append('photo_set_count', String(photoSetCount));
+  form.append('photo_count', String(photoCount));
+  form.append('pdf', new File([bytes], `${productCode}-print-sheet.pdf`, { type:'application/pdf' }));
+  return new Request('https://worker.example/tiny-frame-pdf/upload', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au' },
+    body:form
+  });
+}
+
+function multipartRequest(path, body, contentType = 'application/json') {
+  return new Request(`https://worker.example${path}`, {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':contentType },
+    body:contentType === 'application/json' ? JSON.stringify(body) : body
+  });
+}
+
 async function uploadAndAssignProductPdf(env, cartItemId = pictureCartItemId, productCode = '58321') {
   const uploadResponse = await worker.fetch(oneStepProductPdfRequest(cartItemId, productCode), env);
   const result = await uploadResponse.clone().json();
@@ -291,7 +402,22 @@ function frameWithPictures(overrides = {}) {
   };
 }
 
-test('the only Tiny Frame product is $64.95 and client-supplied shipping is ignored', () => {
+function frameWithPhotoSets(photoSetCount, overrides = {}) {
+  return {
+    productType:'tiny_frame_photo_sets',
+    cartItemId:'ci_33333333333333333333333333333333',
+    size:'80x80mm',
+    frameColour:'Oak',
+    quantity:1,
+    photoSetCount,
+    photoCount:photoSetCount * 3,
+    uploadReference:photoSetCount ? uploadReference : '',
+    price:1,
+    ...overrides
+  };
+}
+
+test('legacy eight-photo carts keep their $64.95 price and client-supplied shipping is ignored', () => {
   const lineItems = buildLineItems([
     frameWithPictures(),
     { price_data: { product_data: { name: 'Shipping' } }, quantity: 99 }
@@ -301,6 +427,33 @@ test('the only Tiny Frame product is $64.95 and client-supplied shipping is igno
   assert.deepEqual(lineItems.map(item => item.name), ['Frame + Eight Photos']);
   assert.equal(lineItems.filter(item => item.name === 'Shipping').length, 0);
   assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
+});
+
+test('variable photo-set pricing is calculated on the server from $50 plus $6 per set', () => {
+  const lineItems = [0, 1, 2, 3, 4, 5].map(photoSetCount => (
+    buildLineItems([frameWithPhotoSets(photoSetCount)])[0]
+  ));
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [5000, 5600, 6200, 6800, 7400, 8000]);
+  assert.deepEqual(lineItems.map(item => item.name), [
+    'Frame Only',
+    'Frame + 3 Photos',
+    'Frame + 6 Photos',
+    'Frame + 9 Photos',
+    'Frame + 12 Photos',
+    'Frame + 15 Photos'
+  ]);
+  assert.throws(() => buildLineItems([frameWithPhotoSets(2, { photoCount:3 })]), /photo count does not match/);
+  assert.throws(() => buildLineItems([frameWithPhotoSets(1, { uploadReference:'' })]), /completed photo upload reference/);
+  assert.throws(() => buildLineItems([frameWithPhotoSets(0, { uploadReference })]), /frame-only product cannot include/);
+});
+
+test('Stripe receives the server-calculated variable total and photo counts', () => {
+  const lineItems = buildLineItems([frameWithPhotoSets(4)]).map(item => ({ ...item, productCode:'73194' }));
+  const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
+  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7400');
+  assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'Frame + 12 Photos');
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_set_count]'), '4');
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_count]'), '12');
 });
 
 test('picture products require a valid upload reference', () => {
@@ -457,6 +610,28 @@ test('PDF-only upload stores exactly one code-named A4 print sheet', async () =>
   database.close();
 });
 
+test('variable multi-page PDF upload stores and validates the declared photo-set count', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  };
+  const response = await worker.fetch(variableProductPdfRequest(4), env);
+  const result = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(result.success, true);
+  const stored = bucket.objects.get('73194/73194-print-sheet.pdf');
+  assert.equal(stored.customMetadata.product_type, 'tiny_frame_photo_sets');
+  assert.equal(stored.customMetadata.photo_set_count, '4');
+  assert.equal(stored.customMetadata.image_count, '12');
+  const text = new TextDecoder('latin1').decode(stored.bytes);
+  assert.equal((text.match(/\/MediaBox \[0 0 595\.275591 841\.889764\]/g) || []).length, 2);
+  assert.equal((text.match(/\/Subtype \/Image/g) || []).length, 12);
+  database.close();
+});
+
 test('single-request upload retries preserve one code and one R2 object', async () => {
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
@@ -474,6 +649,83 @@ test('single-request upload retries preserve one code and one R2 object', async 
   assert.equal(retryResult.retry_recovered, true);
   assert.equal(retryResult.productCode, firstResult.productCode);
   assert.equal(bucket.objects.size, 1);
+  database.close();
+});
+
+test('multipart upload preserves a large generated A4 PDF byte-for-byte', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const testEnv = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  };
+  const productCode = '58321';
+  const largeJpeg = new Uint8Array(1150 * 1024);
+  largeJpeg.set(fakeJpeg());
+  largeJpeg.set([0xff, 0xd9], largeJpeg.length - 2);
+  const pdfBytes = createA4PrintSheetPdf(
+    Array.from({ length:8 }, () => ({ bytes:largeJpeg })),
+    { productCode }
+  );
+  assert.ok(pdfBytes.byteLength > 8 * 1024 * 1024);
+
+  const createdResponse = await worker.fetch(multipartRequest('/tiny-frame-pdf/multipart/create', {
+    cartItemId:pictureCartItemId,
+    productCode,
+    frameColour:'Oak',
+    fileSize:pdfBytes.byteLength
+  }), testEnv);
+  assert.equal(createdResponse.status, 200);
+  const created = await createdResponse.json();
+  assert.equal(created.partSize, 8 * 1024 * 1024);
+  assert.equal(created.partCount, 2);
+
+  const parts = [];
+  for (let index = 0; index < created.partCount; index += 1) {
+    const start = index * created.partSize;
+    const end = Math.min(pdfBytes.byteLength, start + created.partSize);
+    const parameters = new URLSearchParams({
+      cart_item_id:pictureCartItemId,
+      product_code:productCode,
+      upload_id:created.uploadId,
+      file_size:String(pdfBytes.byteLength),
+      part_number:String(index + 1)
+    });
+    const partResponse = await worker.fetch(multipartRequest(
+      `/tiny-frame-pdf/multipart/part?${parameters}`,
+      pdfBytes.slice(start, end),
+      'application/octet-stream'
+    ), testEnv);
+    assert.equal(partResponse.status, 200);
+    const part = await partResponse.json();
+    parts.push({ partNumber:part.partNumber, etag:part.etag });
+  }
+
+  const completedResponse = await worker.fetch(multipartRequest('/tiny-frame-pdf/multipart/complete', {
+    cartItemId:pictureCartItemId,
+    productCode,
+    uploadId:created.uploadId,
+    fileSize:pdfBytes.byteLength,
+    parts
+  }), testEnv);
+  assert.equal(completedResponse.status, 200);
+  const completed = await completedResponse.json();
+  assert.equal(completed.success, true);
+  assert.equal(completed.pdf.objectKey, `${productCode}/${productCode}-print-sheet.pdf`);
+  const stored = bucket.objects.get(completed.pdf.objectKey);
+  assert.equal(Buffer.compare(Buffer.from(stored.bytes), Buffer.from(pdfBytes)), 0);
+  assert.equal(stored.customMetadata.expected_size, String(pdfBytes.byteLength));
+
+  const retryResponse = await worker.fetch(multipartRequest('/tiny-frame-pdf/multipart/complete', {
+    cartItemId:pictureCartItemId,
+    productCode,
+    uploadId:created.uploadId,
+    fileSize:pdfBytes.byteLength,
+    parts
+  }), testEnv);
+  assert.equal(retryResponse.status, 200);
+  assert.equal((await retryResponse.json()).retry_recovered, true);
   database.close();
 });
 
@@ -548,6 +800,15 @@ test('browser PDF builder preserves all eight full-resolution JPEG dimensions', 
   blobs.forEach((_, index) => {
     assert.match(text, new RegExp(`/Width ${2160 + index} /Height ${3440 + Math.round(index * (3440 / 2160))}`));
   });
+});
+
+test('browser PDF builder creates two A4 pages for twelve full-resolution photos', async () => {
+  const blobs = Array.from({ length:12 }, () => new Blob([fakeJpeg(2160, 3440)], { type:'image/jpeg' }));
+  const pdf = await globalThis.GoodFramePrintSheet.createA4PrintSheetPdf(blobs, { productCode:'73194' });
+  const text = new TextDecoder('latin1').decode(await pdf.arrayBuffer());
+  assert.equal((text.match(/\/MediaBox \[0 0 595\.275591 841\.889764\]/g) || []).length, 2);
+  assert.equal((text.match(/\/Subtype \/Image/g) || []).length, 12);
+  assert.equal((text.match(/\(PRODUCT 73194\) Tj/g) || []).length, 2);
 });
 
 test('paid Stripe sessions promote only the code-named product PDF', async () => {

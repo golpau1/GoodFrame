@@ -34,27 +34,39 @@ function number(value) {
   return Number(value).toFixed(6).replace(/\.?0+$/, '');
 }
 
-function getA4PrintLayout() {
+function getA4PrintLayout(photoCount = 8) {
+  if (!Number.isInteger(photoCount) || photoCount < 1) {
+    throw new Error('At least one photo is required for a print-sheet layout.');
+  }
   const threeAcrossWidth = (PHOTO_WIDTH_MM * 3) + (PHOTO_GAP_MM * 2);
-  const twoAcrossWidth = (PHOTO_WIDTH_MM * 2) + PHOTO_GAP_MM;
-  const layoutHeight = (PHOTO_HEIGHT_MM * 3) + (PHOTO_GAP_MM * 2);
-  const topMargin = (PAGE_HEIGHT_MM - layoutHeight) / 2;
   const threeAcrossLeft = (PAGE_WIDTH_MM - threeAcrossWidth) / 2;
-  const twoAcrossLeft = (PAGE_WIDTH_MM - twoAcrossWidth) / 2;
-
-  return Array.from({ length:8 }, (_, index) => {
-    const row = Math.floor(index / 3);
-    const column = index % 3;
-    const left = (row === 2 ? twoAcrossLeft : threeAcrossLeft) + (column * (PHOTO_WIDTH_MM + PHOTO_GAP_MM));
-    const top = topMargin + (row * (PHOTO_HEIGHT_MM + PHOTO_GAP_MM));
-    return {
-      index,
-      xMm:left,
-      yMm:PAGE_HEIGHT_MM - top - PHOTO_HEIGHT_MM,
-      widthMm:PHOTO_WIDTH_MM,
-      heightMm:PHOTO_HEIGHT_MM
-    };
-  });
+  const placements = [];
+  const pageCount = Math.ceil(photoCount / 9);
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+    const pagePhotoCount = Math.min(9, photoCount - (pageIndex * 9));
+    const rowCount = Math.ceil(pagePhotoCount / 3);
+    const layoutHeight = (PHOTO_HEIGHT_MM * rowCount) + (PHOTO_GAP_MM * (rowCount - 1));
+    const topMargin = (PAGE_HEIGHT_MM - layoutHeight) / 2;
+    for (let pagePhotoIndex = 0; pagePhotoIndex < pagePhotoCount; pagePhotoIndex += 1) {
+      const index = (pageIndex * 9) + pagePhotoIndex;
+      const row = Math.floor(pagePhotoIndex / 3);
+      const column = pagePhotoIndex % 3;
+      const photosInRow = Math.min(3, pagePhotoCount - (row * 3));
+      const rowWidth = (PHOTO_WIDTH_MM * photosInRow) + (PHOTO_GAP_MM * (photosInRow - 1));
+      const rowLeft = photosInRow === 3 ? threeAcrossLeft : (PAGE_WIDTH_MM - rowWidth) / 2;
+      const left = rowLeft + (column * (PHOTO_WIDTH_MM + PHOTO_GAP_MM));
+      const top = topMargin + (row * (PHOTO_HEIGHT_MM + PHOTO_GAP_MM));
+      placements.push({
+        index,
+        pageIndex,
+        xMm:left,
+        yMm:PAGE_HEIGHT_MM - top - PHOTO_HEIGHT_MM,
+        widthMm:PHOTO_WIDTH_MM,
+        heightMm:PHOTO_HEIGHT_MM
+      });
+    }
+  }
+  return placements;
 }
 
 function createGuideCommands(placement) {
@@ -158,8 +170,8 @@ function readJpegDetails(bytes) {
 }
 
 function createA4PrintSheetPdf(processedImages, options = {}) {
-  if (!Array.isArray(processedImages) || processedImages.length !== 8) {
-    throw new Error('Exactly 8 processed images are required.');
+  if (!Array.isArray(processedImages) || processedImages.length < 1 || (processedImages.length !== 8 && processedImages.length % 3 !== 0)) {
+    throw new Error('Processed images must be supplied in complete sets of three.');
   }
 
   const images = processedImages.map((image, index) => {
@@ -172,44 +184,50 @@ function createA4PrintSheetPdf(processedImages, options = {}) {
     return { bytes, ...dimensions };
   });
 
-  const placements = getA4PrintLayout();
+  const placements = getA4PrintLayout(images.length);
+  const pageCount = Math.ceil(images.length / 9);
   const productCode = String(options.productCode || '');
   if (productCode && !/^[1-9][0-9]{4}$/.test(productCode)) {
     throw new Error('Product code must contain exactly five digits.');
   }
-  const imageCommands = placements.map((placement, index) => (
-    `q ${number(PHOTO_WIDTH_POINTS)} 0 0 ${number(PHOTO_HEIGHT_POINTS)} ${number(placement.xMm * MM_TO_POINTS)} ${number(placement.yMm * MM_TO_POINTS)} cm /Im${index + 1} Do Q`
-  ));
-  const guideCommands = [
-    '0.72 G',
-    `${number(GUIDE_WIDTH_POINTS)} w`,
-    ...placements.map(createGuideCommands)
-  ];
-  const labelCommands = productCode ? [
-    '0 G',
-    `BT /F1 ${number(PRODUCT_CODE_LABEL_FONT_SIZE_POINTS)} Tf 1 0 0 1 ${number(82 * MM_TO_POINTS)} ${number(PRODUCT_CODE_LABEL_BASELINE_MM * MM_TO_POINTS)} Tm (PRODUCT ${productCode}) Tj ET`
-  ] : [];
-  const contentBytes = bytesFromText([...imageCommands, ...guideCommands, ...labelCommands].join('\n'));
-
   const objects = [];
   objects[1] = bytesFromText('<< /Type /Catalog /Pages 2 0 R >>');
-  objects[2] = bytesFromText('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-  const imageObjectNumbers = images.map((_, index) => index + 5);
-  let nextObjectNumber = 5 + images.length;
+  const pageObjectNumbers = Array.from({ length:pageCount }, (_, index) => 3 + (index * 2));
+  const contentObjectNumbers = pageObjectNumbers.map(value => value + 1);
+  objects[2] = bytesFromText(`<< /Type /Pages /Kids [${pageObjectNumbers.map(value => `${value} 0 R`).join(' ')}] /Count ${pageCount} >>`);
+  const imageObjectStart = 3 + (pageCount * 2);
+  const imageObjectNumbers = images.map((_, index) => imageObjectStart + index);
+  let nextObjectNumber = imageObjectStart + images.length;
   const iccObjectNumbers = images.map(image => (
     image.iccProfile && image.components === 3 ? nextObjectNumber++ : null
   ));
   const fontObjectNumber = productCode ? nextObjectNumber++ : null;
-  const xObjects = images.map((_, index) => `/Im${index + 1} ${imageObjectNumbers[index]} 0 R`).join(' ');
   const fontResources = fontObjectNumber ? ` /Font << /F1 ${fontObjectNumber} 0 R >>` : '';
-  objects[3] = bytesFromText(
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /Text /ImageC] /XObject << ${xObjects} >>${fontResources} >> /Contents 4 0 R >>`
-  );
-  objects[4] = concatenate([
-    bytesFromText(`<< /Length ${contentBytes.length} >>\nstream\n`),
-    contentBytes,
-    bytesFromText('\nendstream')
-  ]);
+  pageObjectNumbers.forEach((pageObjectNumber, pageIndex) => {
+    const pagePlacements = placements.filter(placement => placement.pageIndex === pageIndex);
+    const imageCommands = pagePlacements.map(placement => (
+      `q ${number(PHOTO_WIDTH_POINTS)} 0 0 ${number(PHOTO_HEIGHT_POINTS)} ${number(placement.xMm * MM_TO_POINTS)} ${number(placement.yMm * MM_TO_POINTS)} cm /Im${placement.index + 1} Do Q`
+    ));
+    const guideCommands = [
+      '0.72 G',
+      `${number(GUIDE_WIDTH_POINTS)} w`,
+      ...pagePlacements.map(createGuideCommands)
+    ];
+    const labelCommands = productCode ? [
+      '0 G',
+      `BT /F1 ${number(PRODUCT_CODE_LABEL_FONT_SIZE_POINTS)} Tf 1 0 0 1 ${number(82 * MM_TO_POINTS)} ${number(PRODUCT_CODE_LABEL_BASELINE_MM * MM_TO_POINTS)} Tm (PRODUCT ${productCode}) Tj ET`
+    ] : [];
+    const contentBytes = bytesFromText([...imageCommands, ...guideCommands, ...labelCommands].join('\n'));
+    const xObjects = pagePlacements.map(placement => `/Im${placement.index + 1} ${imageObjectNumbers[placement.index]} 0 R`).join(' ');
+    objects[pageObjectNumber] = bytesFromText(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /Text /ImageC] /XObject << ${xObjects} >>${fontResources} >> /Contents ${contentObjectNumbers[pageIndex]} 0 R >>`
+    );
+    objects[contentObjectNumbers[pageIndex]] = concatenate([
+      bytesFromText(`<< /Length ${contentBytes.length} >>\nstream\n`),
+      contentBytes,
+      bytesFromText('\nendstream')
+    ]);
+  });
   images.forEach((image, index) => {
     const colourSpace = iccObjectNumbers[index]
       ? `[/ICCBased ${iccObjectNumbers[index]} 0 R]`

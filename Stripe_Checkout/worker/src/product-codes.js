@@ -465,7 +465,7 @@ async function attachProductPdf(database, code, cartItemId, objectKey) {
   if (!row || row.cart_item_id !== normalizedCartItemId || Number(row.unit_index) !== 0) {
     throw new ProductCodeError('Product code does not belong to this cart product');
   }
-  if (row.product_type !== 'tiny_frame_8_pictures') {
+  if (!['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(row.product_type)) {
     throw new ProductCodeError('Product code is not for a picture product');
   }
   if (row.upload_session_id && row.upload_session_id !== key) {

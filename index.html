@@ -173,7 +173,7 @@
           "@type": "Offer",
           "url": "https://goodframe.com.au/",
           "priceCurrency": "AUD",
-          "price": "64.95",
+          "price": "50.00",
           "availability": "https://schema.org/InStock"
         }
       }
@@ -201,7 +201,7 @@
     button, input, select, textarea { font-family:inherit; }
     .hero-intro-title, .hero-intro-title-mobile, .palette-title, .configurator-heading, .showcase-heading, .cart-dialog-title, .cart-item-title, .faq-title, .faq-list summary, .footer-kicker { font-family:var(--font-heading); font-synthesis:none; font-weight:400; }
     .option-label, .header-left-nav a, .navigation a, .cart-action { font-family:var(--font-display); }
-    .mobile-hero-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
+    .hero-upload-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
     .showcase-gallery { display:none; }
     .showcase-track { display:contents; }
     .showcase-mobile-viewport { display:none; }
@@ -253,7 +253,7 @@
     .swatch.is-selected .swatch-colour { outline:1px solid var(--brown); outline-offset:4px; }
     .swatch-label { display:block; margin-top:9px; color:var(--muted); font-size:10px; font-weight:500; letter-spacing:.1em; line-height:1.2; text-transform:uppercase; }
     .configurator { width:min(60%,350px); max-height:0; margin-top:0; overflow:hidden; opacity:0; transform:translateY(12px); transition:max-height 260ms ease, margin-top 260ms ease, opacity 220ms ease, transform 260ms ease; }
-    .configurator.is-open { max-height:640px; margin-top:56px; opacity:1; transform:none; }
+    .configurator.is-open { height:auto; max-height:none; margin-top:56px; overflow:visible; opacity:1; transform:none; }
     .configurator-heading { margin:0 0 14px; font-size:13px; letter-spacing:.07em; line-height:1.15; text-transform:uppercase; }
     .product-name { margin:0; padding:0 0 24px; border-bottom:1px solid var(--divider); font-family:var(--font-display); font-size:12px; letter-spacing:.06em; line-height:1.2; text-align:center; text-transform:uppercase; }
     .option-row { border-top:1px solid var(--divider); }
@@ -284,7 +284,7 @@
     .purchase-button:disabled #purchase-label, .purchase-button:disabled .purchase-price { color:rgba(60,42,33,.42); }
     .purchase-error { margin:8px 0 0; color:var(--muted); font-size:10px; font-weight:500; letter-spacing:.035em; line-height:1.45; text-align:left; }
     @media (prefers-reduced-motion:reduce) { .purchase-button #purchase-label::after { transition:none; } }
-    .upload-section { display:grid; gap:18px; padding:28px 0 22px; border-top:0; }
+    .upload-section { --uploader-flow-gap:18px; display:grid; row-gap:var(--uploader-flow-gap); padding:28px 0 22px; border-top:0; scroll-margin-top:calc(var(--header-height) + 24px); }
     .upload-section[hidden] { display:none; }
     .upload-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0; font-size:var(--checkout-meta-size); font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
     .upload-progress { margin-left:auto; color:var(--muted); font-weight:400; white-space:nowrap; }
@@ -293,15 +293,34 @@
     .reset-images-button { padding:0; border:0; background:none; color:var(--muted); font:inherit; font-size:9px; letter-spacing:.1em; cursor:pointer; text-transform:uppercase; }
     .reset-images-button[hidden] { display:none; }
     .reset-images-button:hover { color:var(--brown); text-decoration:underline; text-underline-offset:4px; }
-    .upload-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .photo-sets { display:grid; height:auto; gap:22px; overflow:visible; }
+    .photo-set { display:grid; height:auto; gap:10px; overflow:visible; }
+    .photo-set.is-new { animation:photo-set-reveal 260ms ease-out both; }
+    @keyframes photo-set-reveal { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+    .photo-set-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .photo-set-label { margin:0; color:var(--muted); font-size:9px; font-weight:500; letter-spacing:.1em; line-height:1.2; text-transform:uppercase; }
+    .remove-photo-set { padding:0; border:0; background:none; color:var(--muted); font:inherit; font-size:9px; letter-spacing:.1em; cursor:pointer; text-decoration:underline; text-underline-offset:4px; text-transform:uppercase; }
+    .remove-photo-set:hover { color:var(--brown); }
+    .upload-grid { display:grid; height:auto; grid-template-columns:repeat(3,1fr); gap:12px; overflow:visible; }
+    .add-photo-set-button { width:100%; min-height:44px; margin-block:0; padding:11px 14px; border:1px solid var(--divider); background:transparent; color:var(--brown); font:inherit; font-size:10px; font-weight:600; letter-spacing:.1em; line-height:1.2; cursor:pointer; text-transform:uppercase; }
+    .add-photo-set-button:hover { background:rgba(182,109,77,.10); }
     .image-slot { position:relative; aspect-ratio:54 / 86; overflow:visible; border:1px solid var(--divider); background:rgba(182,109,77,.10); box-shadow:0 2px 10px rgba(60,42,33,.06); }
     .slot-picker { position:absolute; inset:0; display:grid; place-items:center; padding:8px; border:0; background:transparent; color:var(--muted); font-family:"Chunky Upload Plus", "Goudy Bookletter 1911"; font-size:22px; font-weight:600; line-height:1; cursor:pointer; }
     .slot-picker[hidden] { display:none; }
     .slot-picker:hover { background:rgba(182,109,77,.18); }
     .slot-preview { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
+    .slot-replace-button { position:absolute; right:5px; bottom:5px; left:5px; z-index:4; min-height:25px; padding:4px 6px; border:1px solid rgba(255,247,226,.7); background:rgba(60,42,33,.68); color:var(--light); font:inherit; font-size:8px; font-weight:600; letter-spacing:.1em; line-height:1; cursor:pointer; opacity:0; text-transform:uppercase; transition:opacity 180ms ease; }
+    .image-slot:hover .slot-replace-button, .slot-replace-button:focus-visible { opacity:1; }
     .image-remove-button { position:absolute; top:4px; right:4px; z-index:5; display:grid; place-items:center; width:18px; height:18px; padding:0 0 2px; border:1px solid var(--divider); border-radius:50%; background:rgba(255,247,226,.9); color:var(--brown); font:inherit; font-size:14px; font-weight:300; line-height:1; cursor:pointer; opacity:0; transform:none; transition:opacity 180ms ease, background 180ms ease; }
     .image-slot:hover .image-remove-button, .image-remove-button:focus-visible { opacity:1; }
     .image-remove-button:hover { background:var(--cream); }
+    .slot-upload-status { position:absolute; inset:auto 5px 36px; z-index:4; display:flex; align-items:center; justify-content:center; gap:6px; min-height:25px; padding:5px 7px; border:1px solid rgba(255,247,226,.7); background:rgba(60,42,33,.78); color:var(--light); font-size:8px; font-weight:600; letter-spacing:.08em; line-height:1.2; text-align:center; text-transform:uppercase; }
+    .slot-upload-status[hidden] { display:none; }
+    .slot-upload-spinner { width:10px; height:10px; flex:0 0 auto; border:1px solid rgba(255,247,226,.45); border-top-color:var(--light); border-radius:50%; animation:slot-upload-spin 700ms linear infinite; }
+    .slot-upload-retry { padding:0; border:0; background:none; color:inherit; font:inherit; font-weight:600; letter-spacing:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-transform:inherit; }
+    .slot-upload-status.is-complete { right:auto; min-height:20px; padding:3px 6px; background:rgba(60,42,33,.62); }
+    @keyframes slot-upload-spin { to { transform:rotate(360deg); } }
+    @media (prefers-reduced-motion:reduce) { .slot-upload-spinner { animation:none; } }
     .upload-input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
     #cropperOverlay { display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding:24px; background:rgba(60,42,33,.78); }
     #cropperDialog { display:flex; flex-direction:column; width:min(720px,100%); height:min(760px,calc(100vh - 48px)); gap:18px; padding:22px; border:1px solid rgba(255,247,226,.35); background:var(--cream); color:var(--brown); }
@@ -328,7 +347,7 @@
       .cropper-actions button:hover { text-decoration:none; }
       .cropper-actions #saveCrop { border-color:var(--brown); background:var(--brown); color:var(--light); }
     }
-    @media (prefers-reduced-motion:reduce) { .image-remove-button, .cropper-progress-bar { transition:none; } }
+    @media (prefers-reduced-motion:reduce) { .photo-set.is-new { animation:none; } .image-remove-button, .slot-replace-button, .cropper-progress-bar { transition:none; } }
     @media (min-width:1101px) {
       :root { --announcement-height:40px; --header-height:48px; }
       .homepage { position:relative; display:block; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
@@ -343,12 +362,12 @@
       .palette-panel.has-selection .palette { transform:none; }
       .palette-heading-row { margin-bottom:20px; }
       .palette-title { margin-bottom:0; }
-      .configurator { position:static; width:min(86%,560px); margin:0; transform:translateY(12px); }
+      .configurator { position:static; width:min(86%,672px); margin:0; transform:translateY(12px); }
       .configurator.is-open { margin-top:44px; transform:none; }
       .configurator-heading { margin-bottom:10px; }
       .option-row[data-option="order"] .option-label { padding:10px 0 10px; }
       .option-row[data-option="order"] .option-choices { height:62px; }
-      .upload-section { gap:14px; padding:18px 0 16px; }
+      .upload-section { padding:18px 0 16px; }
       .upload-grid { gap:10px; }
       .image-slot { aspect-ratio:54 / 86; }
       .purchase-row { margin-top:8px; padding-top:4px; }
@@ -356,8 +375,6 @@
     @media (min-width:1101px) {
       .palette { transform:scale(1.2); transform-origin:center center; }
       .palette-panel.has-selection .palette { transform:scale(1.2); }
-      .configurator { transform:translateY(12px) scale(1.2); transform-origin:center top; }
-      .configurator.is-open { transform:scale(1.2); }
     }
     .site-footer { padding:40px 7.4% 22px; background:var(--walnut); color:var(--light); font-family:var(--font-body); }
     .footer-grid { display:grid; grid-template-columns:1fr 1fr; align-items:start; gap:10%; max-width:1100px; margin:0 auto; }
@@ -568,24 +585,24 @@
       .hero-left-image, .hero-detail-image { display:none; }
       .hero-image { position:absolute; top:0; right:0; bottom:0; left:0; z-index:1; display:block; width:100%; height:100%; object-fit:cover; object-position:46% 64%; }
       .homepage::after { position:absolute; top:40%; right:0; bottom:0; left:0; z-index:2; content:""; pointer-events:none; background:linear-gradient(to bottom,transparent 0%,rgba(60,42,33,.08) 20%,rgba(60,42,33,.72) 100%); }
-      .hero-intro { position:absolute; right:20px; bottom:calc(104px + env(safe-area-inset-bottom)); left:20px; z-index:3; width:auto; margin:0; color:var(--light); text-align:center; }
+      .hero-intro { position:absolute; right:20px; bottom:calc(32px + env(safe-area-inset-bottom)); left:20px; z-index:3; width:auto; margin:0; color:var(--light); text-align:center; }
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
-      .hero-intro-title-mobile { display:block; margin:0; font-size:clamp(27px,9.5vw,40px); letter-spacing:.01em; line-height:1.08; }
+      .hero-intro-title-mobile { display:block; max-width:min(100%,720px); margin:0 auto; font-size:clamp(32px,6vw,52px); letter-spacing:.01em; line-height:1.08; text-wrap:balance; }
       .hero-intro-copy-mobile, .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
-      .mobile-hero-cta { position:absolute; right:auto; bottom:calc(32px + env(safe-area-inset-bottom)); left:50%; z-index:3; display:grid; place-items:center; width:48px; height:48px; margin:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--light); transform:translateX(-50%); }
-      .mobile-hero-cta svg { display:block; width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
+      .hero-upload-cta { display:inline-flex; min-height:46px; align-items:center; justify-content:center; margin-top:clamp(18px,3vw,28px); padding:11px 21px; border:1px solid currentColor; background:transparent; color:var(--light); font-family:var(--font-display); font-size:clamp(12px,1.8vw,14px); font-weight:600; letter-spacing:.095em; line-height:1.2; text-transform:uppercase; transition:background-color 180ms ease,color 180ms ease; }
+      .hero-upload-cta:hover { background:var(--light); color:var(--brown); }
       .palette-spread { grid-template-columns:1fr; height:auto; min-height:0; overflow-x:clip; overflow-y:visible; }
       .palette-panel { overflow:visible; }
       .palette { width:100%; max-width:340px; min-width:0; transform:scale(.95); transform-origin:center top; }
       .palette-heading-row { gap:12px; }
       .swatches { column-gap:10px; }
-      .configurator { width:100%; max-width:100%; transform:translateY(12px) scale(.95); transform-origin:center top; }
-      .configurator.is-open { height:auto; max-height:none; margin-top:48px; overflow:visible; transform:scale(.95); }
+      .configurator { width:95%; max-width:95%; transform:translateY(12px); }
+      .configurator.is-open { height:auto; max-height:none; margin-top:48px; overflow:visible; transform:none; }
       .option-row[data-option="order"] .option-choices { gap:8px clamp(32px,8vw,64px); height:92px; }
       .choice { min-height:44px; font-size:11px; }
-      .upload-section { width:100%; margin-right:auto; margin-left:auto; gap:14px; padding:20px 0 12px; }
+      .upload-section { width:100%; margin-right:auto; margin-left:auto; padding:20px 0 12px; }
       .upload-heading { min-height:24px; padding:0 10px; }
-      .upload-grid { width:100%; height:auto; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+      .upload-grid { width:100%; height:auto; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
       .image-slot { width:100%; min-width:0; aspect-ratio:54 / 86; }
       .purchase-row { margin-top:8px; padding:4px 0 clamp(52px,14vw,76px); }
       .purchase-button { min-height:44px; }
@@ -622,12 +639,12 @@
       .hero-left-image, .hero-detail-image { display:none; }
       .hero-image { position:absolute; top:0; right:0; bottom:0; left:0; z-index:1; display:block; width:100%; height:100%; object-fit:cover; object-position:50% 50%; }
       .homepage::after { position:absolute; top:40%; right:0; bottom:0; left:0; z-index:2; content:""; pointer-events:none; background:linear-gradient(to bottom,transparent 0%,rgba(60,42,33,.08) 20%,rgba(60,42,33,.72) 100%); }
-      .hero-intro { position:absolute; right:6%; bottom:calc(132px + env(safe-area-inset-bottom)); left:6%; z-index:3; width:auto; margin:0 auto; color:var(--light); text-align:center; }
+      .hero-intro { position:absolute; right:6%; bottom:calc(44px + env(safe-area-inset-bottom)); left:6%; z-index:3; width:auto; margin:0 auto; color:var(--light); text-align:center; }
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
-      .hero-intro-title-mobile { display:block; margin:0; font-size:clamp(48px,4.6vw,70px); letter-spacing:.01em; line-height:1.08; }
+      .hero-intro-title-mobile { display:block; max-width:min(100%,980px); margin:0 auto; font-size:clamp(46px,4.35vw,66px); letter-spacing:.01em; line-height:1.08; text-wrap:balance; }
       .hero-intro-copy-mobile { display:none; }
-      .mobile-hero-cta { position:absolute; right:auto; bottom:calc(44px + env(safe-area-inset-bottom)); left:50%; z-index:3; display:grid; place-items:center; width:56px; height:56px; margin:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--light); transform:translateX(-50%); }
-      .mobile-hero-cta svg { display:block; width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round; }
+      .hero-upload-cta { display:inline-flex; min-height:48px; align-items:center; justify-content:center; margin-top:28px; padding:12px 24px; border:1px solid currentColor; background:transparent; color:var(--light); font-family:var(--font-display); font-size:13px; font-weight:600; letter-spacing:.095em; line-height:1.2; text-transform:uppercase; transition:background-color 180ms ease,color 180ms ease; }
+      .hero-upload-cta:hover { background:var(--light); color:var(--brown); }
       .floating-graphic { display:none !important; }
       .graphic-02, .graphic-83 { display:none !important; }
       .graphic-71, .mobile-graphic-281 { display:block !important; position:absolute; z-index:0; pointer-events:none; }
@@ -664,7 +681,7 @@
     .palette-panel:not(.has-pictures) .purchase-row { padding-top:10px; padding-bottom:36px; }
     @media (min-width:1101px) {
       .palette-panel { height:auto; min-height:0; padding:152px 6vw 128px; }
-      .palette-panel.has-pictures { padding:96px 6vw 208px; }
+      .palette-panel.has-pictures { padding:96px 6vw 72px; }
       .palette-panel:not(.has-pictures) .configurator.is-open { margin-top:46px; }
     }
     @media (max-width:1100px) {
@@ -676,7 +693,9 @@
       .palette-panel:not(.has-pictures) .purchase-row { padding-top:8px; padding-bottom:32px; }
     }
     @media (max-width:1100px) {
-      .upload-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0 10px; }
+      .photo-set-header, .add-photo-set-button { margin-right:10px; margin-left:10px; width:calc(100% - 20px); }
+      .upload-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:0 10px; }
+      .slot-replace-button { opacity:.88; }
     }
     /* One native horizontal canvas; prints retain their complete intrinsic proportions. */
     .showcase-gallery { position:relative; isolation:isolate; display:block; width:100%; margin:0; padding:0; overflow:hidden; background:#FFF7E1; color:#171412; }
@@ -851,15 +870,15 @@
       <source media="(min-width: 1101px)" srcset="Assets/coffee/hero-desktop-f7048e.webp" type="image/webp" width="2560" height="1707">
       <img class="hero-image" src="Assets/coffee/hero-mobile-DSCF1619.jpg" width="3925" height="5887" alt="Tiny timber frame and printed photos on a warm tabletop" fetchpriority="high">
     </picture>
-    <a class="mobile-hero-cta" href="#colour-palette" aria-label="Scroll to frame configuration"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15M6 13l6 6 6-6"/></svg></a>
     <img class="floating-graphic graphic-71" src="Assets/graphics/71.png" alt="" aria-hidden="true">
     <img class="floating-graphic graphic-83" src="Assets/graphics/83.png" alt="" aria-hidden="true">
     <img class="floating-graphic mobile-graphic-281" src="Assets/graphics/281.png" alt="" aria-hidden="true">
     <div class="hero-intro">
-      <h2 class="hero-intro-title hero-intro-title-desktop">Tiny frames, made for your pictures.</h2>
+      <h2 class="hero-intro-title hero-intro-title-desktop">Some memories deserve a home.</h2>
       <p class="hero-intro-copy hero-intro-copy-desktop">An 80 × 80 mm solid timber frame designed to hold the photos you actually want around you.</p>
       <a class="hero-intro-link hero-intro-link-desktop" href="#colour-palette">Create your frame <span class="hero-intro-arrow" aria-hidden="true">→</span></a>
-      <h2 class="hero-intro-title-mobile">Tiny frames.<br>Big memories.</h2>
+      <h2 class="hero-intro-title-mobile">Some memories deserve a home.</h2>
+      <a class="hero-upload-cta" href="#upload-section">Choose Memories</a>
       <p class="hero-intro-copy-mobile">An 80 × 80 mm solid timber frame for your favourite pictures.</p>
     </div>
   </main>
@@ -867,29 +886,21 @@
   <section class="palette-spread" id="colour-palette" aria-label="Editorial colour palette and frame configurator">
     <div class="palette-panel">
       <div class="palette">
-        <div class="palette-heading-row"><h2 class="palette-title">CHOOSE COLOUR / STAIN</h2></div>
+        <div class="palette-heading-row"><h2 class="palette-title">FRAME COLOUR</h2></div>
         <div class="swatches">
           <div class="swatch is-selected"><button class="swatch-button" type="button" data-colour="Oak" aria-pressed="true"><span class="swatch-colour swatch-colour--oak"></span><span class="swatch-label">Oak</span></button></div>
           <div class="swatch"><button class="swatch-button" type="button" data-colour="Walnut" aria-pressed="false"><span class="swatch-colour swatch-colour--walnut"></span><span class="swatch-label">Walnut</span></button></div>
         </div>
       </div>
       <div class="configurator" id="configurator" aria-hidden="true">
-        <p class="product-name">Frame + Eight Photos</p>
+        <p class="product-name" id="product-name">Frame &amp; Photos</p>
         <div class="upload-section" id="upload-section" aria-hidden="false">
-          <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 8 Added</span></p>
+          <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 3 Added</span></p>
           <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
-          <div class="upload-grid" aria-label="Upload eight photos">
-            <div class="image-slot" data-slot="0"><button class="slot-picker" type="button" aria-label="Add images starting at photo 01">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-            <div class="image-slot" data-slot="1"><button class="slot-picker" type="button" aria-label="Add images starting at photo 02">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-            <div class="image-slot" data-slot="2"><button class="slot-picker" type="button" aria-label="Add images starting at photo 03">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-            <div class="image-slot" data-slot="3"><button class="slot-picker" type="button" aria-label="Add images starting at photo 04">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-            <div class="image-slot" data-slot="4"><button class="slot-picker" type="button" aria-label="Add images starting at photo 05">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-            <div class="image-slot" data-slot="5"><button class="slot-picker" type="button" aria-label="Add images starting at photo 06">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-            <div class="image-slot" data-slot="6"><button class="slot-picker" type="button" aria-label="Add images starting at photo 07">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-            <div class="image-slot" data-slot="7"><button class="slot-picker" type="button" aria-label="Add images starting at photo 08">+</button><input class="upload-input" type="file" accept="image/*" multiple></div>
-          </div>
+          <div class="photo-sets" id="photo-sets" aria-label="Photo upload sets"></div>
+          <button class="add-photo-set-button" id="add-photo-set" type="button">+ Add Another 3 Photos — $6</button>
         </div>
-        <div class="purchase-row"><button class="purchase-button" type="button"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">64.95</span></span><span id="purchase-label">Add to cart</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
+        <div class="purchase-row"><button class="purchase-button" type="button"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">56.00</span></span><span id="purchase-label">Add to cart</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
       </div>
     </div>
   </section>
@@ -1047,7 +1058,6 @@
     </div>
   </dialog>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-  <script src="print-sheet.js"></script>
   <script>
     const configurator = document.getElementById("configurator");
     const faqDialog = document.getElementById("faq-dialog");
@@ -1222,23 +1232,36 @@
     });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
-    const PRODUCT_PRICE = 64.95;
-    const PRODUCT_ID = "tiny_frame_8_pictures";
+    const BASE_FRAME_PRICE = 50;
+    const PHOTO_SET_PRICE = 6;
+    const VARIABLE_PRODUCT_ID = "tiny_frame_photo_sets";
+    const LEGACY_PRODUCT_ID = "tiny_frame_8_pictures";
+    const LEGACY_PRODUCT_PRICE = 64.95;
     const SHIPPING_PRICE = 10;
     function normalizeOrderType(value) {
       const normalized = String(value || "").trim().toLowerCase();
-      if (["frame-plus-pictures", "frame + eight photos", "frame plus eight photos", "frame + 8 photos", "frame plus 8 photos", "frame + 8 pictures", "frame plus 8 pictures"].includes(normalized)) return "frame-plus-pictures";
+      if (["frame-plus-pictures", "frame + eight photos", "frame plus eight photos", "frame + 8 photos", "frame plus 8 photos", "frame + 8 pictures", "frame plus 8 pictures"].includes(normalized)) return "legacy-eight-photos";
+      if (normalized === "frame-only" || normalized === "frame only" || /^frame \+ \d+ photos$/.test(normalized)) return "photo-sets";
       return "";
     }
-    function productPriceFor(value) {
-      return normalizeOrderType(value) ? PRODUCT_PRICE : null;
+    function photoSetCountFor(item) {
+      const explicit = Number(item?.photoSetCount);
+      if (Number.isInteger(explicit) && explicit >= 0) return explicit;
+      const match = String(item?.order || item || "").match(/^Frame \+ (\d+) Photos$/i);
+      return match && Number(match[1]) % 3 === 0 ? Number(match[1]) / 3 : 0;
     }
-    function productIdFor(value) {
-      return normalizeOrderType(value) ? PRODUCT_ID : "";
+    function productPriceFor(item) {
+      const order = item?.order || item;
+      if (normalizeOrderType(order) === "legacy-eight-photos") return LEGACY_PRODUCT_PRICE;
+      if (normalizeOrderType(order) === "photo-sets") return BASE_FRAME_PRICE + (photoSetCountFor(item) * PHOTO_SET_PRICE);
+      return null;
     }
-    const selections = { colour: "Oak", order: "Frame + Eight Photos" };
-    const orderType = "frame-plus-pictures";
-    const orderPrice = PRODUCT_PRICE;
+    function productIdFor(item) {
+      const order = item?.order || item;
+      if (item?.productType === LEGACY_PRODUCT_ID || normalizeOrderType(order) === "legacy-eight-photos") return LEGACY_PRODUCT_ID;
+      return normalizeOrderType(order) === "photo-sets" ? VARIABLE_PRODUCT_ID : "";
+    }
+    const selections = { colour: "Oak", order: "Frame + 3 Photos" };
 
     function selectColour(colour, reveal = true) {
       selections.colour = colour;
@@ -1257,8 +1280,12 @@
     swatchButtons.forEach((button) => button.addEventListener("click", () => selectColour(button.dataset.colour)));
     const overlay = document.getElementById("cropperOverlay");
     const cropImage = document.getElementById("cropperImage");
-    const uploadedImages = Array(8).fill(null);
-    const imageSlots = [...document.querySelectorAll(".image-slot")];
+    const uploadedImages = Array(3).fill(null);
+    let imageSlots = [];
+    let photoSetCount = 1;
+    const photoSetsContainer = document.getElementById("photo-sets");
+    const addPhotoSetButton = document.getElementById("add-photo-set");
+    const configPrice = document.getElementById("config-price");
     const progress = document.getElementById("upload-progress");
     const imageQualityWarning = document.getElementById("image-quality-warning");
     const resetImagesButton = document.getElementById("reset-images");
@@ -1279,6 +1306,11 @@
     let cropperReturnFocus = null;
     let pendingUploadScrollPosition = null;
     let cropperScrollRestoreFrame = null;
+    let individualUploadSession = null;
+    let individualUploadSessionPromise = null;
+    const individualUploadQueue = [];
+    let activeIndividualUploads = 0;
+    const MAX_CONCURRENT_PHOTO_UPLOADS = 2;
 
     function revoke(url) { if (url) URL.revokeObjectURL(url); }
     function capturePageScroll() {
@@ -1356,8 +1388,25 @@
       }
       cropImage.removeAttribute("src");
     }
+    function getSelectedPhotoCount() {
+      return uploadedImages.filter(Boolean).length;
+    }
+    function getConfiguredPhotoCount() {
+      return photoSetCount * 3;
+    }
+    function getConfiguredPrice() {
+      return BASE_FRAME_PRICE + (photoSetCount * PHOTO_SET_PRICE);
+    }
+    function getConfiguredOrderName() {
+      const photoCount = getConfiguredPhotoCount();
+      return photoCount ? `Frame + ${photoCount} Photos` : "Frame Only";
+    }
+    function updateProductSummary() {
+      selections.order = getConfiguredOrderName();
+      configPrice.textContent = getConfiguredPrice().toFixed(2);
+    }
     function canAddToCart() {
-      return uploadedImages.filter(Boolean).length === 8;
+      return uploadedImages.length === 0 || uploadedImages.every((entry) => entry?.uploadState === "complete");
     }
     function updateAddToCartState() {
       const enabled = canAddToCart();
@@ -1365,31 +1414,43 @@
       purchaseButton.setAttribute("aria-disabled", String(!enabled));
     }
     function updateUploadProgress() {
-      const count = uploadedImages.filter(Boolean).length;
+      const count = getSelectedPhotoCount();
+      const configuredCount = getConfiguredPhotoCount();
+      const uploadedCount = uploadedImages.filter((entry) => entry?.uploadState === "complete").length;
+      const failedCount = uploadedImages.filter((entry) => entry?.uploadState === "failed").length;
       const lowResolutionEntries = uploadedImages.filter((entry) => entry?.effectivePpi < 200);
-      progress.textContent = `${count} / 8 Added`;
+      progress.textContent = configuredCount
+        ? `${uploadedCount} / ${configuredCount} uploaded${count > uploadedCount ? ` · ${count} selected` : ""}`
+        : "0 photos selected";
       resetImagesButton.hidden = count === 0;
-      imageQualityWarning.hidden = lowResolutionEntries.length === 0;
       imageQualityWarning.textContent = lowResolutionEntries.length
         ? `${lowResolutionEntries.length === 1 ? "One picture is" : `${lowResolutionEntries.length} pictures are`} below 200 PPI at print size. A higher-resolution original is recommended.`
-        : "";
+        : failedCount
+          ? `${failedCount === 1 ? "One photo upload needs" : `${failedCount} photo uploads need`} to be retried.`
+          : "";
+      imageQualityWarning.hidden = lowResolutionEntries.length === 0 && failedCount === 0;
+      updateProductSummary();
       updateAddToCartState();
     }
 
     resetImagesButton.addEventListener("click", () => {
       uploadedImages.forEach((entry, index) => {
+        cancelIndividualPhotoUpload(entry);
         revoke(entry?.url);
         uploadedImages[index] = null;
         imageSlots[index].querySelector(".upload-input").value = "";
         renderSlot(imageSlots[index], null);
       });
       updateUploadProgress();
+      schedulePersistDraftUploads();
     });
 
     function renderSlot(slot, entry) {
       const picker = slot.querySelector(".slot-picker");
       slot.querySelector(".slot-preview")?.remove();
       slot.querySelector(".image-remove-button")?.remove();
+      slot.querySelector(".slot-replace-button")?.remove();
+      slot.querySelector(".slot-upload-status")?.remove();
       picker.hidden = Boolean(entry);
       if (!entry) return;
 
@@ -1399,6 +1460,13 @@
       image.alt = entry.original.name;
       slot.prepend(image);
 
+      const replace = document.createElement("button");
+      replace.className = "slot-replace-button";
+      replace.type = "button";
+      replace.textContent = "Replace";
+      replace.setAttribute("aria-label", `Replace photo ${Number(slot.dataset.slot) + 1}`);
+      replace.addEventListener("click", () => triggerSlotPicker(slot, replace));
+
       const remove = document.createElement("button");
       remove.className = "image-remove-button";
       remove.type = "button";
@@ -1406,13 +1474,37 @@
       remove.setAttribute("aria-label", "Remove image");
       remove.addEventListener("click", () => {
         const index = Number(slot.dataset.slot);
+        cancelIndividualPhotoUpload(uploadedImages[index]);
         revoke(uploadedImages[index].url);
         uploadedImages[index] = null;
         slot.querySelector(".upload-input").value = "";
         renderSlot(slot, null);
         updateUploadProgress();
+        schedulePersistDraftUploads();
       });
-      slot.append(remove);
+      const status = document.createElement("div");
+      status.className = "slot-upload-status";
+      if (["queued", "uploading"].includes(entry.uploadState)) {
+        const spinner = document.createElement("span");
+        spinner.className = "slot-upload-spinner";
+        spinner.setAttribute("aria-hidden", "true");
+        const label = document.createElement("span");
+        label.textContent = entry.uploadState === "queued" ? "Waiting…" : "Uploading…";
+        status.append(spinner, label);
+      } else if (entry.uploadState === "failed") {
+        const retry = document.createElement("button");
+        retry.className = "slot-upload-retry";
+        retry.type = "button";
+        retry.textContent = "Upload failed · Retry";
+        retry.addEventListener("click", () => retryIndividualPhotoUpload(entry));
+        status.append(retry);
+      } else if (entry.uploadState === "complete") {
+        status.classList.add("is-complete");
+        status.textContent = "Uploaded";
+      } else {
+        status.hidden = true;
+      }
+      slot.append(replace, remove, status);
     }
 
     function updateCropperNavigation() {
@@ -1499,7 +1591,7 @@
       const scrollPosition = unlockCropperPageScroll();
       closingBatch?.items.forEach((item) => {
         revoke(item.sourceUrl);
-        if (!closingBatch.committed) revoke(item.draft?.entry?.url);
+        if (!item.committed) revoke(item.draft?.entry?.url);
       });
       sourceUrl = null;
       activeSlotIndex = null;
@@ -1512,12 +1604,16 @@
       restorePageScrollAfterLayout(scrollPosition, Promise.resolve());
     }
 
-    imageSlots.forEach((slot) => {
+    function triggerSlotPicker(slot, returnFocus = slot.querySelector(".slot-picker")) {
       const input = slot.querySelector(".upload-input");
-      slot.querySelector(".slot-picker").addEventListener("click", () => {
-        pendingUploadScrollPosition = capturePageScroll();
-        input.click();
-      });
+      input.dataset.returnFocus = returnFocus.className;
+      pendingUploadScrollPosition = capturePageScroll();
+      input.click();
+    }
+
+    function bindUploadSlot(slot) {
+      const input = slot.querySelector(".upload-input");
+      slot.querySelector(".slot-picker").addEventListener("click", () => triggerSlotPicker(slot));
       input.addEventListener("change", () => {
         const selectedFiles = Array.from(input.files || []);
         input.value = "";
@@ -1530,7 +1626,123 @@
         if (selectedFiles.length > targetSlots.length) {
           window.alert(`Only ${targetSlots.length} more ${targetSlots.length === 1 ? "photo can" : "photos can"} be added.`);
         }
-        startCropBatch(acceptedFiles, targetSlots.slice(0, acceptedFiles.length), slot.querySelector(".slot-picker"));
+        const returnFocus = input.dataset.returnFocus === "slot-replace-button"
+          ? slot.querySelector(".slot-replace-button")
+          : slot.querySelector(".slot-picker");
+        startCropBatch(acceptedFiles, targetSlots.slice(0, acceptedFiles.length), returnFocus);
+      });
+    }
+
+    function createPhotoSlot(index) {
+      const slot = document.createElement("div");
+      slot.className = "image-slot";
+      slot.dataset.slot = String(index);
+      const picker = document.createElement("button");
+      picker.className = "slot-picker";
+      picker.type = "button";
+      picker.textContent = "+";
+      picker.setAttribute("aria-label", `Add images starting at photo ${String(index + 1).padStart(2, "0")}`);
+      const input = document.createElement("input");
+      input.className = "upload-input";
+      input.type = "file";
+      input.accept = "image/*";
+      input.multiple = true;
+      slot.append(picker, input);
+      bindUploadSlot(slot);
+      renderSlot(slot, uploadedImages[index]);
+      return slot;
+    }
+
+    function renderPhotoSets(newSetIndex = -1) {
+      photoSetsContainer.replaceChildren();
+      imageSlots = [];
+      for (let setIndex = 0; setIndex < photoSetCount; setIndex += 1) {
+        const section = document.createElement("section");
+        section.className = "photo-set";
+        if (setIndex === newSetIndex) section.classList.add("is-new");
+        section.dataset.photoSet = String(setIndex);
+        const header = document.createElement("div");
+        header.className = "photo-set-header";
+        const label = document.createElement("p");
+        label.className = "photo-set-label";
+        label.textContent = `Photo set ${setIndex + 1} · 3 photos`;
+        const removeSet = document.createElement("button");
+        removeSet.className = "remove-photo-set";
+        removeSet.type = "button";
+        removeSet.textContent = "Remove set";
+        removeSet.setAttribute("aria-label", `Remove photo set ${setIndex + 1}`);
+        removeSet.addEventListener("click", () => removePhotoSet(setIndex));
+        header.append(label, removeSet);
+        const grid = document.createElement("div");
+        grid.className = "upload-grid";
+        grid.setAttribute("aria-label", `Upload photos ${setIndex * 3 + 1} to ${setIndex * 3 + 3}`);
+        for (let offset = 0; offset < 3; offset += 1) {
+          const slot = createPhotoSlot((setIndex * 3) + offset);
+          imageSlots.push(slot);
+          grid.append(slot);
+        }
+        section.append(header, grid);
+        photoSetsContainer.append(section);
+      }
+    }
+
+    function appendPhotoSet(setIndex) {
+      const section = document.createElement("section");
+      section.className = "photo-set is-new";
+      section.dataset.photoSet = String(setIndex);
+      const header = document.createElement("div");
+      header.className = "photo-set-header";
+      const label = document.createElement("p");
+      label.className = "photo-set-label";
+      label.textContent = `Photo set ${setIndex + 1} · 3 photos`;
+      const removeSet = document.createElement("button");
+      removeSet.className = "remove-photo-set";
+      removeSet.type = "button";
+      removeSet.textContent = "Remove set";
+      removeSet.setAttribute("aria-label", `Remove photo set ${setIndex + 1}`);
+      removeSet.addEventListener("click", () => removePhotoSet(setIndex));
+      header.append(label, removeSet);
+      const grid = document.createElement("div");
+      grid.className = "upload-grid";
+      grid.setAttribute("aria-label", `Upload photos ${setIndex * 3 + 1} to ${setIndex * 3 + 3}`);
+      for (let offset = 0; offset < 3; offset += 1) {
+        const slot = createPhotoSlot((setIndex * 3) + offset);
+        imageSlots.push(slot);
+        grid.append(slot);
+      }
+      section.append(header, grid);
+      photoSetsContainer.append(section);
+    }
+
+    function preserveScrollDuringLayoutChange(callback) {
+      const position = capturePageScroll();
+      callback();
+      scrollToPagePosition(position);
+      requestAnimationFrame(() => scrollToPagePosition(position));
+    }
+
+    function removePhotoSet(setIndex) {
+      if (!Number.isInteger(setIndex) || setIndex < 0 || setIndex >= photoSetCount) return;
+      preserveScrollDuringLayoutChange(() => {
+        uploadedImages.slice(setIndex * 3, (setIndex * 3) + 3).forEach((entry) => {
+          cancelIndividualPhotoUpload(entry);
+          revoke(entry?.url);
+        });
+        uploadedImages.splice(setIndex * 3, 3);
+        photoSetCount -= 1;
+        renderPhotoSets();
+        updateUploadProgress();
+        schedulePersistDraftUploads();
+      });
+    }
+
+    addPhotoSetButton.addEventListener("click", () => {
+      preserveScrollDuringLayoutChange(() => {
+        uploadedImages.push(null, null, null);
+        photoSetCount += 1;
+        appendPhotoSet(photoSetCount - 1);
+        updateUploadProgress();
+        schedulePersistDraftUploads();
       });
     });
 
@@ -1616,11 +1828,16 @@
         const entry = {
           original:item.file,
           crop,
+          photoId:`ph_${crypto.randomUUID().replaceAll("-", "")}`,
           revision:crypto.randomUUID(),
           effectivePpi:Math.min(printCanvas.width / (54 / 25.4), printCanvas.height / (86 / 25.4)),
           printBlob,
           previewBlob,
-          url:URL.createObjectURL(previewBlob)
+          url:URL.createObjectURL(previewBlob),
+          uploadState:"queued",
+          uploadError:"",
+          objectKey:"",
+          uploadController:null
         };
         item.draft = { crop, entry };
         return entry;
@@ -1647,7 +1864,22 @@
       setCropperProcessing(true);
       const pictureNumber = cropBatch.currentIndex + 1;
       try {
-        await saveCurrentCropDraft();
+        const entry = await saveCurrentCropDraft();
+        const item = cropBatch.items[cropBatch.currentIndex];
+        const previousEntry = uploadedImages[item.slotIndex];
+        if (previousEntry !== entry) {
+          cancelIndividualPhotoUpload(previousEntry);
+          revoke(previousEntry?.url);
+        }
+        uploadedImages[item.slotIndex] = entry;
+        item.committed = true;
+        renderSlot(imageSlots[item.slotIndex], entry);
+        enqueueIndividualPhotoUpload(entry);
+        window.dispatchEvent(new CustomEvent("image-cropped", {
+          detail:{ previewBlob:entry.previewBlob, crop:entry.crop, slotIndex:item.slotIndex, aspectRatio:frameAspectRatio }
+        }));
+        window.croppedImageBlob = entry.previewBlob;
+        updateUploadProgress();
         if (direction === "back") {
           cropBatch.currentIndex -= 1;
           loadCurrentCropPhoto();
@@ -1658,20 +1890,7 @@
           loadCurrentCropPhoto();
           return;
         }
-        cropBatch.items.forEach((item) => {
-          const entry = item.draft?.entry;
-          if (!entry) throw new Error("One of the selected photos is missing its saved crop.");
-          revoke(uploadedImages[item.slotIndex]?.url);
-          uploadedImages[item.slotIndex] = entry;
-          renderSlot(imageSlots[item.slotIndex], entry);
-          window.dispatchEvent(new CustomEvent("image-cropped", {
-            detail:{ previewBlob:entry.previewBlob, crop:entry.crop, slotIndex:item.slotIndex, aspectRatio:frameAspectRatio }
-          }));
-        });
-        const lastEntry = cropBatch.items.at(-1).draft.entry;
-        window.croppedImageBlob = lastEntry.previewBlob;
         cropBatch.committed = true;
-        updateUploadProgress();
         closeCropper();
       } catch (error) {
         console.error("Crop batch navigation failed", { pictureNumber, errorName:String(error?.name || "Error") });
@@ -1694,6 +1913,7 @@
         revoke(item.draft?.entry?.url);
       });
     });
+    renderPhotoSets();
     updateUploadProgress();
     selectColour("Oak", true);
     configurator.closest(".palette-panel").classList.add("has-pictures");
@@ -1732,7 +1952,7 @@
           if (!keep) cartIdentityWasMigrated = true;
           return keep;
         }).slice(0, 10).map((item) => {
-          const currentPrice = productPriceFor(item?.order);
+          const currentPrice = productPriceFor(item);
           const cartItemId = /^ci_[a-f0-9]{32}$/.test(String(item?.cartItemId || ""))
             ? item.cartItemId
             : createCartItemId();
@@ -2059,6 +2279,7 @@
     }
     const CART_PREVIEW_DB_NAME = "goodFrameCartPhotoPreviews";
     const CART_PREVIEW_STORE_NAME = "previews";
+    const DRAFT_UPLOAD_STORE_NAME = "draftUploads";
     const cartPhotoPreviewMemory = new Map();
     let cartPreviewDatabasePromise = null;
     let photoPreviewReturnFocus = null;
@@ -2071,11 +2292,14 @@
           reject(new Error("Picture preview storage is unavailable."));
           return;
         }
-        const request = indexedDB.open(CART_PREVIEW_DB_NAME, 1);
+        const request = indexedDB.open(CART_PREVIEW_DB_NAME, 2);
         request.addEventListener("upgradeneeded", () => {
           const database = request.result;
           if (!database.objectStoreNames.contains(CART_PREVIEW_STORE_NAME)) {
             database.createObjectStore(CART_PREVIEW_STORE_NAME, { keyPath:"cartItemId" });
+          }
+          if (!database.objectStoreNames.contains(DRAFT_UPLOAD_STORE_NAME)) {
+            database.createObjectStore(DRAFT_UPLOAD_STORE_NAME, { keyPath:"id" });
           }
         });
         request.addEventListener("success", () => resolve(request.result));
@@ -2097,9 +2321,107 @@
       }));
     }
 
+    function runDraftUploadTransaction(mode, operation) {
+      return openCartPreviewDatabase().then((database) => new Promise((resolve, reject) => {
+        const transaction = database.transaction(DRAFT_UPLOAD_STORE_NAME, mode);
+        const store = transaction.objectStore(DRAFT_UPLOAD_STORE_NAME);
+        const request = operation(store);
+        let result;
+        request.addEventListener("success", () => { result = request.result; });
+        request.addEventListener("error", () => reject(request.error || new Error("Draft photo storage failed.")));
+        transaction.addEventListener("complete", () => resolve(result));
+        transaction.addEventListener("abort", () => reject(transaction.error || new Error("Draft photo storage was interrupted.")));
+      }));
+    }
+
+    let draftUploadPersistenceTimer = null;
+    function schedulePersistDraftUploads() {
+      window.clearTimeout(draftUploadPersistenceTimer);
+      draftUploadPersistenceTimer = window.setTimeout(() => { void persistDraftUploads(); }, 120);
+    }
+    async function persistDraftUploads() {
+      if (!individualUploadSession && uploadedImages.every((entry) => !entry)) return;
+      const entries = uploadedImages.map((entry) => entry ? {
+        originalName:String(entry.original?.name || "Photo"),
+        crop:entry.crop,
+        photoId:entry.photoId,
+        revision:entry.revision,
+        effectivePpi:entry.effectivePpi,
+        previewBlob:entry.previewBlob,
+        printBlob:entry.uploadState === "complete" ? null : entry.printBlob,
+        uploadState:entry.uploadState,
+        uploadError:entry.uploadError,
+        objectKey:entry.objectKey
+      } : null);
+      try {
+        await runDraftUploadTransaction("readwrite", (store) => store.put({
+          id:"active",
+          session:individualUploadSession,
+          photoSetCount,
+          entries,
+          savedAt:Date.now()
+        }));
+      } catch (error) {
+        console.warn("Draft photo progress could not be saved in this browser.", { errorName:String(error?.name || "Error") });
+      }
+    }
+    function clearPersistedDraftUploads() {
+      window.clearTimeout(draftUploadPersistenceTimer);
+      void runDraftUploadTransaction("readwrite", (store) => store.delete("active")).catch(() => {});
+    }
+    async function restoreDraftUploads() {
+      if (uploadedImages.some(Boolean)) return;
+      let draft;
+      try { draft = await runDraftUploadTransaction("readonly", (store) => store.get("active")); }
+      catch { return; }
+      if (
+        !draft || !/^tf_[a-f0-9]{32}$/.test(String(draft.session?.uploadSessionId || "")) ||
+        !/^ut_[a-f0-9]{64}$/.test(String(draft.session?.uploadToken || "")) ||
+        !/^ci_[a-f0-9]{32}$/.test(String(draft.session?.cartItemId || "")) ||
+        !Number.isInteger(draft.photoSetCount) || draft.photoSetCount < 0 ||
+        !Array.isArray(draft.entries) || draft.entries.length !== draft.photoSetCount * 3
+      ) return;
+      let storedPhotos = [];
+      try {
+        const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });
+        const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/status?${parameters}`, {
+          headers:{ "X-Upload-Token":draft.session.uploadToken },
+          cache:"no-store"
+        });
+        if (response.ok) storedPhotos = (await response.json()).photos || [];
+      } catch {
+        // Local blobs still allow interrupted photos to retry when connectivity returns.
+      }
+      const storedById = new Map(storedPhotos.map((photo) => [photo.photoId, photo]));
+      individualUploadSession = draft.session;
+      photoSetCount = draft.photoSetCount;
+      uploadedImages.splice(0, uploadedImages.length, ...draft.entries.map((saved) => {
+        if (!saved?.previewBlob || !saved.photoId || !saved.revision) return null;
+        const stored = storedById.get(saved.photoId);
+        const complete = stored?.revision === saved.revision;
+        return {
+          original:{ name:saved.originalName || "Photo" },
+          crop:saved.crop,
+          photoId:saved.photoId,
+          revision:saved.revision,
+          effectivePpi:saved.effectivePpi,
+          previewBlob:saved.previewBlob,
+          printBlob:saved.printBlob,
+          url:URL.createObjectURL(saved.previewBlob),
+          uploadState:complete ? "complete" : saved.printBlob ? "queued" : "failed",
+          uploadError:complete ? "" : "Upload needs to be retried",
+          objectKey:complete ? stored.objectKey : "",
+          uploadController:null
+        };
+      }));
+      renderPhotoSets();
+      updateUploadProgress();
+      uploadedImages.filter((entry) => entry?.uploadState === "queued").forEach(enqueueIndividualPhotoUpload);
+    }
+
     async function saveCartPhotoPreviews(cartItemId, entries) {
       const previewBlobs = entries.map((entry) => entry?.previewBlob instanceof Blob ? entry.previewBlob : entry?.printBlob);
-      if (!/^ci_[a-f0-9]{32}$/.test(cartItemId) || previewBlobs.length !== 8 || previewBlobs.some((blob) => !(blob instanceof Blob))) {
+      if (!/^ci_[a-f0-9]{32}$/.test(cartItemId) || previewBlobs.length < 1 || previewBlobs.length % 3 !== 0 || previewBlobs.some((blob) => !(blob instanceof Blob))) {
         console.error("Cart picture previews could not be associated with the product.");
         return false;
       }
@@ -2153,7 +2475,8 @@
       const record = await getCartPhotoPreviews(item.cartItemId);
       if (!photoPreviewDialog.open) return;
       photoPreviewGrid.replaceChildren();
-      if (!record?.pictures || record.pictures.length !== 8) {
+      const expectedPhotoCount = Number(item.photoCount || photoSetCountFor(item) * 3 || (normalizeOrderType(item.order) === "legacy-eight-photos" ? 8 : 0));
+      if (!record?.pictures || record.pictures.length !== expectedPhotoCount) {
         const unavailable = document.createElement("p");
         unavailable.className = "photo-preview-message";
         unavailable.textContent = "Picture previews are unavailable for this item.";
@@ -2180,19 +2503,181 @@
     function createUploadReference() {
       return `tf_${crypto.randomUUID().replaceAll("-", "")}`;
     }
-    let printUploadAttempt = null;
-    function getPrintUploadFingerprint(entries, frameColour) {
-      return JSON.stringify({
-        frameColour,
-        pictures:entries.map((entry) => ({
-          name:entry.original.name,
-          size:entry.original.size,
-          type:entry.original.type,
-          lastModified:entry.original.lastModified,
-          revision:entry.revision,
-          crop:entry.crop
-        }))
+    function createUploadToken() {
+      return `ut_${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
+    }
+    function renderIndividualUploadEntry(entry) {
+      const index = uploadedImages.indexOf(entry);
+      if (index >= 0 && imageSlots[index]) renderSlot(imageSlots[index], entry);
+      updateUploadProgress();
+      schedulePersistDraftUploads();
+    }
+    async function ensureIndividualUploadSession() {
+      if (individualUploadSession) return individualUploadSession;
+      if (individualUploadSessionPromise) return individualUploadSessionPromise;
+      const session = {
+        uploadSessionId:createUploadReference(),
+        uploadToken:createUploadToken(),
+        cartItemId:createCartItemId()
+      };
+      individualUploadSessionPromise = (async () => {
+        let response;
+        try {
+          response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/session`, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify(session)
+          });
+        } catch (error) {
+          throw new Error(isLocalPreview
+            ? "The local photo service is unavailable. Start the checkout Worker on port 8787 and retry."
+            : "The photo service could not be reached. Check your connection and retry.");
+        }
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || "The photo upload could not be started.");
+        individualUploadSession = session;
+        schedulePersistDraftUploads();
+        return session;
+      })();
+      try {
+        return await individualUploadSessionPromise;
+      } finally {
+        individualUploadSessionPromise = null;
+      }
+    }
+    async function deleteIndividualRemotePhoto(entry) {
+      if (!individualUploadSession || !entry?.photoId) return;
+      try {
+        await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/photo`, {
+          method:"DELETE",
+          headers:{
+            "Content-Type":"application/json",
+            "X-Upload-Token":individualUploadSession.uploadToken
+          },
+          body:JSON.stringify({
+            uploadSessionId:individualUploadSession.uploadSessionId,
+            photoId:entry.photoId
+          })
+        });
+      } catch {
+        // Abandoned draft files are also removed by the Worker's scheduled cleanup.
+      }
+    }
+    function cancelIndividualPhotoUpload(entry) {
+      if (!entry) return;
+      entry.cancelled = true;
+      entry.uploadController?.abort();
+      if (entry.objectKey) void deleteIndividualRemotePhoto(entry);
+    }
+    function enqueueIndividualPhotoUpload(entry) {
+      if (!entry || !(entry.printBlob instanceof Blob) || entry.cancelled) return;
+      entry.uploadState = "queued";
+      entry.uploadError = "";
+      individualUploadQueue.push(entry);
+      renderIndividualUploadEntry(entry);
+      pumpIndividualUploadQueue();
+    }
+    function retryIndividualPhotoUpload(entry) {
+      if (!entry || entry.uploadState !== "failed") return;
+      entry.cancelled = false;
+      enqueueIndividualPhotoUpload(entry);
+    }
+    async function uploadIndividualPhoto(entry) {
+      const session = await ensureIndividualUploadSession();
+      if (entry.cancelled || !uploadedImages.includes(entry)) return;
+      const position = uploadedImages.indexOf(entry) + 1;
+      const form = new FormData();
+      form.append("upload_session_id", session.uploadSessionId);
+      form.append("photo_id", entry.photoId);
+      form.append("revision", entry.revision);
+      form.append("position", String(position));
+      form.append("file", entry.printBlob, `${entry.photoId}.jpg`);
+      let lastError = null;
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        if (entry.cancelled || !uploadedImages.includes(entry)) return;
+        const controller = new AbortController();
+        entry.uploadController = controller;
+        try {
+          const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/photo`, {
+            method:"POST",
+            headers:{ "X-Upload-Token":session.uploadToken },
+            body:form,
+            signal:controller.signal
+          });
+          const result = await response.json().catch(() => ({}));
+          if (response.ok && result.success && result.photo?.objectKey) {
+            if (entry.cancelled || !uploadedImages.includes(entry)) {
+              entry.objectKey = String(result.photo.objectKey);
+              void deleteIndividualRemotePhoto(entry);
+              return;
+            }
+            entry.objectKey = String(result.photo.objectKey);
+            entry.uploadState = "complete";
+            entry.uploadError = "";
+            entry.uploadController = null;
+            renderIndividualUploadEntry(entry);
+            return;
+          }
+          lastError = new Error(result.error || "The photo could not be uploaded.");
+          if (![429, 500, 502, 503, 504].includes(response.status)) break;
+        } catch (error) {
+          if (error?.name === "AbortError" && entry.cancelled) return;
+          lastError = error;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 600 * (2 ** attempt)));
+      }
+      if (!entry.cancelled && uploadedImages.includes(entry)) {
+        entry.uploadState = "failed";
+        entry.uploadError = String(lastError?.message || "Upload failed");
+        entry.uploadController = null;
+        renderIndividualUploadEntry(entry);
+      }
+    }
+    function pumpIndividualUploadQueue() {
+      while (activeIndividualUploads < MAX_CONCURRENT_PHOTO_UPLOADS && individualUploadQueue.length) {
+        const entry = individualUploadQueue.shift();
+        if (!entry || entry.cancelled || !uploadedImages.includes(entry) || entry.uploadState !== "queued") continue;
+        activeIndividualUploads += 1;
+        entry.uploadState = "uploading";
+        renderIndividualUploadEntry(entry);
+        uploadIndividualPhoto(entry).finally(() => {
+          activeIndividualUploads -= 1;
+          pumpIndividualUploadQueue();
+        });
+      }
+    }
+    async function finalizeIndividualUploads(entries, frameColour) {
+      if (!entries.length || entries.some((entry) => entry?.uploadState !== "complete" || !entry.objectKey)) {
+        throw new Error("Please wait for every photo to finish uploading.");
+      }
+      const session = await ensureIndividualUploadSession();
+      const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/finalize`, {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "X-Upload-Token":session.uploadToken
+        },
+        body:JSON.stringify({
+          uploadSessionId:session.uploadSessionId,
+          cartItemId:session.cartItemId,
+          frameColour,
+          photoSetCount:entries.length / 3,
+          photos:entries.map((entry, index) => ({
+            photoId:entry.photoId,
+            objectKey:entry.objectKey,
+            revision:entry.revision,
+            position:index + 1
+          }))
+        })
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || "The uploaded photos could not be confirmed.");
+      return { ...session, photos:entries.map((entry, index) => ({
+        photoId:entry.photoId,
+        objectKey:entry.objectKey,
+        revision:entry.revision,
+        position:index + 1
+      })) };
     }
     function getStoredCheckoutContext() {
       try {
@@ -2232,6 +2717,8 @@
       const fingerprint = JSON.stringify(cartItems.map((item) => ({
         cartItemId:item.cartItemId,
         order:normalizeOrderType(item.order),
+        photoSetCount:photoSetCountFor(item),
+        photoCount:Number(item.photoCount || 0),
         colour:item.colour,
         quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
         uploadReference:item.uploadSessionId || item.uploadReference || ""
@@ -2264,209 +2751,6 @@
         id:checkoutRequestId
       }));
     }
-    async function createFullResolutionPrintCrop(entry, pictureNumber) {
-      if (!(entry?.printBlob instanceof Blob) || entry.printBlob.type !== "image/jpeg" || !entry.printBlob.size) {
-        throw new Error(`Picture ${pictureNumber} does not have a confirmed full-resolution crop.`);
-      }
-      return entry.printBlob;
-    }
-    async function uploadPrintSheet(entries, frameColour, reportProgress = () => {}) {
-      if (!Array.isArray(entries) || entries.length !== 8 || entries.some((entry) => !(entry?.original instanceof File) || !entry?.crop)) {
-        throw new Error("All eight original photos and crop settings are required.");
-      }
-      if (!globalThis.GoodFramePrintSheet?.createA4PrintSheetPdf) {
-        throw new Error("The print-sheet builder did not load. Please refresh and try again.");
-      }
-      const fingerprint = getPrintUploadFingerprint(entries, frameColour);
-      if (!printUploadAttempt || printUploadAttempt.fingerprint !== fingerprint) {
-        printUploadAttempt = {
-          fingerprint,
-          cartItemId:createCartItemId(),
-          productCode:createProductCode(),
-          pdfBlob:null,
-          promise:null,
-          result:null
-        };
-      }
-      if (printUploadAttempt.result) {
-        reportProgress({ phase:"complete", percent:100 });
-        return printUploadAttempt.result;
-      }
-      if (printUploadAttempt.promise) return printUploadAttempt.promise;
-
-      const attempt = printUploadAttempt;
-      attempt.promise = (async () => {
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 600000);
-        const uploadPdfWithProgress = (form) => new Promise((resolve, reject) => {
-          const request = new XMLHttpRequest();
-          const handleAbort = () => request.abort();
-          request.open("POST", `${checkoutApiBaseUrl}/tiny-frame-pdf/upload`);
-          request.upload.addEventListener("loadstart", () => reportProgress({ phase:"uploading", percent:0 }));
-          request.upload.addEventListener("progress", (event) => {
-            if (!event.lengthComputable || !event.total) {
-              reportProgress({ phase:"uploading-indeterminate" });
-              return;
-            }
-            const percent = Math.min(99, Math.floor((event.loaded / event.total) * 100));
-            reportProgress({ phase:"uploading", percent });
-          });
-          request.addEventListener("load", () => {
-            controller.signal.removeEventListener("abort", handleAbort);
-            resolve({
-              ok:request.status >= 200 && request.status < 300,
-              status:request.status,
-              text:async () => request.responseText,
-              headers:{ get:(name) => request.getResponseHeader(name) }
-            });
-          });
-          const rejectRequest = (name) => {
-            controller.signal.removeEventListener("abort", handleAbort);
-            const error = new Error(name === "AbortError" ? "Upload aborted" : "Upload network error");
-            error.name = name;
-            reject(error);
-          };
-          request.addEventListener("error", () => rejectRequest("NetworkError"));
-          request.addEventListener("abort", () => rejectRequest("AbortError"));
-          controller.signal.addEventListener("abort", handleAbort, { once:true });
-          request.send(form);
-        });
-        const requestUploadStage = async (endpoint, options, stage) => {
-          let response;
-          let responseText;
-          try {
-            response = endpoint === "/tiny-frame-pdf/upload"
-              ? await uploadPdfWithProgress(options.body)
-              : await fetch(`${checkoutApiBaseUrl}${endpoint}`, { ...options, signal:controller.signal });
-            responseText = await response.text();
-          } catch (error) {
-            const timedOut = error?.name === "AbortError";
-            console.error("Picture upload request failed", {
-              endpoint,
-              stage:timedOut ? "request_timeout" : stage,
-              errorName:String(error?.name || "Error")
-            });
-            const customerError = new Error(timedOut
-              ? "The upload took too long. Your photos are still selected — please try again."
-              : isLocalPreview
-                ? "The local image-upload service is unavailable. Start the checkout Worker on port 8787 and try again."
-                : "The image-upload service could not be reached. Your photos are still selected — please try again.");
-            customerError.code = timedOut ? "UPLOAD_TIMEOUT" : "UPLOAD_NETWORK_ERROR";
-            throw customerError;
-          }
-          let result = {};
-          try { result = responseText ? JSON.parse(responseText) : {}; }
-          catch {
-            console.error("Picture upload returned an invalid response", {
-              endpoint,
-              status:response.status,
-              stage,
-              contentType:response.headers.get("Content-Type") || ""
-            });
-          }
-          if (!response.ok || !result.success) {
-            console.error("Picture upload stage was rejected", {
-              endpoint,
-              status:response.status,
-              code:String(result.code || "INVALID_UPLOAD_RESPONSE"),
-              stage:String(result.stage || stage),
-              diagnosticId:String(result.diagnostic_id || "")
-            });
-            const customerMessage = response.status === 413
-              ? "The full-quality print sheet is too large to upload. Please contact us for help with this order."
-              : response.status === 400
-                ? String(result.error || "One or more photos could not be processed. Please review them and try again.")
-                : String(result.error || "We could not prepare your photos. Your selections are still here, so please try again.");
-            const customerError = new Error(customerMessage);
-            customerError.code = String(result.code || "UPLOAD_FAILED");
-            throw customerError;
-          }
-          return result;
-        };
-        const recoverCompletedUpload = async () => {
-          reportProgress({ phase:"confirming" });
-          const parameters = new URLSearchParams({
-            cart_item_id:attempt.cartItemId,
-            product_code:attempt.productCode
-          });
-          for (const delay of [250, 1000, 2500]) {
-            await new Promise((resolve) => window.setTimeout(resolve, delay));
-            try {
-              const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-pdf/status?${parameters}`, {
-                method:"GET",
-                cache:"no-store",
-                signal:controller.signal
-              });
-              if (!response.ok) continue;
-              const result = await response.json();
-              if (result?.success && result.productCode === attempt.productCode) return result;
-            } catch (error) {
-              if (error?.name === "AbortError") throw error;
-            }
-          }
-          return null;
-        };
-        try {
-          for (let codeAttempt = 0; codeAttempt < 5; codeAttempt += 1) {
-            if (!attempt.pdfBlob) {
-              reportProgress({ phase:"preparing" });
-              const printCrops = [];
-              for (let index = 0; index < entries.length; index += 1) {
-                printCrops.push(await createFullResolutionPrintCrop(entries[index], index + 1));
-              }
-              attempt.pdfBlob = await globalThis.GoodFramePrintSheet.createA4PrintSheetPdf(printCrops, {
-                productCode:attempt.productCode
-              });
-              if (attempt.pdfBlob.size > 95 * 1024 * 1024) {
-                attempt.pdfBlob = null;
-                throw new Error("The full-quality print sheet exceeds the upload limit. Please contact us for help with this order.");
-              }
-            }
-            const form = new FormData();
-            form.append("cart_item_id", attempt.cartItemId);
-            form.append("product_code", attempt.productCode);
-            form.append("frame_colour", frameColour);
-            form.append("pdf", attempt.pdfBlob, `${attempt.productCode}-print-sheet.pdf`);
-            let result;
-            try {
-              result = await requestUploadStage("/tiny-frame-pdf/upload", { method:"POST", body:form }, "uploading_pdf");
-            } catch (error) {
-              if (error?.code === "UPLOAD_NETWORK_ERROR") {
-                const recovered = await recoverCompletedUpload();
-                if (recovered) result = recovered;
-                else throw error;
-              } else {
-                if (error?.code !== "PRODUCT_CODE_COLLISION" || codeAttempt === 4) throw error;
-                attempt.productCode = createProductCode();
-                attempt.pdfBlob = null;
-                continue;
-              }
-            }
-            const productCode = String(result.productCode || "");
-            const objectKey = String(result.pdf?.objectKey || "");
-            if (productCode !== attempt.productCode || objectKey !== `${productCode}/${productCode}-print-sheet.pdf`) {
-              throw new Error("The print sheet was uploaded but its product reference was missing. Please try again.");
-            }
-            reportProgress({ phase:"complete", percent:100 });
-            return {
-              uploadSessionId:objectKey,
-              printSheetReference:objectKey,
-              cartItemId:attempt.cartItemId,
-              productCode
-            };
-          }
-          throw new Error("A unique product reference could not be assigned. Please try again.");
-        } finally {
-          window.clearTimeout(timeout);
-        }
-      })();
-      try {
-        attempt.result = await attempt.promise;
-        return attempt.result;
-      } finally {
-        attempt.promise = null;
-      }
-    }
     async function registerArtworkManifest(uploadReference, artworkObjectKeys) {
       if (!/^tf_[a-f0-9]{32}$/.test(uploadReference) || artworkObjectKeys.length !== 8) {
         throw new Error("The picture upload reference is invalid.");
@@ -2497,7 +2781,7 @@
     async function preparePictureOrdersForCheckout() {
       let cartChanged = false;
       for (const item of cartItems) {
-        if (normalizeOrderType(item.order) !== "frame-plus-pictures" || item.uploadSessionId || item.uploadReference) continue;
+        if (normalizeOrderType(item.order) !== "legacy-eight-photos" || item.uploadSessionId || item.uploadReference) continue;
         const keys = Array.isArray(item.artworkObjectKeys) ? item.artworkObjectKeys : [];
         if (keys.length !== 8) {
           throw new Error("A Frame + Eight Photos item is missing uploaded photos. Please remove it and add it again.");
@@ -2539,11 +2823,13 @@
             checkoutRequestId:getCheckoutRequestId(),
             shippingCountry:confirmedCountry,
             items:cartItems.map((item) => ({
-              productType:productIdFor(item.order),
+              productType:productIdFor(item),
               cartItemId:item.cartItemId,
               size:"80x80mm",
               frameColour:item.colour,
               quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
+              photoSetCount:photoSetCountFor(item),
+              photoCount:Number(item.photoCount || (normalizeOrderType(item.order) === "legacy-eight-photos" ? 8 : photoSetCountFor(item) * 3)),
               productCode:item.productCode || "",
               uploadReference:item.uploadSessionId || item.uploadReference || ""
             }))
@@ -2581,26 +2867,36 @@
         }
       }
       cartItems.forEach((item) => {
+        const itemPhotoCount = Number(item.photoCount || (normalizeOrderType(item.order) === "legacy-eight-photos" ? 8 : photoSetCountFor(item) * 3));
+        const itemName = itemPhotoCount ? `Frame + ${itemPhotoCount} Photos` : "Frame Only";
         const row = document.createElement("article");
         row.className = "cart-item";
         const details = document.createElement("div");
         details.className = "cart-item-details";
         const title = document.createElement("h3");
         title.className = "cart-item-title";
-        title.textContent = `${item.colour} · Frame + Eight Photos`;
+        title.textContent = `${item.colour} · ${itemName}`;
         const titleRow = document.createElement("div");
         titleRow.className = "cart-item-title-row";
         titleRow.append(title);
-        if (normalizeOrderType(item.order) === "frame-plus-pictures") {
+        if (itemPhotoCount > 0) {
           const previewButton = document.createElement("button");
           previewButton.className = "cart-photo-preview-button";
           previewButton.type = "button";
-          previewButton.setAttribute("aria-label", `Preview photos for ${item.colour} Frame + Eight Photos`);
+          previewButton.setAttribute("aria-label", `Preview ${itemPhotoCount} photos for ${item.colour} frame`);
           previewButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.2-4 3 2.7 2.2-2 3.6 3.3"/></svg>';
           previewButton.addEventListener("click", () => { void openCartPhotoPreview(item, previewButton); });
           titleRow.append(previewButton);
         }
         details.append(titleRow);
+        const photoSummary = document.createElement("p");
+        photoSummary.className = "cart-item-option";
+        photoSummary.textContent = itemPhotoCount
+          ? normalizeOrderType(item.order) === "legacy-eight-photos"
+            ? `${itemPhotoCount} photos · previous 8-photo format`
+            : `${itemPhotoCount} photos · ${item.photoSetCount || Math.ceil(itemPhotoCount / 3)} ${Number(item.photoSetCount || Math.ceil(itemPhotoCount / 3)) === 1 ? "set" : "sets"}`
+          : "Frame without photos";
+        details.append(photoSummary);
         const aside = document.createElement("div");
         aside.className = "cart-item-aside";
         const price = document.createElement("span");
@@ -2706,25 +3002,18 @@
       cartNotice = "";
       showPurchaseError();
       purchaseButton.disabled = true;
-      const withPictures = orderType === "frame-plus-pictures";
-      if (withPictures) openUploadProgressOverlay();
-      document.getElementById("purchase-label").textContent = withPictures ? "PREPARING PRINTS…" : "ADDING…";
+      const configuredPhotoCount = getConfiguredPhotoCount();
+      const configuredPhotoSetCount = photoSetCount;
+      const withPictures = configuredPhotoCount > 0;
+      document.getElementById("purchase-label").textContent = "ADDING…";
       try {
         let uploadSession = null;
         let cartItemId = createCartItemId();
         let productCode = "";
         if (withPictures) {
-          document.getElementById("purchase-label").textContent = "UPLOADING PRINTS…";
-          uploadSession = await uploadPrintSheet(uploadedImages, selections.colour, updateUploadProgressOverlay);
+          uploadSession = await finalizeIndividualUploads(uploadedImages, selections.colour);
           await saveCartPhotoPreviews(uploadSession.cartItemId, uploadedImages);
-          if (cartItems.some((item) => item.uploadSessionId === uploadSession.uploadSessionId)) {
-            await new Promise((resolve) => window.setTimeout(resolve, 180));
-            await closeUploadProgressOverlay();
-            openCart();
-            return;
-          }
           cartItemId = uploadSession.cartItemId;
-          productCode = uploadSession.productCode;
         }
         const cartItem = {
           id:Date.now(),
@@ -2732,23 +3021,26 @@
           productCode,
           colour:selections.colour,
           order:selections.order,
-          price:orderPrice,
+          price:getConfiguredPrice(),
           quantity:1,
+          productType:VARIABLE_PRODUCT_ID,
+          frameColour:selections.colour.toLowerCase(),
+          photoSetCount:configuredPhotoSetCount,
+          photoCount:configuredPhotoCount,
           ...(uploadSession ? {
-            productType:"frame_8_pictures",
-            frameColour:selections.colour.toLowerCase(),
             uploadSessionId:uploadSession.uploadSessionId,
-            printSheetReference:uploadSession.printSheetReference
+            photoFiles:uploadSession.photos
           } : {})
         };
-        cartItems.push(cartItem);
+        const existingItemIndex = uploadSession
+          ? cartItems.findIndex((item) => item.uploadSessionId === uploadSession.uploadSessionId)
+          : -1;
+        if (existingItemIndex >= 0) cartItems.splice(existingItemIndex, 1, cartItem);
+        else cartItems.push(cartItem);
         saveCart();
+        clearPersistedDraftUploads();
         window.goodFrameCartItem = cartItem;
         renderCart();
-        if (withPictures) {
-          await new Promise((resolve) => window.setTimeout(resolve, 180));
-          await closeUploadProgressOverlay();
-        }
         openCart();
       } catch (error) {
         console.error("Add to cart failed", {
@@ -2756,11 +3048,7 @@
           code:String(error?.code || "ADD_TO_CART_FAILED"),
           errorName:String(error?.name || "Error")
         });
-        if (withPictures) {
-          showUploadProgressError(String(error?.message || "Upload failed — please try again."));
-        } else {
-          showPurchaseError(`${error.message} Please try again.`);
-        }
+        showPurchaseError(`${error.message} Please try again.`);
       } finally {
         addToCartInFlight = false;
         if (!uploadProgressDialog.open) uploadOverlayBusy = false;
@@ -3033,6 +3321,7 @@
       shippingPrice = restoredCheckoutShipping.amount / 100;
     }
     renderCart();
+    void restoreDraftUploads();
     void loadShippingQuote(restoredCheckoutShipping?.country || "");
     handleCheckoutReturn();
   </script>

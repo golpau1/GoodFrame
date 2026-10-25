@@ -74,7 +74,10 @@
     <script>
         async function loadOrders() {
             try {
-                const response = await fetch('/admin/orders');
+                const key = getAdminApiKey();
+                if (!key) throw new Error('An admin API key is required.');
+                const response = await fetch('/admin/orders', { headers:{ Authorization:`Bearer ${key}` } });
+                if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Orders could not be loaded.');
                 const orders = await response.json();
                 
                 const ordersContent = document.getElementById('ordersContent');
@@ -115,13 +118,18 @@
                                 <div class="item">
                                     <div class="item-name">${item.finalProductName}</div>
                                     <div class="unique-code">🆔 CODE: #${item.uniqueCode}</div>
+                                    ${/^\d{5}$/.test(String(item.uniqueCode || '')) ? `
+                                        <div class="file-info" id="assets-${item.uniqueCode}">
+                                            <button type="button" onclick="loadProductAssets('${item.uniqueCode}')">View ordered photos</button>
+                                        </div>
+                                    ` : ''}
                                     <div class="file-info">
                                         📁 Find files: ${item.originalObjectKey && item.thumbnailObjectKey
                                             ? `<strong>${item.originalObjectKey}</strong> and <strong>${item.thumbnailObjectKey}</strong>`
                                             : `<strong>${item.uniqueCode}_original_*</strong> and <strong>${item.uniqueCode}_thumbnail_*</strong>`}
                                     </div>
                                     <div class="item-details">
-                                        ${item.size} | ${item.orientation} | ${item.frameColor} Frame | ${item.border} | Qty: ${item.quantity} | $${item.amount.toFixed(2)}
+                                        ${item.size} | ${item.frameColor} Frame${item.photoCount ? ` | ${item.photoCount} Photos` : ''} | Qty: ${item.quantity} | $${item.amount.toFixed(2)}
                                     </div>
                                 </div>
                             `).join('')}
@@ -132,6 +140,57 @@
             } catch (error) {
                 console.error('Error loading orders:', error);
                 document.getElementById('ordersContent').innerHTML = '<div class="no-orders">Error loading orders. Please check the console.</div>';
+            }
+        }
+
+        const checkoutWorkerBaseUrl = (window.GOOD_FRAME_CHECKOUT_API_BASE_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
+
+        function getAdminApiKey() {
+            let key = sessionStorage.getItem('goodFrameAdminApiKey') || '';
+            if (!key) {
+                key = window.prompt('Enter the order-management API key') || '';
+                if (key) sessionStorage.setItem('goodFrameAdminApiKey', key);
+            }
+            return key;
+        }
+
+        async function downloadProductAsset(url, filename) {
+            const key = getAdminApiKey();
+            if (!key) return;
+            const response = await fetch(`${checkoutWorkerBaseUrl}${url}`, { headers:{ Authorization:`Bearer ${key}` } });
+            if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Download failed');
+            const objectUrl = URL.createObjectURL(await response.blob());
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename;
+            link.click();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        }
+
+        async function loadProductAssets(productCode) {
+            const container = document.getElementById(`assets-${productCode}`);
+            const key = getAdminApiKey();
+            if (!container || !key) return;
+            container.textContent = 'Loading ordered photos…';
+            try {
+                const response = await fetch(`${checkoutWorkerBaseUrl}/admin/product-assets/${productCode}`, {
+                    headers:{ Authorization:`Bearer ${key}` }
+                });
+                const assets = await response.json();
+                if (!response.ok) throw new Error(assets.error || 'Files could not be loaded');
+                container.replaceChildren();
+                const summary = document.createElement('div');
+                summary.textContent = `${assets.photoCount} photos · ${assets.frameColour || 'Frame colour unavailable'}`;
+                container.append(summary);
+                [...assets.photos, ...(assets.legacyPdf ? [assets.legacyPdf] : [])].forEach((asset) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = `Download ${asset.filename}`;
+                    button.addEventListener('click', () => downloadProductAsset(asset.downloadUrl, asset.filename).catch(error => window.alert(error.message)));
+                    container.append(button);
+                });
+            } catch (error) {
+                container.textContent = error.message;
             }
         }
         

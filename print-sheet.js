@@ -34,28 +34,37 @@
     return value.toFixed(6).replace(/\.?0+$/, "");
   }
 
-  function getA4PrintLayout() {
+  function getA4PrintLayout(photoCount = 8) {
+    if (!Number.isInteger(photoCount) || photoCount < 1) {
+      throw new Error("At least one photo is required for a print-sheet layout.");
+    }
     const threeAcrossWidth = (PHOTO_WIDTH_MM * 3) + (GAP_MM * 2);
-    const twoAcrossWidth = (PHOTO_WIDTH_MM * 2) + GAP_MM;
-    const layoutHeight = (PHOTO_HEIGHT_MM * 3) + (GAP_MM * 2);
-    const topMargin = (PAGE_HEIGHT_MM - layoutHeight) / 2;
     const threeAcrossLeft = (PAGE_WIDTH_MM - threeAcrossWidth) / 2;
-    const twoAcrossLeft = (PAGE_WIDTH_MM - twoAcrossWidth) / 2;
     const placements = [];
-
-    for (let index = 0; index < 8; index += 1) {
-      const row = Math.floor(index / 3);
-      const column = index % 3;
-      const isLastRow = row === 2;
-      const left = (isLastRow ? twoAcrossLeft : threeAcrossLeft) + (column * (PHOTO_WIDTH_MM + GAP_MM));
-      const top = topMargin + (row * (PHOTO_HEIGHT_MM + GAP_MM));
-      placements.push({
-        index,
-        xMm:left,
-        yMm:PAGE_HEIGHT_MM - top - PHOTO_HEIGHT_MM,
-        widthMm:PHOTO_WIDTH_MM,
-        heightMm:PHOTO_HEIGHT_MM
-      });
+    const pageCount = Math.ceil(photoCount / 9);
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+      const pagePhotoCount = Math.min(9, photoCount - (pageIndex * 9));
+      const rowCount = Math.ceil(pagePhotoCount / 3);
+      const layoutHeight = (PHOTO_HEIGHT_MM * rowCount) + (GAP_MM * (rowCount - 1));
+      const topMargin = (PAGE_HEIGHT_MM - layoutHeight) / 2;
+      for (let pagePhotoIndex = 0; pagePhotoIndex < pagePhotoCount; pagePhotoIndex += 1) {
+        const index = (pageIndex * 9) + pagePhotoIndex;
+        const row = Math.floor(pagePhotoIndex / 3);
+        const column = pagePhotoIndex % 3;
+        const photosInRow = Math.min(3, pagePhotoCount - (row * 3));
+        const rowWidth = (PHOTO_WIDTH_MM * photosInRow) + (GAP_MM * (photosInRow - 1));
+        const rowLeft = photosInRow === 3 ? threeAcrossLeft : (PAGE_WIDTH_MM - rowWidth) / 2;
+        const left = rowLeft + (column * (PHOTO_WIDTH_MM + GAP_MM));
+        const top = topMargin + (row * (PHOTO_HEIGHT_MM + GAP_MM));
+        placements.push({
+          index,
+          pageIndex,
+          xMm:left,
+          yMm:PAGE_HEIGHT_MM - top - PHOTO_HEIGHT_MM,
+          widthMm:PHOTO_WIDTH_MM,
+          heightMm:PHOTO_HEIGHT_MM
+        });
+      }
     }
     return placements;
   }
@@ -116,8 +125,8 @@
   }
 
   async function createA4PrintSheetPdf(croppedBlobs, { includeCutMarks = true, productCode = "" } = {}) {
-    if (!Array.isArray(croppedBlobs) || croppedBlobs.length !== 8) {
-      throw new Error("Exactly 8 saved crops are required to prepare the print sheet.");
+    if (!Array.isArray(croppedBlobs) || croppedBlobs.length < 1 || (croppedBlobs.length !== 8 && croppedBlobs.length % 3 !== 0)) {
+      throw new Error("Saved crops must be supplied in complete sets of three.");
     }
     productCode = String(productCode || "");
     if (productCode && !/^[1-9][0-9]{4}$/.test(productCode)) {
@@ -139,36 +148,42 @@
       images.push({ bytes, ...dimensions });
     }
 
-    const placements = getA4PrintLayout();
-    const imageCommands = placements.map((placement, index) => {
-      const x = placement.xMm * MM_TO_POINTS;
-      const y = placement.yMm * MM_TO_POINTS;
-      return `q ${number(PHOTO_WIDTH_POINTS)} 0 0 ${number(PHOTO_HEIGHT_POINTS)} ${number(x)} ${number(y)} cm /Im${index + 1} Do Q`;
-    });
-    const cutMarkCommands = includeCutMarks
-      ? ["0.72 G", `${number(GUIDE_WIDTH_POINTS)} w`, ...placements.map(createCutMarkCommands)]
-      : [];
-    const labelCommands = productCode ? [
-      "0 G",
-      `BT /F1 ${number(PRODUCT_CODE_LABEL_FONT_SIZE_POINTS)} Tf 1 0 0 1 ${number(82 * MM_TO_POINTS)} ${number(PRODUCT_CODE_LABEL_BASELINE_MM * MM_TO_POINTS)} Tm (PRODUCT ${productCode}) Tj ET`
-    ] : [];
-    const contentBytes = bytesFromText([...imageCommands, ...cutMarkCommands, ...labelCommands].join("\n"));
-
+    const placements = getA4PrintLayout(images.length);
+    const pageCount = Math.ceil(images.length / 9);
     const objects = [];
     objects[1] = bytesFromText("<< /Type /Catalog /Pages 2 0 R >>");
-    objects[2] = bytesFromText("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-    const imageObjectNumbers = images.map((_, index) => index + 5);
-    const fontObjectNumber = productCode ? 5 + images.length : null;
-    const xObjects = images.map((_, index) => `/Im${index + 1} ${imageObjectNumbers[index]} 0 R`).join(" ");
+    const pageObjectNumbers = Array.from({ length:pageCount }, (_, index) => 3 + (index * 2));
+    const contentObjectNumbers = pageObjectNumbers.map((value) => value + 1);
+    objects[2] = bytesFromText(`<< /Type /Pages /Kids [${pageObjectNumbers.map((value) => `${value} 0 R`).join(" ")}] /Count ${pageCount} >>`);
+    const imageObjectStart = 3 + (pageCount * 2);
+    const imageObjectNumbers = images.map((_, index) => imageObjectStart + index);
+    const fontObjectNumber = productCode ? imageObjectStart + images.length : null;
     const fontResources = fontObjectNumber ? ` /Font << /F1 ${fontObjectNumber} 0 R >>` : "";
-    objects[3] = bytesFromText(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /Text /ImageC] /XObject << ${xObjects} >>${fontResources} >> /Contents 4 0 R >>`
-    );
-    objects[4] = concatenate([
-      bytesFromText(`<< /Length ${contentBytes.length} >>\nstream\n`),
-      contentBytes,
-      bytesFromText("\nendstream")
-    ]);
+    pageObjectNumbers.forEach((pageObjectNumber, pageIndex) => {
+      const pagePlacements = placements.filter((placement) => placement.pageIndex === pageIndex);
+      const imageCommands = pagePlacements.map((placement) => {
+        const x = placement.xMm * MM_TO_POINTS;
+        const y = placement.yMm * MM_TO_POINTS;
+        return `q ${number(PHOTO_WIDTH_POINTS)} 0 0 ${number(PHOTO_HEIGHT_POINTS)} ${number(x)} ${number(y)} cm /Im${placement.index + 1} Do Q`;
+      });
+      const cutMarkCommands = includeCutMarks
+        ? ["0.72 G", `${number(GUIDE_WIDTH_POINTS)} w`, ...pagePlacements.map(createCutMarkCommands)]
+        : [];
+      const labelCommands = productCode ? [
+        "0 G",
+        `BT /F1 ${number(PRODUCT_CODE_LABEL_FONT_SIZE_POINTS)} Tf 1 0 0 1 ${number(82 * MM_TO_POINTS)} ${number(PRODUCT_CODE_LABEL_BASELINE_MM * MM_TO_POINTS)} Tm (PRODUCT ${productCode}) Tj ET`
+      ] : [];
+      const contentBytes = bytesFromText([...imageCommands, ...cutMarkCommands, ...labelCommands].join("\n"));
+      const xObjects = pagePlacements.map((placement) => `/Im${placement.index + 1} ${imageObjectNumbers[placement.index]} 0 R`).join(" ");
+      objects[pageObjectNumber] = bytesFromText(
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${number(PAGE_WIDTH_POINTS)} ${number(PAGE_HEIGHT_POINTS)}] /Resources << /ProcSet [/PDF /Text /ImageC] /XObject << ${xObjects} >>${fontResources} >> /Contents ${contentObjectNumbers[pageIndex]} 0 R >>`
+      );
+      objects[contentObjectNumbers[pageIndex]] = concatenate([
+        bytesFromText(`<< /Length ${contentBytes.length} >>\nstream\n`),
+        contentBytes,
+        bytesFromText("\nendstream")
+      ]);
+    });
     images.forEach((image, index) => {
       objects[imageObjectNumbers[index]] = [
         bytesFromText(

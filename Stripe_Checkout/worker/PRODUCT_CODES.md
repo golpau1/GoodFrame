@@ -80,6 +80,9 @@ never reused.
 - Checkout and PaymentIntent metadata contain the full product-code list.
 - Stripe idempotency and `checkout_requests` preserve codes across retries.
 - Live webhook retries update existing D1 rows and cannot create new products.
-- Picture products receive `print-sheet-#####.pdf`, with the code printed in
-  the unused bottom A4 margin outside every photo and crop mark.
-- R2 manifests, originals, processed crops, and PDFs store the same codes.
+- New picture products keep their individual 54 × 86 crops under an
+  order/product path containing the same five-digit code.
+- Historical picture products keep their existing code-named A4 PDF paths;
+  those files are not migrated, renamed, or deleted.
+- R2 manifests and D1 rows preserve the upload-session, Stripe-session, and
+  product-code relationship for both storage formats.

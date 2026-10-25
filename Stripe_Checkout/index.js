@@ -115,6 +115,58 @@ app.use(express.json({ limit: '100mb' }))
 app.set('views', path.join(__dirname, 'Views'))
 app.set('view engine', 'ejs')
 
+app.get('/admin', (req, res) => {
+    res.render('admin-orders')
+})
+
+app.get('/admin/orders', async (req, res) => {
+    const configuredAdminKey = String(process.env.ADMIN_API_KEY || '')
+    const suppliedAdminKey = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
+    if (configuredAdminKey.length < 24) {
+        return res.status(503).json({ error: 'Order management is not configured' })
+    }
+    if (suppliedAdminKey !== configuredAdminKey) {
+        return res.status(401).json({ error: 'Unauthorized' })
+    }
+    try {
+        const sessions = await stripe.checkout.sessions.list({
+            limit: 100,
+            status: 'complete',
+            expand: ['data.line_items.data.price.product']
+        })
+        const orders = sessions.data
+            .filter(session => session.payment_status === 'paid')
+            .map(session => ({
+                stripeSessionId: session.id,
+                paymentStatus: session.payment_status,
+                customerName: session.customer_details?.name || '',
+                customerEmail: session.customer_details?.email || session.customer_email || '',
+                totalAmount: Number(session.amount_total || 0) / 100,
+                currency: session.currency || 'aud',
+                createdAt: Number(session.created || 0) * 1000,
+                items: (session.line_items?.data || []).map(lineItem => {
+                    const product = lineItem.price?.product || {}
+                    const metadata = typeof product === 'object' && product ? product.metadata || {} : {}
+                    return {
+                        finalProductName: String(product.name || lineItem.description || 'Good Frame'),
+                        uniqueCode: String(metadata.product_code || ''),
+                        frameColor: String(metadata.frame_colour || ''),
+                        photoCount: Number(metadata.photo_count || 0),
+                        size: String(metadata.frame_size || '80 × 80 mm'),
+                        orientation: '',
+                        border: '',
+                        quantity: Number(lineItem.quantity || 1),
+                        amount: Number(lineItem.amount_total || 0) / 100
+                    }
+                })
+            }))
+        res.json(orders)
+    } catch (error) {
+        console.error('Order management lookup failed', { type:error?.type, code:error?.code })
+        res.status(502).json({ error: 'Orders could not be loaded from Stripe' })
+    }
+})
+
 // Serve the customer-facing order confirmation page.
 app.get('/order-confirmation', (req, res) => {
     const filePath = path.join(__dirname, '..', 'Checkout', 'success.html');
