@@ -25,7 +25,13 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /\/tiny-frame-upload\/session/);
   assert.match(html, /\/tiny-frame-upload\/photo/);
   assert.match(html, /\/tiny-frame-upload\/finalize/);
-  assert.match(html, /uploadState:\"queued\"/);
+  assert.match(html, /uploadState:\"processing\"/);
+  assert.match(html, /PHOTO_UPLOAD_REQUEST_TIMEOUT_MS/);
+  assert.match(html, /fetchWithUploadTimeout/);
+  assert.match(html, /readUploadJson/);
+  assert.match(html, /PHOTO_UPLOAD_MAX_ATTEMPTS = 4/);
+  assert.match(html, /waitForUploadRetry/);
+  assert.match(html, /\.catch\(\(error\) => failIndividualPhotoUpload\(entry, error\)\)/);
   assert.match(html, /Upload failed · Retry/);
   assert.match(html, /entry\?\.uploadState === \"complete\"/);
   assert.match(html, /finalizeIndividualUploads\(uploadedImages, selections\.colour\)/);
@@ -49,6 +55,96 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
   assert.match(html, /\.configurator\.is-open \{ height:auto; max-height:none;[^}]*overflow:visible/);
   assert.match(html, /hero-mobile-DSCF1619\.jpg/);
+});
+
+test('individual photo upload CORS allows configured storefront origins and readable Worker errors', async () => {
+  const bucket = new MemoryR2Bucket();
+  const origins = [
+    'https://goodframe.com.au',
+    'https://www.goodframe.com.au',
+    'http://localhost:4173',
+    'http://127.0.0.1:4173'
+  ];
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    ALLOWED_ORIGINS:origins.join(',')
+  };
+
+  for (const [index, origin] of origins.entries()) {
+    const preflight = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+      method:'OPTIONS',
+      headers:{
+        Origin:origin,
+        'Access-Control-Request-Method':'POST',
+        'Access-Control-Request-Headers':'content-type,x-upload-token'
+      }
+    }), env);
+    assert.equal(preflight.status, 204);
+    assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.equal(preflight.headers.get('Access-Control-Allow-Methods'), 'GET,POST,DELETE,OPTIONS');
+    assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /Content-Type/i);
+    assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /X-Upload-Token/i);
+    assert.equal(preflight.headers.get('Access-Control-Allow-Credentials'), null);
+
+    const uploadSessionId = `tf_${String(index + 1).repeat(32)}`;
+    const uploadToken = `ut_${String(index + 1).repeat(64)}`;
+    const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+      method:'POST',
+      headers:{ Origin:origin, 'Content-Type':'application/json' },
+      body:JSON.stringify({ uploadSessionId, uploadToken })
+    }), env);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.equal((await response.json()).success, true);
+    assert.ok(bucket.objects.has(`tinyframes/${uploadSessionId}/manifest.json`));
+  }
+
+  const rejectedPreflight = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'OPTIONS',
+    headers:{
+      Origin:'https://attacker.example',
+      'Access-Control-Request-Method':'POST',
+      'Access-Control-Request-Headers':'content-type'
+    }
+  }), env);
+  assert.equal(rejectedPreflight.status, 403);
+  assert.equal(rejectedPreflight.headers.get('Access-Control-Allow-Origin'), null);
+
+  const rejectedHeader = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'OPTIONS',
+    headers:{
+      Origin:origins[0],
+      'Access-Control-Request-Method':'POST',
+      'Access-Control-Request-Headers':'x-unexpected-header'
+    }
+  }), env);
+  assert.equal(rejectedHeader.status, 403);
+  assert.equal(rejectedHeader.headers.get('Access-Control-Allow-Origin'), origins[0]);
+
+  const failingEnv = {
+    ...env,
+    ARTWORK_BUCKET:{ get:async () => { throw new Error('R2 unavailable'); } }
+  };
+  const originalConsoleError = console.error;
+  const loggedErrors = [];
+  console.error = (...args) => loggedErrors.push(args);
+  let failedResponse;
+  try {
+    failedResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+      method:'POST',
+      headers:{ Origin:origins[0], 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        uploadSessionId:`tf_${'f'.repeat(32)}`,
+        uploadToken:`ut_${'f'.repeat(64)}`
+      })
+    }), failingEnv);
+  } finally {
+    console.error = originalConsoleError;
+  }
+  assert.equal(failedResponse.status, 500);
+  assert.equal(failedResponse.headers.get('Access-Control-Allow-Origin'), origins[0]);
+  assert.equal((await failedResponse.json()).code, 'WORKER_REQUEST_FAILED');
+  assert.equal(loggedErrors.length, 1);
 });
 
 test('individual cropped photos are authenticated, resumable, finalized, and promoted after payment', async () => {
@@ -86,6 +182,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       method:'POST', headers, body:form
     }), env);
     assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://goodframe.com.au');
     photos.push((await response.json()).photo);
     photos[index].revision = revision;
   }
@@ -139,6 +236,38 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   assert.equal(downloadResponse.headers.get('Content-Type'), 'image/jpeg');
   assert.equal((await downloadResponse.arrayBuffer()).byteLength, fakeJpeg().byteLength);
   database.close();
+});
+
+test('individual upload never reports success unless R2 confirms the stored object', async () => {
+  const bucket = new MemoryR2Bucket();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    ALLOWED_ORIGINS:'https://goodframe.com.au',
+    IMAGES:{ info:async () => ({ width:1080, height:1720 }) }
+  };
+  const uploadSessionId = 'tf_dddddddddddddddddddddddddddddddd';
+  const uploadToken = `ut_${'e'.repeat(64)}`;
+  const sessionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ uploadSessionId, uploadToken })
+  }), env);
+  assert.equal(sessionResponse.status, 200);
+  const normalPut = bucket.put.bind(bucket);
+  bucket.put = async (key, body, options) => key.endsWith('.jpg') ? { key } : normalPut(key, body, options);
+  const form = new FormData();
+  form.append('upload_session_id', uploadSessionId);
+  form.append('photo_id', `ph_${'f'.repeat(32)}`);
+  form.append('revision', '11111111-2222-3333-4444-555555555555');
+  form.append('position', '1');
+  form.append('file', new File([fakeJpeg()], 'photo.jpg', { type:'image/jpeg' }));
+  const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'X-Upload-Token':uploadToken },
+    body:form
+  }), env);
+  assert.equal(response.status, 500);
+  assert.equal((await response.json()).code, 'PHOTO_UPLOAD_FAILED');
 });
 
 test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () => {

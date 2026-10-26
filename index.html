@@ -1484,12 +1484,16 @@
       });
       const status = document.createElement("div");
       status.className = "slot-upload-status";
-      if (["queued", "uploading"].includes(entry.uploadState)) {
+      if (["processing", "queued", "uploading"].includes(entry.uploadState)) {
         const spinner = document.createElement("span");
         spinner.className = "slot-upload-spinner";
         spinner.setAttribute("aria-hidden", "true");
         const label = document.createElement("span");
-        label.textContent = entry.uploadState === "queued" ? "Waiting…" : "Uploading…";
+        label.textContent = entry.uploadState === "processing"
+          ? "Processing…"
+          : entry.uploadState === "queued"
+            ? "Waiting…"
+            : "Uploading…";
         status.append(spinner, label);
       } else if (entry.uploadState === "failed") {
         const retry = document.createElement("button");
@@ -1834,7 +1838,7 @@
           printBlob,
           previewBlob,
           url:URL.createObjectURL(previewBlob),
-          uploadState:"queued",
+          uploadState:"processing",
           uploadError:"",
           objectKey:"",
           uploadController:null
@@ -1874,6 +1878,7 @@
         uploadedImages[item.slotIndex] = entry;
         item.committed = true;
         renderSlot(imageSlots[item.slotIndex], entry);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
         enqueueIndividualPhotoUpload(entry);
         window.dispatchEvent(new CustomEvent("image-cropped", {
           detail:{ previewBlob:entry.previewBlob, crop:entry.crop, slotIndex:item.slotIndex, aspectRatio:frameAspectRatio }
@@ -2384,11 +2389,11 @@
       let storedPhotos = [];
       try {
         const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });
-        const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/status?${parameters}`, {
+        const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/status?${parameters}`, {
           headers:{ "X-Upload-Token":draft.session.uploadToken },
           cache:"no-store"
         });
-        if (response.ok) storedPhotos = (await response.json()).photos || [];
+        if (response.ok) storedPhotos = (await readUploadJson(response)).photos || [];
       } catch {
         // Local blobs still allow interrupted photos to retry when connectivity returns.
       }
@@ -2506,6 +2511,67 @@
     function createUploadToken() {
       return `ut_${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
     }
+    const PHOTO_UPLOAD_REQUEST_TIMEOUT_MS = Number.isFinite(Number(window.GOOD_FRAME_UPLOAD_TIMEOUT_MS))
+      ? Math.max(50, Number(window.GOOD_FRAME_UPLOAD_TIMEOUT_MS))
+      : 90000;
+    const PHOTO_UPLOAD_MAX_ATTEMPTS = 4;
+    function isRetryableUploadStatus(status) {
+      return [408, 425, 429, 500, 502, 503, 504].includes(Number(status));
+    }
+    function waitForUploadRetry(attempt) {
+      const delay = Math.min(6000, 750 * (2 ** attempt));
+      return new Promise((resolve) => window.setTimeout(resolve, delay));
+    }
+    async function fetchWithUploadTimeout(url, options = {}) {
+      const controller = new AbortController();
+      const externalSignal = options.signal;
+      let timedOut = false;
+      const forwardAbort = () => controller.abort(externalSignal?.reason);
+      if (externalSignal?.aborted) forwardAbort();
+      else externalSignal?.addEventListener("abort", forwardAbort, { once:true });
+      const timeout = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, PHOTO_UPLOAD_REQUEST_TIMEOUT_MS);
+      try {
+        return await fetch(url, { ...options, signal:controller.signal });
+      } catch (error) {
+        if (timedOut) {
+          const timeoutError = new Error("The upload timed out. Please retry.");
+          timeoutError.code = "UPLOAD_TIMEOUT";
+          throw timeoutError;
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeout);
+        externalSignal?.removeEventListener("abort", forwardAbort);
+      }
+    }
+    async function readUploadJson(response) {
+      let timeout;
+      try {
+        return await Promise.race([
+          response.json().catch(() => ({})),
+          new Promise((resolve, reject) => {
+            timeout = window.setTimeout(() => {
+              response.body?.cancel().catch(() => {});
+              const error = new Error("The upload response timed out. Please retry.");
+              error.code = "UPLOAD_TIMEOUT";
+              reject(error);
+            }, PHOTO_UPLOAD_REQUEST_TIMEOUT_MS);
+          })
+        ]);
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    }
+    function failIndividualPhotoUpload(entry, error) {
+      if (!entry || entry.cancelled || !uploadedImages.includes(entry)) return;
+      entry.uploadState = "failed";
+      entry.uploadError = String(error?.message || "Upload failed");
+      entry.uploadController = null;
+      renderIndividualUploadEntry(entry);
+    }
     function renderIndividualUploadEntry(entry) {
       const index = uploadedImages.indexOf(entry);
       if (index >= 0 && imageSlots[index]) renderSlot(imageSlots[index], entry);
@@ -2521,23 +2587,31 @@
         cartItemId:createCartItemId()
       };
       individualUploadSessionPromise = (async () => {
-        let response;
-        try {
-          response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/session`, {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body:JSON.stringify(session)
-          });
-        } catch (error) {
-          throw new Error(isLocalPreview
-            ? "The local photo service is unavailable. Start the checkout Worker on port 8787 and retry."
-            : "The photo service could not be reached. Check your connection and retry.");
+        let lastError = null;
+        for (let attempt = 0; attempt < PHOTO_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
+          try {
+            const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/session`, {
+              method:"POST",
+              headers:{ "Content-Type":"application/json" },
+              body:JSON.stringify(session)
+            });
+            const result = await readUploadJson(response);
+            if (response.ok && result.success) {
+              individualUploadSession = session;
+              schedulePersistDraftUploads();
+              return session;
+            }
+            lastError = new Error(result.error || "The photo upload could not be started.");
+            if (!isRetryableUploadStatus(response.status)) break;
+          } catch (error) {
+            lastError = error;
+          }
+          if (attempt < PHOTO_UPLOAD_MAX_ATTEMPTS - 1) await waitForUploadRetry(attempt);
         }
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.success) throw new Error(result.error || "The photo upload could not be started.");
-        individualUploadSession = session;
-        schedulePersistDraftUploads();
-        return session;
+        if (lastError?.code === "UPLOAD_TIMEOUT") throw lastError;
+        throw new Error(isLocalPreview
+          ? "The local photo service is unavailable. Start the checkout Worker on port 8787 and retry."
+          : lastError?.message || "The photo service could not be reached. Check your connection and retry.");
       })();
       try {
         return await individualUploadSessionPromise;
@@ -2548,7 +2622,7 @@
     async function deleteIndividualRemotePhoto(entry) {
       if (!individualUploadSession || !entry?.photoId) return;
       try {
-        await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/photo`, {
+        await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/photo`, {
           method:"DELETE",
           headers:{
             "Content-Type":"application/json",
@@ -2570,7 +2644,11 @@
       if (entry.objectKey) void deleteIndividualRemotePhoto(entry);
     }
     function enqueueIndividualPhotoUpload(entry) {
-      if (!entry || !(entry.printBlob instanceof Blob) || entry.cancelled) return;
+      if (
+        !entry || !(entry.printBlob instanceof Blob) || entry.cancelled ||
+        entry.uploadState === "complete" || entry.uploadState === "uploading" ||
+        individualUploadQueue.includes(entry)
+      ) return;
       entry.uploadState = "queued";
       entry.uploadError = "";
       individualUploadQueue.push(entry);
@@ -2583,55 +2661,61 @@
       enqueueIndividualPhotoUpload(entry);
     }
     async function uploadIndividualPhoto(entry) {
-      const session = await ensureIndividualUploadSession();
+      let session;
+      try {
+        session = await ensureIndividualUploadSession();
+      } catch (error) {
+        failIndividualPhotoUpload(entry, error);
+        return;
+      }
       if (entry.cancelled || !uploadedImages.includes(entry)) return;
       const position = uploadedImages.indexOf(entry) + 1;
-      const form = new FormData();
-      form.append("upload_session_id", session.uploadSessionId);
-      form.append("photo_id", entry.photoId);
-      form.append("revision", entry.revision);
-      form.append("position", String(position));
-      form.append("file", entry.printBlob, `${entry.photoId}.jpg`);
+      const expectedObjectKey = `tinyframes/${session.uploadSessionId}/photos/${entry.photoId}.jpg`;
       let lastError = null;
-      for (let attempt = 0; attempt < 4; attempt += 1) {
+      for (let attempt = 0; attempt < PHOTO_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
         if (entry.cancelled || !uploadedImages.includes(entry)) return;
         const controller = new AbortController();
         entry.uploadController = controller;
         try {
-          const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/photo`, {
+          const form = new FormData();
+          form.append("upload_session_id", session.uploadSessionId);
+          form.append("photo_id", entry.photoId);
+          form.append("revision", entry.revision);
+          form.append("position", String(position));
+          form.append("file", entry.printBlob, `${entry.photoId}.jpg`);
+          const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/photo`, {
             method:"POST",
             headers:{ "X-Upload-Token":session.uploadToken },
             body:form,
             signal:controller.signal
           });
-          const result = await response.json().catch(() => ({}));
-          if (response.ok && result.success && result.photo?.objectKey) {
+          const result = await readUploadJson(response);
+          if (response.ok && result.success && result.photo?.objectKey === expectedObjectKey) {
             if (entry.cancelled || !uploadedImages.includes(entry)) {
-              entry.objectKey = String(result.photo.objectKey);
+              entry.objectKey = expectedObjectKey;
               void deleteIndividualRemotePhoto(entry);
               return;
             }
-            entry.objectKey = String(result.photo.objectKey);
+            entry.objectKey = expectedObjectKey;
             entry.uploadState = "complete";
             entry.uploadError = "";
             entry.uploadController = null;
             renderIndividualUploadEntry(entry);
             return;
           }
-          lastError = new Error(result.error || "The photo could not be uploaded.");
-          if (![429, 500, 502, 503, 504].includes(response.status)) break;
+          lastError = new Error(
+            response.ok && result.success
+              ? "The stored photo reference could not be verified."
+              : result.error || "The photo could not be uploaded."
+          );
+          if (!isRetryableUploadStatus(response.status)) break;
         } catch (error) {
           if (error?.name === "AbortError" && entry.cancelled) return;
           lastError = error;
         }
-        await new Promise((resolve) => window.setTimeout(resolve, 600 * (2 ** attempt)));
+        if (attempt < PHOTO_UPLOAD_MAX_ATTEMPTS - 1) await waitForUploadRetry(attempt);
       }
-      if (!entry.cancelled && uploadedImages.includes(entry)) {
-        entry.uploadState = "failed";
-        entry.uploadError = String(lastError?.message || "Upload failed");
-        entry.uploadController = null;
-        renderIndividualUploadEntry(entry);
-      }
+      failIndividualPhotoUpload(entry, lastError);
     }
     function pumpIndividualUploadQueue() {
       while (activeIndividualUploads < MAX_CONCURRENT_PHOTO_UPLOADS && individualUploadQueue.length) {
@@ -2640,10 +2724,12 @@
         activeIndividualUploads += 1;
         entry.uploadState = "uploading";
         renderIndividualUploadEntry(entry);
-        uploadIndividualPhoto(entry).finally(() => {
-          activeIndividualUploads -= 1;
-          pumpIndividualUploadQueue();
-        });
+        uploadIndividualPhoto(entry)
+          .catch((error) => failIndividualPhotoUpload(entry, error))
+          .finally(() => {
+            activeIndividualUploads -= 1;
+            pumpIndividualUploadQueue();
+          });
       }
     }
     async function finalizeIndividualUploads(entries, frameColour) {
@@ -2651,7 +2737,7 @@
         throw new Error("Please wait for every photo to finish uploading.");
       }
       const session = await ensureIndividualUploadSession();
-      const response = await fetch(`${checkoutApiBaseUrl}/tiny-frame-upload/finalize`, {
+      const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/finalize`, {
         method:"POST",
         headers:{
           "Content-Type":"application/json",
@@ -2670,7 +2756,7 @@
           }))
         })
       });
-      const result = await response.json().catch(() => ({}));
+      const result = await readUploadJson(response);
       if (!response.ok || !result.success) throw new Error(result.error || "The uploaded photos could not be confirmed.");
       return { ...session, photos:entries.map((entry, index) => ({
         photoId:entry.photoId,

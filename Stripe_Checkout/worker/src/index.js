@@ -69,6 +69,8 @@ const MAX_TINY_FRAME_PDF_BYTES = 95 * 1024 * 1024;
 const MAX_TINY_FRAME_MULTIPART_PDF_BYTES = 512 * 1024 * 1024;
 const TINY_FRAME_PDF_PART_BYTES = 8 * 1024 * 1024;
 const MAX_TINY_FRAME_PDF_PARTS = Math.ceil(MAX_TINY_FRAME_MULTIPART_PDF_BYTES / TINY_FRAME_PDF_PART_BYTES);
+const CORS_ALLOWED_METHODS = Object.freeze(['GET', 'POST', 'DELETE', 'OPTIONS']);
+const CORS_ALLOWED_HEADERS = Object.freeze(['content-type', 'authorization', 'x-upload-token']);
 const A4_WIDTH_POINTS = 595.275591;
 const A4_HEIGHT_POINTS = 841.889764;
 const TINY_FRAME_PHOTO_WIDTH_POINTS = 54 * 72 / 25.4;
@@ -187,15 +189,15 @@ function getAllowedOrigin(request, env) {
 
 function createCorsHeaders(request, env) {
   const headers = new Headers({
-    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+    'Access-Control-Allow-Methods': CORS_ALLOWED_METHODS.join(','),
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Upload-Token',
     'Content-Type': 'application/json'
   });
   const allowedOrigin = getAllowedOrigin(request, env);
 
+  headers.set('Vary', 'Origin');
   if (allowedOrigin) {
     headers.set('Access-Control-Allow-Origin', allowedOrigin);
-    headers.set('Vary', 'Origin');
   }
 
   return headers;
@@ -733,6 +735,11 @@ async function uploadIndividualTinyFramePhoto(request, env) {
       },
       onlyIf:{ etagDoesNotMatch:'*' }
     });
+    const confirmed = await env.ARTWORK_BUCKET.head(objectKey);
+    if (
+      !confirmed || Number(confirmed.size || 0) !== file.size ||
+      confirmed.customMetadata?.revision !== revision
+    ) throw new Error('R2 did not confirm the stored photo');
     return jsonResponse(request, env, { success:true, photo:{ photoId, objectKey, position, width, height, size:file.size } });
   } catch (error) {
     const status = Number(error?.status) || (error instanceof TinyFrameInputError ? 400 : 500);
@@ -3579,11 +3586,23 @@ export {
   normalizeUploadReference
 };
 
-export default {
-  async fetch(request, env) {
+async function routeWorkerRequest(request, env) {
     const url = new URL(request.url);
 
     if (request.method === 'OPTIONS') {
+      const origin = getAllowedOrigin(request, env);
+      const requestedMethod = String(request.headers.get('Access-Control-Request-Method') || '').toUpperCase();
+      const requestedHeaders = String(request.headers.get('Access-Control-Request-Headers') || '')
+        .split(',')
+        .map(header => header.trim().toLowerCase())
+        .filter(Boolean);
+      if (
+        !origin ||
+        (requestedMethod && !CORS_ALLOWED_METHODS.includes(requestedMethod)) ||
+        requestedHeaders.some(header => !CORS_ALLOWED_HEADERS.includes(header))
+      ) {
+        return jsonResponse(request, env, { error:'CORS request is not allowed' }, 403);
+      }
       return new Response(null, {
         status: 204,
         headers: createCorsHeaders(request, env)
@@ -3703,6 +3722,25 @@ export default {
     }
 
     return jsonResponse(request, env, { error: 'Not found' }, 404);
+}
+
+export default {
+  async fetch(request, env) {
+    try {
+      return await routeWorkerRequest(request, env);
+    } catch (error) {
+      const url = new URL(request.url);
+      console.error('Unhandled Worker request error', {
+        method:request.method,
+        path:url.pathname,
+        errorName:String(error?.name || 'Error'),
+        message:String(error?.message || 'Unknown Worker error')
+      });
+      return jsonResponse(request, env, {
+        error:'The request could not be completed. Please retry.',
+        code:'WORKER_REQUEST_FAILED'
+      }, 500);
+    }
   },
 
   async scheduled(controller, env, context) {

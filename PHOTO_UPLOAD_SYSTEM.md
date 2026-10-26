@@ -14,7 +14,16 @@ finalizes an already uploaded set; it does not create or upload a PDF.
   codes and Stripe relationships.
 - `IMAGES`: used to validate uploaded JPEG dimensions and crop ratio.
 - `UPLOAD_RATE_LIMITER`: 120 upload operations per minute per client/session.
+- `ALLOWED_ORIGINS`: exact comma-separated storefront origins:
+  `https://goodframe.com.au`, `https://www.goodframe.com.au`,
+  `http://localhost:4173`, and `http://127.0.0.1:4173`.
 - Daily cron: removes abandoned draft upload prefixes after the configured TTL.
+
+The uploader uses the `X-Upload-Token` request header rather than cookies, so
+cross-origin requests do not use credentialed CORS. The Worker validates
+preflight methods and headers and returns CORS-readable JSON for route errors.
+Keep the deployed Worker variable in sync with the allowlist in
+`Stripe_Checkout/worker/wrangler.jsonc`.
 
 Set `ADMIN_API_KEY` as an encrypted Worker secret. It must be at least 24
 characters and is required by the order-file listing and download endpoints.
