@@ -39,8 +39,8 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
   tiny_frame_photo_sets: Object.freeze({
     orderType: 'photo-sets',
     name: 'Frame',
-    baseUnitAmount: 4600,
-    photoSetUnitAmount: 600,
+    baseUnitAmount: 5000,
+    additionalPhotoSetUnitAmount: 500,
     requiresPictures: false
   }),
   tiny_frame_8_pictures: Object.freeze({
@@ -98,7 +98,8 @@ function getTinyFrameUnitAmount(productType, photoSetCount = 0) {
   if (productType === 'tiny_frame_8_pictures') return TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.unitAmount;
   if (productType !== 'tiny_frame_photo_sets' || normalizePhotoSetCount(photoSetCount) === null) return undefined;
   const product = TINY_FRAME_PRODUCTS.tiny_frame_photo_sets;
-  const amount = product.baseUnitAmount + (photoSetCount * product.photoSetUnitAmount);
+  const additionalPhotoSetCount = Math.max(0, photoSetCount - 1);
+  const amount = product.baseUnitAmount + (additionalPhotoSetCount * product.additionalPhotoSetUnitAmount);
   return Number.isSafeInteger(amount) ? amount : undefined;
 }
 

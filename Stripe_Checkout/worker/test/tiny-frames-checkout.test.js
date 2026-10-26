@@ -52,11 +52,12 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /function preserveScrollDuringLayoutChange/);
   assert.match(html, /id=\"product-name\">Frame &amp; Photos</);
   assert.match(html, /<h2 class=\"palette-title\">FRAME COLOUR<\/h2>/);
-  assert.match(html, /"price": "46\.00"/);
-  assert.match(html, /const BASE_FRAME_PRICE = 46;/);
-  assert.match(html, /const PHOTO_SET_PRICE = 6;/);
-  assert.match(html, /id=\"config-price\">52\.00</);
-  assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$6</);
+  assert.match(html, /"price": "50\.00"/);
+  assert.match(html, /const BASE_FRAME_PRICE = 50;/);
+  assert.match(html, /const PHOTO_SET_PRICE = 5;/);
+  assert.match(html, /function photoSetPriceFor\(photoSetCount\) \{\s*return BASE_FRAME_PRICE \+ \(Math\.max\(0, photoSetCount - 1\) \* PHOTO_SET_PRICE\);/);
+  assert.match(html, /id=\"config-price\">50\.00</);
+  assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$5</);
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
   assert.match(html, /\.configurator\.is-open \{ height:auto; max-height:none;[^}]*overflow:visible/);
   assert.match(html, /hero-mobile-DSCF1619\.jpg/);
@@ -394,7 +395,7 @@ test('individual photo sets are not capped at 100 sets or 300 photos', async () 
   const lineItem = buildLineItems([frameWithPhotoSets(101)])[0];
   assert.equal(lineItem.photoSetCount, 101);
   assert.equal(lineItem.photoCount, 303);
-  assert.equal(lineItem.unitAmount, 65200);
+  assert.equal(lineItem.unitAmount, 55000);
 
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
@@ -894,11 +895,11 @@ test('legacy eight-photo carts keep their $64.95 price and client-supplied shipp
   assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
 });
 
-test('variable photo-set pricing is calculated on the server from $46 plus $6 per set', () => {
+test('variable photo-set pricing is calculated on the server from $50 including three photos plus $5 per additional set', () => {
   const lineItems = [0, 1, 2, 3, 4, 5].map(photoSetCount => (
     buildLineItems([frameWithPhotoSets(photoSetCount)])[0]
   ));
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [4600, 5200, 5800, 6400, 7000, 7600]);
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [5000, 5000, 5500, 6000, 6500, 7000]);
   assert.deepEqual(lineItems.map(item => item.name), [
     'Frame Only',
     'Frame + 3 Photos',
@@ -913,12 +914,15 @@ test('variable photo-set pricing is calculated on the server from $46 plus $6 pe
 });
 
 test('Stripe receives the server-calculated variable total and photo counts', () => {
-  const lineItems = buildLineItems([frameWithPhotoSets(4)]).map(item => ({ ...item, productCode:'73194' }));
-  const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
-  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7000');
-  assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'Frame + 12 Photos');
-  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_set_count]'), '4');
-  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_count]'), '12');
+  const expectedAmounts = [5000, 5500, 6000, 6500];
+  for (const [index, photoSetCount] of [1, 2, 3, 4].entries()) {
+    const lineItems = buildLineItems([frameWithPhotoSets(photoSetCount)]).map(item => ({ ...item, productCode:'73194' }));
+    const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', `co_${String(index + 1).repeat(32)}`);
+    assert.equal(payload.get('line_items[0][price_data][unit_amount]'), String(expectedAmounts[index]));
+    assert.equal(payload.get('line_items[0][price_data][product_data][name]'), `Frame + ${photoSetCount * 3} Photos`);
+    assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_set_count]'), String(photoSetCount));
+    assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_count]'), String(photoSetCount * 3));
+  }
 });
 
 test('picture products require a valid upload reference', () => {

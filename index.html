@@ -173,7 +173,7 @@
           "@type": "Offer",
           "url": "https://goodframe.com.au/",
           "priceCurrency": "AUD",
-          "price": "46.00",
+          "price": "50.00",
           "availability": "https://schema.org/InStock"
         }
       }
@@ -903,9 +903,9 @@
           <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 3 Added</span></p>
           <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
           <div class="photo-sets" id="photo-sets" aria-label="Photo upload sets"></div>
-          <button class="add-photo-set-button" id="add-photo-set" type="button">+ Add Another 3 Photos — $6</button>
+          <button class="add-photo-set-button" id="add-photo-set" type="button">+ Add Another 3 Photos — $5</button>
         </div>
-        <div class="purchase-row"><button class="purchase-button" type="button"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">52.00</span></span><span id="purchase-label">Add to cart</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
+        <div class="purchase-row"><button class="purchase-button" type="button"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">50.00</span></span><span id="purchase-label">Add to cart</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
       </div>
     </div>
   </section>
@@ -1237,8 +1237,8 @@
     });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
-    const BASE_FRAME_PRICE = 46;
-    const PHOTO_SET_PRICE = 6;
+    const BASE_FRAME_PRICE = 50;
+    const PHOTO_SET_PRICE = 5;
     const VARIABLE_PRODUCT_ID = "tiny_frame_photo_sets";
     const LEGACY_PRODUCT_ID = "tiny_frame_8_pictures";
     const LEGACY_PRODUCT_PRICE = 64.95;
@@ -1255,10 +1255,13 @@
       const match = String(item?.order || item || "").match(/^Frame \+ (\d+) Photos$/i);
       return match && Number(match[1]) % 3 === 0 ? Number(match[1]) / 3 : 0;
     }
+    function photoSetPriceFor(photoSetCount) {
+      return BASE_FRAME_PRICE + (Math.max(0, photoSetCount - 1) * PHOTO_SET_PRICE);
+    }
     function productPriceFor(item) {
       const order = item?.order || item;
       if (normalizeOrderType(order) === "legacy-eight-photos") return LEGACY_PRODUCT_PRICE;
-      if (normalizeOrderType(order) === "photo-sets") return BASE_FRAME_PRICE + (photoSetCountFor(item) * PHOTO_SET_PRICE);
+      if (normalizeOrderType(order) === "photo-sets") return photoSetPriceFor(photoSetCountFor(item));
       return null;
     }
     function productIdFor(item) {
@@ -1402,7 +1405,7 @@
       return photoSetCount * 3;
     }
     function getConfiguredPrice() {
-      return BASE_FRAME_PRICE + (photoSetCount * PHOTO_SET_PRICE);
+      return photoSetPriceFor(photoSetCount);
     }
     function getConfiguredOrderName() {
       const photoCount = getConfiguredPhotoCount();

@@ -75,8 +75,9 @@ refuse to replace files belonging to a different order. Paid-order files are
 never included in temporary cleanup. Existing legacy product-folder PDFs,
 historical orders, and older photo manifests remain readable.
 
-Variable photo sets have no fixed set limit. Prices are calculated server-side
-as A$46 plus A$6 per three-photo set.
+Variable photo sets have no fixed set limit. The A$50 starting price includes
+the first three photos; each additional three-photo set adds A$5. Prices are
+calculated server-side using the same rule.
 
 ## Local verification
 
