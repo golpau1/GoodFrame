@@ -84,6 +84,7 @@ test('storefront uploads cropped photos individually in the background', async (
 test('individual photo upload CORS allows configured storefront origins and readable Worker errors', async () => {
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
+  const storageFolders = [];
   const origins = [
     'https://goodframe.com.au',
     'https://www.goodframe.com.au',
@@ -95,6 +96,7 @@ test('individual photo upload CORS allows configured storefront origins and read
     PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:origins.join(',')
   };
+  const foldersByMinute = new Map();
 
   for (const [index, origin] of origins.entries()) {
     const preflight = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
@@ -102,7 +104,7 @@ test('individual photo upload CORS allows configured storefront origins and read
       headers:{
         Origin:origin,
         'Access-Control-Request-Method':'POST',
-        'Access-Control-Request-Headers':'content-type,x-upload-token'
+        'Access-Control-Request-Headers':'content-type,x-upload-token,x-upload-attempt'
       }
     }), env);
     assert.equal(preflight.status, 204);
@@ -110,6 +112,7 @@ test('individual photo upload CORS allows configured storefront origins and read
     assert.equal(preflight.headers.get('Access-Control-Allow-Methods'), 'GET,POST,DELETE,OPTIONS');
     assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /Content-Type/i);
     assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /X-Upload-Token/i);
+    assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /X-Upload-Attempt/i);
     assert.equal(preflight.headers.get('Access-Control-Allow-Credentials'), null);
 
     const uploadSessionId = `tf_${String(index + 1).repeat(32)}`;
@@ -122,8 +125,32 @@ test('individual photo upload CORS allows configured storefront origins and read
     }), env);
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
-    assert.equal((await response.json()).success, true);
-    assert.ok(bucket.objects.has(`temporary/${uploadSessionId}/manifest.json`));
+    const session = await response.json();
+    assert.equal(session.success, true);
+    assert.match(session.storageFolder, /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}$/);
+    storageFolders.push(session.storageFolder);
+    const manifest = await bucket.get(`temporary/${session.storageFolder}/manifest.json`);
+    assert.ok(manifest);
+    const manifestData = await manifest.json();
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+      timeZone:'Australia/Brisbane',
+      year:'numeric',
+      month:'2-digit',
+      day:'2-digit',
+      hour:'2-digit',
+      minute:'2-digit',
+      second:'2-digit',
+      hourCycle:'h23'
+    }).formatToParts(new Date(manifestData.created_at)).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+    const expectedFolderPrefix = `${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}-${parts.second}_`;
+    assert.ok(session.storageFolder.startsWith(expectedFolderPrefix));
+    const folderGroup = foldersByMinute.get(expectedFolderPrefix) || [];
+    folderGroup.push(session.storageFolder);
+    foldersByMinute.set(expectedFolderPrefix, folderGroup);
+  }
+  assert.equal(new Set(storageFolders).size, storageFolders.length);
+  for (const [folderPrefix, folders] of foldersByMinute) {
+    assert.ok(folders.every(folder => folder.startsWith(folderPrefix)));
   }
 
   const rejectedPreflight = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
@@ -176,6 +203,28 @@ test('individual photo upload CORS allows configured storefront origins and read
   database.close();
 });
 
+test('photo upload folders support the longest suffixed time and remain unique in D1', () => {
+  const database = createProductCodeDatabase();
+  const storageFolder = '2026-10-26_21-36-32_a7b4';
+  const insertSession = (uploadSessionId, cartItemId) => database.prepare(
+    `INSERT OR IGNORE INTO photo_upload_sessions
+      (upload_session_id, cart_item_id, upload_token_hash, status, storage_folder, created_at, updated_at)
+     VALUES (?, ?, ?, 'draft', ?, ?, ?)`
+  ).bind(
+    uploadSessionId,
+    cartItemId,
+    'a'.repeat(64),
+    storageFolder,
+    new Date().toISOString(),
+    new Date().toISOString()
+  ).run();
+
+  assert.equal(storageFolder.length, 24);
+  assert.equal(insertSession(`tf_${'1'.repeat(32)}`, `ci_${'1'.repeat(32)}`).meta.changes, 1);
+  assert.equal(insertSession(`tf_${'2'.repeat(32)}`, `ci_${'2'.repeat(32)}`).meta.changes, 0);
+  database.close();
+});
+
 test('individual cropped photos are authenticated, resumable, finalized, and promoted after payment', async () => {
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
@@ -196,6 +245,9 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   }), env);
   assert.equal(sessionResponse.status, 200);
+  const session = await sessionResponse.json();
+  const storageFolder = session.storageFolder;
+  assert.match(storageFolder, /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}$/);
 
   const photos = [];
   const selection = [];
@@ -232,6 +284,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://goodframe.com.au');
     photos.push((await response.json()).photo);
     photos[index].revision = revision;
+    assert.match(photos[index].objectKey, new RegExp(`^temporary/${storageFolder}/photos/[a-f0-9]{32}\\.jpg$`));
   }
 
   const statusResponse = await worker.fetch(new Request(`https://worker.example/tiny-frame-upload/status?upload_session_id=${uploadSessionId}`, { headers }), env);
@@ -279,8 +332,9 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   }), env);
   assert.equal(finalizeResponse.status, 200);
 
-  const manifestKey = `temporary/${uploadSessionId}/manifest.json`;
+  const manifestKey = `temporary/${storageFolder}/manifest.json`;
   const manifest = await (await bucket.get(manifestKey)).json();
+  assert.equal(manifest.storage_folder, storageFolder);
   database.prepare(
     `UPDATE photo_upload_sessions
         SET product_codes_json = '["58321"]',
@@ -680,7 +734,12 @@ class MemoryR2Bucket {
   }
   async head(key) {
     const stored = this.objects.get(key);
-    return stored ? { key, size:stored.bytes.byteLength, customMetadata:stored.customMetadata } : null;
+    return stored ? {
+      key,
+      size:stored.bytes.byteLength,
+      httpMetadata:{ contentType:stored.contentType },
+      customMetadata:stored.customMetadata
+    } : null;
   }
   async put(key, body, options = {}) {
     if (options.onlyIf?.etagDoesNotMatch === '*' && this.objects.has(key)) return null;
@@ -1354,6 +1413,7 @@ test('seven-day cleanup removes abandoned drafts but retains active checkouts an
     { id:`tf_${'2'.repeat(32)}`, cart:`ci_${'2'.repeat(32)}`, status:'checkout_pending' },
     { id:`tf_${'3'.repeat(32)}`, cart:`ci_${'3'.repeat(32)}`, status:'paid' }
   ];
+  const storageFolders = [];
   for (const [index, session] of sessions.entries()) {
     const token = `ut_${String(index + 1).repeat(64)}`;
     const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
@@ -1370,7 +1430,9 @@ test('seven-day cleanup removes abandoned drafts but retains active checkouts an
       ALLOWED_ORIGINS:'https://goodframe.com.au'
     });
     assert.equal(response.status, 200);
-    await bucket.put(`temporary/${session.id}/photos/${String(index + 1).repeat(32)}.jpg`, 'photo');
+    const upload = await response.json();
+    storageFolders.push(upload.storageFolder);
+    await bucket.put(`temporary/${upload.storageFolder}/photos/${String(index + 1).repeat(32)}.jpg`, 'photo');
     database.prepare(
       `UPDATE photo_upload_sessions
           SET status = ?,
@@ -1392,9 +1454,9 @@ test('seven-day cleanup removes abandoned drafts but retains active checkouts an
     PENDING_UPLOAD_TTL_DAYS:'7'
   }, now);
   assert.equal(deleted, 1);
-  assert.equal(bucket.objects.has(`temporary/${sessions[0].id}/manifest.json`), false);
-  assert.equal(bucket.objects.has(`temporary/${sessions[0].id}/photos/${'1'.repeat(32)}.jpg`), false);
-  assert.equal(bucket.objects.has(`temporary/${sessions[1].id}/manifest.json`), true);
-  assert.equal(bucket.objects.has(`temporary/${sessions[2].id}/manifest.json`), true);
+  assert.equal(bucket.objects.has(`temporary/${storageFolders[0]}/manifest.json`), false);
+  assert.equal(bucket.objects.has(`temporary/${storageFolders[0]}/photos/${'1'.repeat(32)}.jpg`), false);
+  assert.equal(bucket.objects.has(`temporary/${storageFolders[1]}/manifest.json`), true);
+  assert.equal(bucket.objects.has(`temporary/${storageFolders[2]}/manifest.json`), true);
   database.close();
 });

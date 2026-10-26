@@ -15,8 +15,10 @@ or upload a print-sheet PDF.
 
 - `ARTWORK_BUCKET`: private R2 bucket (`goodframes` in production).
 - `PRODUCT_CODES_DB`: D1 database for product codes, photo selections, snapshots,
-  and Stripe relationships. Apply migration `0003_photo_upload_sessions.sql`
-  to the production and test databases before deploying this Worker revision.
+  and Stripe relationships. Apply migrations `0003_photo_upload_sessions.sql`
+  `0004_photo_upload_storage_folders.sql`, and
+  `0005_photo_upload_storage_folder_length.sql` to the production and test
+  databases before deploying this Worker revision.
 - `IMAGES`: validates stored JPEG dimensions and crop ratio.
 - `UPLOAD_RATE_LIMITER`: 120 upload operations per minute per client/session.
 - `ALLOWED_ORIGINS`: exact comma-separated storefront origins:
@@ -28,10 +30,31 @@ or upload a print-sheet PDF.
 
 The uploader uses `X-Upload-Token`, not cookies, so cross-origin requests do
 not use credentialed CORS. The Worker handles `GET`, `POST`, `DELETE`, and
-`OPTIONS`, allows `Content-Type`, `Authorization`, and `X-Upload-Token`, and
-returns CORS-readable JSON for upload route errors. Browser uploads go through
-the Worker; there are no presigned URLs or direct browser-to-R2 requests, so
-an R2 bucket CORS policy is not required.
+`OPTIONS`, allows `Content-Type`, `Authorization`, `X-Upload-Token`, and
+`X-Upload-Attempt`, and returns CORS-readable JSON for upload route errors.
+Browser uploads go through the Worker; there are no presigned URLs or direct
+browser-to-R2 requests, so an R2 bucket CORS policy is not required.
+
+The cropper commits each completed crop to the local photo grid and IndexedDB
+before starting selection synchronization and upload in the background. It
+does not wait for Cloudflare to close. The queue runs at most two uploads
+concurrently, retries timeouts and transient network/server responses with
+jittered backoff, and leaves permanent failures available for manual retry.
+Pending local drafts include the original and print crop where browser storage
+allows; a visible warning is shown if the browser cannot save recovery data.
+Recovery depends on the browser retaining its local data.
+
+Each upload response is checked against the `storageFolder` returned by the
+Worker (not the separate `tf_...` session ID). The Worker confirms object size,
+JPEG content type, and session/photo/revision metadata in R2 before marking the
+selection uploaded. Checkout remains blocked until every configured photo is
+confirmed and the Worker finalizes the same session-bound selection.
+
+Client and Worker diagnostics record Brisbane time, anonymous session/photo
+references, a broad browser category, stage, HTTP status, safe error code,
+attempt number, duration, and result. They do not include image contents,
+customer-identifying data, credentials, or signed URLs. Worker diagnostics are
+available only through authenticated Cloudflare logging tools.
 
 Set `ADMIN_API_KEY` as an encrypted Worker secret. It must be at least 24
 characters and is required by the authenticated order-file listing and download
@@ -40,12 +63,18 @@ endpoints. Existing Stripe and Resend secrets remain unchanged.
 ## Temporary selection and finalization
 
 Every browser session gets a unique upload session ID. Each confirmed crop is
-written to a unique, immutable key:
+written to a unique, immutable key in a Brisbane-time folder named
+`YYYY-MM-DD_HH-mm-ss_<4-hex-id>`. For example:
 
 ```text
-temporary/tf_<session-id>/manifest.json
-temporary/tf_<session-id>/photos/<random-immutable-id>.jpg
+temporary/2026-10-26_21-36-32_a7b4/manifest.json
+temporary/2026-10-26_21-36-32_a7b4/photos/<random-immutable-id>.jpg
 ```
+
+The upload session ID remains the durable application/Stripe reference; only
+the new R2 storage folder name changes. A unique suffix prevents collisions
+even when multiple uploads start in the same second. Existing `tf_<session-id>`
+and previously timestamped folders remain in place and readable.
 
 The upload token is stored only as a SHA-256 hash. D1 stores the active ordered
 photo selection per cart item, including photo identity, revision, position,
