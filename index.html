@@ -309,13 +309,6 @@
     .slot-preview { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
     .slot-replace-button { position:absolute; right:5px; bottom:5px; left:5px; z-index:4; min-height:25px; padding:4px 6px; border:1px solid rgba(255,247,226,.7); background:rgba(60,42,33,.68); color:var(--light); font:inherit; font-size:8px; font-weight:600; letter-spacing:.1em; line-height:1; cursor:pointer; opacity:0; text-transform:uppercase; transition:opacity 180ms ease; }
     .image-slot:hover .slot-replace-button, .slot-replace-button:focus-visible { opacity:1; }
-    .image-remove-button { position:absolute; top:4px; right:4px; z-index:5; display:grid; place-items:center; width:18px; height:18px; padding:0 0 2px; border:1px solid var(--divider); border-radius:50%; background:rgba(255,247,226,.9); color:var(--brown); font:inherit; font-size:14px; font-weight:300; line-height:1; cursor:pointer; opacity:0; transform:none; transition:opacity 180ms ease, background 180ms ease; }
-    .image-slot:hover .image-remove-button, .image-remove-button:focus-visible { opacity:1; }
-    .image-remove-button:hover { background:var(--cream); }
-    .slot-move-button { position:absolute; top:4px; left:4px; z-index:5; display:grid; place-items:center; width:22px; height:22px; padding:0; border:1px solid var(--divider); border-radius:50%; background:rgba(255,247,226,.9); color:var(--brown); font:inherit; font-size:12px; line-height:1; cursor:pointer; opacity:0; transition:opacity 180ms ease, background 180ms ease; }
-    .slot-move-button--later { top:27px; right:4px; left:auto; }
-    .image-slot:hover .slot-move-button, .slot-move-button:focus-visible { opacity:1; }
-    .slot-move-button:hover { background:var(--cream); }
     .slot-upload-status { position:absolute; inset:auto 5px 36px; z-index:4; display:flex; align-items:center; justify-content:center; gap:6px; min-height:25px; padding:5px 7px; border:1px solid rgba(255,247,226,.7); background:rgba(60,42,33,.78); color:var(--light); font-size:8px; font-weight:600; letter-spacing:.08em; line-height:1.2; text-align:center; text-transform:uppercase; }
     .slot-upload-status[hidden] { display:none; }
     .slot-upload-spinner { width:10px; height:10px; flex:0 0 auto; border:1px solid rgba(255,247,226,.45); border-top-color:var(--light); border-radius:50%; animation:slot-upload-spin 700ms linear infinite; }
@@ -349,7 +342,7 @@
       .cropper-actions button:hover { text-decoration:none; }
       .cropper-actions #saveCrop { border-color:var(--brown); background:var(--brown); color:var(--light); }
     }
-    @media (prefers-reduced-motion:reduce) { .photo-set.is-new { animation:none; } .image-remove-button, .slot-replace-button, .slot-move-button, .cropper-progress-bar { transition:none; } }
+    @media (prefers-reduced-motion:reduce) { .photo-set.is-new { animation:none; } .slot-replace-button, .cropper-progress-bar { transition:none; } }
     @media (min-width:1101px) {
       :root { --announcement-height:40px; --header-height:48px; }
       .homepage { position:relative; display:block; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
@@ -607,8 +600,6 @@
       .image-slot { width:100%; min-width:0; aspect-ratio:54 / 86; }
       .purchase-row { margin-top:8px; padding:4px 0 clamp(52px,14vw,76px); }
       .purchase-button { min-height:44px; }
-      .image-remove-button { width:15px; height:15px; padding:0 0 1px; font-size:11px; opacity:.86; }
-      .slot-move-button { width:18px; height:18px; font-size:10px; opacity:.86; }
       .site-footer { padding:32px 24px 20px; }
       .footer-grid { grid-template-columns:1fr; gap:28px; }
       .footer-brand { margin-bottom:10px; }
@@ -1463,7 +1454,7 @@
 
     function renderSlot(slot, entry) {
       const picker = slot.querySelector(".slot-picker");
-      slot.querySelectorAll(".slot-preview, .image-remove-button, .slot-replace-button, .slot-move-button, .slot-upload-status")
+      slot.querySelectorAll(".slot-preview, .slot-replace-button, .slot-upload-status")
         .forEach((element) => element.remove());
       picker.hidden = Boolean(entry);
       if (!entry) return;
@@ -1480,42 +1471,6 @@
       replace.textContent = "Replace";
       replace.setAttribute("aria-label", `Replace photo ${Number(slot.dataset.slot) + 1}`);
       replace.addEventListener("click", () => triggerSlotPicker(slot, replace));
-
-      const moveEarlier = document.createElement("button");
-      moveEarlier.className = "slot-move-button";
-      moveEarlier.type = "button";
-      moveEarlier.textContent = "←";
-      moveEarlier.disabled = Number(slot.dataset.slot) === 0;
-      moveEarlier.setAttribute("aria-label", `Move photo ${Number(slot.dataset.slot) + 1} earlier`);
-      moveEarlier.addEventListener("click", () => movePhoto(Number(slot.dataset.slot), -1));
-
-      const remove = document.createElement("button");
-      remove.className = "image-remove-button";
-      remove.type = "button";
-      remove.textContent = "×";
-      remove.setAttribute("aria-label", "Remove image");
-      remove.addEventListener("click", () => {
-        const index = Number(slot.dataset.slot);
-        cancelIndividualPhotoUpload(uploadedImages[index]);
-        revoke(uploadedImages[index].url);
-        uploadedImages[index] = null;
-        slot.querySelector(".upload-input").value = "";
-        renderSlot(slot, null);
-        updateUploadProgress();
-        schedulePersistDraftUploads();
-        if (individualUploadSession) {
-          void synchronizeActivePhotoSelection().catch((error) => {
-            console.error("Photo removal could not be synchronized", { errorName:String(error?.name || "Error") });
-          });
-        }
-      });
-      const moveLater = document.createElement("button");
-      moveLater.className = "slot-move-button slot-move-button--later";
-      moveLater.type = "button";
-      moveLater.textContent = "→";
-      moveLater.disabled = Number(slot.dataset.slot) === uploadedImages.length - 1;
-      moveLater.setAttribute("aria-label", `Move photo ${Number(slot.dataset.slot) + 1} later`);
-      moveLater.addEventListener("click", () => movePhoto(Number(slot.dataset.slot), 1));
 
       const status = document.createElement("div");
       status.className = "slot-upload-status";
@@ -1548,27 +1503,7 @@
       } else {
         status.hidden = true;
       }
-      slot.append(replace, moveEarlier, moveLater, remove, status);
-    }
-
-    function movePhoto(index, offset) {
-      const target = index + offset;
-      if (!Number.isInteger(index) || target < 0 || target >= uploadedImages.length) return;
-      [uploadedImages[index], uploadedImages[target]] = [uploadedImages[target], uploadedImages[index]];
-      imageSlots.forEach((slot, slotIndex) => {
-        slot.dataset.slot = String(slotIndex);
-        slot.querySelector(".upload-input").value = "";
-        renderSlot(slot, uploadedImages[slotIndex]);
-      });
-      updateUploadProgress();
-      schedulePersistDraftUploads();
-      if (individualUploadSession) {
-        void synchronizeActivePhotoSelection().catch((error) => {
-          console.error("Photo order could not be synchronized", { errorName:String(error?.name || "Error") });
-        });
-      }
-      const moveButton = imageSlots[target]?.querySelector(".slot-move-button:not(:disabled)");
-      moveButton?.focus({ preventScroll:true });
+      slot.append(replace, status);
     }
 
     function updateCropperNavigation() {

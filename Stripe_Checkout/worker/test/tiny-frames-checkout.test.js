@@ -63,6 +63,11 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /hero-dscf1744-effect-landscape-2560\.webp/);
   assert.match(html, /hero-dscf1744-effect-portrait-960\.webp/);
   assert.match(html, /Choose 8 Memories/);
+  assert.match(html, /replace\.addEventListener\("click", \(\) => triggerSlotPicker\(slot, replace\)\);/);
+  assert.match(html, /uploadedImages\[item\.slotIndex\] = entry;/);
+  assert.doesNotMatch(html, /image-remove-button/);
+  assert.doesNotMatch(html, /slot-move-button/);
+  assert.doesNotMatch(html, /function movePhoto/);
 });
 
 test('individual photo upload CORS allows configured storefront origins and readable Worker errors', async () => {
