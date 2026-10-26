@@ -18,6 +18,15 @@ const uploadReference = 'tf_0123456789abcdef0123456789abcdef';
 test('storefront uploads cropped photos individually in the background', async () => {
   const html = await readFile(new URL('../../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const frameAspectRatio = 54 \/ 86;/);
+  assert.match(html, /const CROP_SOURCE_MAX_DIMENSION = 3200;/);
+  assert.match(html, /function createCropSourceUrl\(file, maximumDimension = CROP_SOURCE_MAX_DIMENSION\)/);
+  assert.match(html, /maximumDimension \/ sourceImage\.naturalWidth/);
+  assert.match(html, /item\.sourceUrl \|\|= await createCropSourceUrl\(item\.file\)/);
+  assert.match(html, /const PRINT_EXPORT_SHORT_EDGE = 1600;/);
+  assert.match(html, /const PRINT_EXPORT_LONG_EDGE = Math\.round\(PRINT_EXPORT_SHORT_EDGE \/ frameAspectRatio\);/);
+  assert.match(html, /maxWidth:cropFrameIsPortrait \? PRINT_EXPORT_SHORT_EDGE : PRINT_EXPORT_LONG_EDGE/);
+  assert.match(html, /maxHeight:cropFrameIsPortrait \? PRINT_EXPORT_LONG_EDGE : PRINT_EXPORT_SHORT_EDGE/);
+  assert.match(html, /canvasToJpegBlob\(printCanvas, PRINT_JPEG_QUALITY\)/);
   assert.match(html, /const uploadedImages = Array\(3\)\.fill\(null\);/);
   assert.match(html, /for \(let offset = 0; offset < 3; offset \+= 1\)/);
   assert.match(html, /input\.multiple = true;/);
@@ -62,7 +71,9 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /\.configurator\.is-open \{ height:auto; max-height:none;[^}]*overflow:visible/);
   assert.match(html, /hero-dscf1744-effect-landscape-2560\.webp/);
   assert.match(html, /hero-dscf1744-effect-portrait-960\.webp/);
-  assert.match(html, /Choose 8 Memories/);
+  assert.match(html, /Upload Photos/);
+  assert.match(html, /id="upload-progress" role="status" aria-live="polite"/);
+  assert.match(html, /your selected \$\{failedCount === 1 \? "photo is" : "photos are"\} still saved/);
   assert.match(html, /replace\.addEventListener\("click", \(\) => triggerSlotPicker\(slot, replace\)\);/);
   assert.match(html, /uploadedImages\[item\.slotIndex\] = entry;/);
   assert.doesNotMatch(html, /image-remove-button/);

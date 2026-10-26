@@ -875,7 +875,7 @@
       <p class="hero-intro-copy hero-intro-copy-desktop">An 80 × 80 mm solid timber frame designed to hold the photos you actually want around you.</p>
       <a class="hero-intro-link hero-intro-link-desktop" href="#colour-palette">Create your frame <span class="hero-intro-arrow" aria-hidden="true">→</span></a>
       <h2 class="hero-intro-title-mobile">Some memories deserve a home.</h2>
-      <a class="hero-upload-cta" href="#upload-section">Choose 8 Memories</a>
+      <a class="hero-upload-cta" href="#upload-section">Upload Photos</a>
       <p class="hero-intro-copy-mobile">An 80 × 80 mm solid timber frame for your favourite pictures.</p>
     </div>
   </main>
@@ -892,7 +892,7 @@
       <div class="configurator" id="configurator" aria-hidden="true">
         <p class="product-name" id="product-name">Frame &amp; Photos</p>
         <div class="upload-section" id="upload-section" aria-hidden="false">
-          <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress">0 / 3 Added</span></p>
+          <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress" role="status" aria-live="polite">0 / 3 Added</span></p>
           <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
           <div class="photo-sets" id="photo-sets" aria-label="Photo upload sets"></div>
           <button class="add-photo-set-button" id="add-photo-set" type="button">+ Add Another 3 Photos — $5</button>
@@ -1229,6 +1229,10 @@
     });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
+    const CROP_SOURCE_MAX_DIMENSION = 3200;
+    const PRINT_EXPORT_SHORT_EDGE = 1600;
+    const PRINT_EXPORT_LONG_EDGE = Math.round(PRINT_EXPORT_SHORT_EDGE / frameAspectRatio);
+    const PRINT_JPEG_QUALITY = .96;
     const BASE_FRAME_PRICE = 50;
     const PHOTO_SET_PRICE = 5;
     const VARIABLE_PRODUCT_ID = "tiny_frame_photo_sets";
@@ -1425,10 +1429,10 @@
         ? `${uploadedCount} / ${configuredCount} uploaded${count > uploadedCount ? ` · ${count} selected` : ""}`
         : "0 photos selected";
       resetImagesButton.hidden = count === 0;
-      imageQualityWarning.textContent = lowResolutionEntries.length
-        ? `${lowResolutionEntries.length === 1 ? "One picture is" : `${lowResolutionEntries.length} pictures are`} below 200 PPI at print size. A higher-resolution original is recommended.`
-        : failedCount
-          ? `${failedCount === 1 ? "One photo upload needs" : `${failedCount} photo uploads need`} to be retried.`
+      imageQualityWarning.textContent = failedCount
+        ? `${failedCount === 1 ? "One photo upload failed" : `${failedCount} photo uploads failed`}. Retry ${failedCount === 1 ? "it" : "them"} below; your selected ${failedCount === 1 ? "photo is" : "photos are"} still saved.`
+        : lowResolutionEntries.length
+          ? `${lowResolutionEntries.length === 1 ? "One picture is" : `${lowResolutionEntries.length} pictures are`} below 200 PPI at print size. A higher-resolution original is recommended.`
           : "";
       imageQualityWarning.hidden = lowResolutionEntries.length === 0 && failedCount === 0;
       updateProductSummary();
@@ -1474,6 +1478,8 @@
 
       const status = document.createElement("div");
       status.className = "slot-upload-status";
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
       if (["processing", "queued", "uploading"].includes(entry.uploadState)) {
         const spinner = document.createElement("span");
         spinner.className = "slot-upload-spinner";
@@ -1519,12 +1525,68 @@
       saveCropButton.textContent = current === total ? "Finish" : "Next Photo";
     }
 
-    function loadCurrentCropPhoto() {
+    function createCropSourceUrl(file, maximumDimension = CROP_SOURCE_MAX_DIMENSION) {
+      return new Promise((resolve, reject) => {
+        const originalUrl = URL.createObjectURL(file);
+        const sourceImage = new Image();
+        sourceImage.onload = () => {
+          const scale = Math.min(1, maximumDimension / sourceImage.naturalWidth, maximumDimension / sourceImage.naturalHeight);
+          if (scale === 1) {
+            resolve(originalUrl);
+            return;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
+          const context = canvas.getContext("2d", { alpha:file.type === "image/png" });
+          if (!context) {
+            revoke(originalUrl);
+            reject(new Error("The picture could not be prepared for cropping."));
+            return;
+          }
+          context.imageSmoothingEnabled = true;
+          context.imageSmoothingQuality = "high";
+          context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+          const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
+          canvas.toBlob((blob) => {
+            revoke(originalUrl);
+            canvas.width = 1;
+            canvas.height = 1;
+            if (blob) resolve(URL.createObjectURL(blob));
+            else reject(new Error("The picture could not be prepared for cropping."));
+          }, outputType, .96);
+        };
+        sourceImage.onerror = () => {
+          revoke(originalUrl);
+          reject(new Error("The selected picture could not be opened."));
+        };
+        sourceImage.src = originalUrl;
+      });
+    }
+
+    async function loadCurrentCropPhoto() {
       const item = cropBatch?.items[cropBatch.currentIndex];
       if (!item) return;
+      const expectedBatch = cropBatch;
+      const expectedIndex = cropBatch.currentIndex;
       cropBatch.loading = true;
       setCropperProcessing(true);
       destroyCropper();
+      try {
+        item.sourceUrl ||= await createCropSourceUrl(item.file);
+      } catch (error) {
+        console.error("Crop source preparation failed", { pictureNumber:item.slotIndex + 1, errorName:String(error?.name || "Error") });
+        if (cropBatch === expectedBatch) {
+          window.alert("One of the selected photos could not be opened. Your previously saved photos are unchanged.");
+          closeCropper();
+        }
+        return;
+      }
+      if (cropBatch !== expectedBatch || cropBatch.currentIndex !== expectedIndex || overlay.style.display !== "flex") {
+        revoke(item.sourceUrl);
+        item.sourceUrl = null;
+        return;
+      }
       sourceUrl = item.sourceUrl;
       activeSlotIndex = item.slotIndex;
       cropFrameIsPortrait = item.draft?.crop?.rotation !== 90;
@@ -1571,7 +1633,7 @@
         items:files.map((file, index) => ({
           file,
           slotIndex:slotIndices[index],
-          sourceUrl:URL.createObjectURL(file),
+          sourceUrl:null,
           draft:null
         }))
       };
@@ -1579,7 +1641,7 @@
       overlay.style.display = "flex";
       overlay.setAttribute("aria-hidden", "false");
       lockCropperPageScroll();
-      loadCurrentCropPhoto();
+      void loadCurrentCropPhoto();
     }
 
     function closeCropper() {
@@ -1821,6 +1883,8 @@
       let previewCanvas;
       try {
         croppedCanvas = cropper.getCroppedCanvas({
+          maxWidth:cropFrameIsPortrait ? PRINT_EXPORT_SHORT_EDGE : PRINT_EXPORT_LONG_EDGE,
+          maxHeight:cropFrameIsPortrait ? PRINT_EXPORT_LONG_EDGE : PRINT_EXPORT_SHORT_EDGE,
           imageSmoothingEnabled:true,
           imageSmoothingQuality:"high"
         });
@@ -1830,7 +1894,7 @@
         printCanvas = cropFrameIsPortrait ? croppedCanvas : rotateCanvasClockwise(croppedCanvas);
         previewCanvas = createPreviewCanvas(printCanvas);
         const [printBlob, previewBlob] = await Promise.all([
-          canvasToJpegBlob(printCanvas, 1),
+          canvasToJpegBlob(printCanvas, PRINT_JPEG_QUALITY),
           canvasToJpegBlob(previewCanvas, .95)
         ]);
         revoke(item.draft?.entry?.url);
@@ -1897,12 +1961,12 @@
         updateUploadProgress();
         if (direction === "back") {
           cropBatch.currentIndex -= 1;
-          loadCurrentCropPhoto();
+          void loadCurrentCropPhoto();
           return;
         }
         if (cropBatch.currentIndex < cropBatch.items.length - 1) {
           cropBatch.currentIndex += 1;
-          loadCurrentCropPhoto();
+          void loadCurrentCropPhoto();
           return;
         }
         cropBatch.committed = true;
