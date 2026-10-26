@@ -80,8 +80,9 @@ never reused.
 - Checkout and PaymentIntent metadata contain the full product-code list.
 - Stripe idempotency and `checkout_requests` preserve codes across retries.
 - Live webhook retries update existing D1 rows and cannot create new products.
-- New picture products keep their individual 54 × 86 crops under
-  `orders/YYYY-MM-DD_<five-digit-code>/`, using the Brisbane payment date.
+- New picture products reserve a code when the upload session starts and keep
+  their individual 54 × 86 crops under `uploads/<five-digit-code>/`. The same
+  code is attached to the Stripe line item at checkout.
 - Historical picture products keep their existing code-named A4 PDF paths;
   those files are not migrated, renamed, or deleted.
 - R2 manifests and D1 rows preserve the upload-session, Stripe-session, and

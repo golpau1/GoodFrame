@@ -207,35 +207,24 @@ function getArtworkUrl(request, objectKey) {
   return `${getWorkerBaseUrl(request)}/artwork/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
 }
 
-function formatBrisbaneUploadFolder(value = new Date(), suffix = '') {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-AU', {
-    timeZone:'Australia/Brisbane',
-    day:'2-digit',
-    month:'2-digit',
-    year:'numeric',
-    hour:'numeric',
-    minute:'2-digit',
-    hour12:true
-  }).formatToParts(value).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
-  const uniqueSuffix = String(suffix || '').trim().toLowerCase();
-  if (uniqueSuffix && !/^[a-f0-9]{4}$/.test(uniqueSuffix)) throw new Error('Upload folder suffix must be four hexadecimal characters');
-  return `${parts.day}-${parts.month}-${parts.year}_${Number(parts.hour)}-${parts.minute}${String(parts.dayPeriod || '').toUpperCase()}${uniqueSuffix ? `-${uniqueSuffix}` : ''}`;
-}
-
 function normalizeUploadStorageFolder(value) {
   const folder = String(value || '').trim();
-  return /^(?:\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?)$/.test(folder)
+  return /^(?:[1-9]\d{4}|\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?)$/.test(folder)
     ? folder
     : '';
 }
 
 function getPhotoUploadStorageFolder(record, uploadSessionId = record?.upload_session_id) {
-  return normalizeUploadStorageFolder(record?.storage_folder) || normalizeUploadReference(uploadSessionId);
+  return normalizeProductCode(record?.product_code) ||
+    normalizeUploadStorageFolder(record?.storage_folder) ||
+    normalizeUploadReference(uploadSessionId);
 }
 
 function getTinyFrameUploadPrefix(uploadSessionId, storageFolder = '') {
   const folder = normalizeUploadStorageFolder(storageFolder) || normalizeUploadReference(uploadSessionId);
-  return folder ? `${TINY_FRAME_UPLOAD_PREFIX}${folder}/` : '';
+  return folder
+    ? `${/^[1-9]\d{4}$/.test(folder) ? 'uploads/' : TINY_FRAME_UPLOAD_PREFIX}${folder}/`
+    : '';
 }
 
 function getUploadManifestKey(uploadSessionId, storageFolder = '') {
@@ -265,6 +254,13 @@ function getIndividualPhotoKey(uploadSessionId, photoId) {
     : '';
 }
 
+function getProductPhotoKey(productCode, position) {
+  const code = normalizeProductCode(productCode);
+  return code && Number.isSafeInteger(position) && position > 0
+    ? `uploads/${code}/photo-${String(position).padStart(2, '0')}.jpg`
+    : '';
+}
+
 function getTemporaryPhotoKey(uploadSessionId, storageFolder = '', photoId = '', revision = '') {
   const sessionId = normalizeUploadReference(uploadSessionId);
   const normalizedPhotoId = normalizePhotoId(photoId);
@@ -276,6 +272,11 @@ function getTemporaryPhotoKey(uploadSessionId, storageFolder = '', photoId = '',
 
 function isValidIndividualPhotoKey(value, uploadSessionId = '', storageFolder = '') {
   const key = String(value || '');
+  const productPhoto = key.match(/^uploads\/([1-9]\d{4})\/photo-\d{2,}\.jpg$/);
+  if (productPhoto) {
+    const expectedCode = normalizeProductCode(storageFolder);
+    return Boolean(expectedCode && productPhoto[1] === expectedCode);
+  }
   // The single-ID form is retained for sessions created by the immediately
   // preceding release. New writes include both photo and revision identities,
   // making a retry resolve to the same immutable R2 key.
@@ -432,18 +433,22 @@ async function createIndividualUploadSession(request, env) {
   const tokenHash = await sha256Hex(uploadToken);
   const createdAt = new Date().toISOString();
   let sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
-  for (let attempt = 0; !sessionRecord && attempt < 6; attempt += 1) {
-    const storageFolder = formatBrisbaneUploadFolder(
-      new Date(createdAt),
-      attempt ? crypto.randomUUID().replaceAll('-', '').slice(0, 4) : ''
-    );
+  if (!sessionRecord) {
+    const allocation = await reserveProductCodes(env.PRODUCT_CODES_DB, [{
+      cartItemId,
+      unitIndex:0,
+      productType:'tiny_frame_photo_sets',
+      uploadReference:uploadSessionId
+    }], `co_${cartItemId.slice(3)}`);
+    const productCode = normalizeProductCode(allocation.units[0]?.productCode);
+    if (!productCode) throw new Error('A unique five-digit product code could not be allocated');
     await env.PRODUCT_CODES_DB.prepare(
       `INSERT OR IGNORE INTO photo_upload_sessions
         (upload_session_id, cart_item_id, upload_token_hash, status, selection_json,
          selection_version, state_version, photo_set_count, product_codes_json,
-         storage_folder, created_at, updated_at)
-       VALUES (?, ?, ?, 'draft', '[]', 0, 0, 1, '[]', ?, ?, ?)`
-    ).bind(uploadSessionId, cartItemId, tokenHash, storageFolder, createdAt, createdAt).run();
+         storage_folder, product_code, created_at, updated_at)
+       VALUES (?, ?, ?, 'draft', '[]', 0, 0, 1, ?, NULL, ?, ?, ?)`
+    ).bind(uploadSessionId, cartItemId, tokenHash, JSON.stringify([productCode]), productCode, createdAt, createdAt).run();
     sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
   }
   if (
@@ -451,6 +456,7 @@ async function createIndividualUploadSession(request, env) {
     sessionRecord.upload_token_hash !== tokenHash
   ) return jsonResponse(request, env, { error:'This upload session is already in use', code:'UPLOAD_SESSION_CONFLICT' }, 409);
   const storageFolder = getPhotoUploadStorageFolder(sessionRecord, uploadSessionId);
+  const productCode = normalizeProductCode(sessionRecord.product_code);
   const manifestKey = getUploadManifestKey(uploadSessionId, storageFolder);
   const existing = await env.ARTWORK_BUCKET.get(manifestKey);
   if (existing) {
@@ -458,12 +464,20 @@ async function createIndividualUploadSession(request, env) {
     if (manifest?.upload_session_id !== uploadSessionId || ![LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest.storage_version))) {
       return jsonResponse(request, env, { error:'This upload session is already in use', code:'UPLOAD_SESSION_CONFLICT' }, 409);
     }
-    return jsonResponse(request, env, { success:true, uploadSessionId, storageFolder, selectionVersion:Number(sessionRecord.selection_version), recovered:true });
+    return jsonResponse(request, env, {
+      success:true,
+      uploadSessionId,
+      productCode,
+      storageFolder,
+      selectionVersion:Number(sessionRecord.selection_version),
+      recovered:true
+    });
   }
   const stored = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
     storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
     upload_session_id:uploadSessionId,
     storage_folder:storageFolder,
+    product_code:productCode || null,
     cart_item_id:cartItemId,
     upload_token_hash:tokenHash,
     product_type:'tiny_frame_photo_sets',
@@ -479,7 +493,13 @@ async function createIndividualUploadSession(request, env) {
     onlyIf:{ etagDoesNotMatch:'*' }
   });
   if (stored === null) return jsonResponse(request, env, { error:'Upload session could not be created' }, 409);
-  return jsonResponse(request, env, { success:true, uploadSessionId, storageFolder, selectionVersion:Number(sessionRecord.selection_version) });
+  return jsonResponse(request, env, {
+    success:true,
+    uploadSessionId,
+    productCode,
+    storageFolder,
+    selectionVersion:Number(sessionRecord.selection_version)
+  });
 }
 
 async function updateIndividualPhotoSelection(request, env) {
@@ -537,9 +557,17 @@ async function updateIndividualPhotoSelection(request, env) {
         if (!photo.photo_id) return photo;
         const previous = previousByIdentity.get(`${photo.photo_id}:${photo.revision}`);
         return previous?.object_key && isValidIndividualPhotoKey(previous.object_key, uploadSessionId, storageFolder)
-          ? { ...photo, object_key:previous.object_key, status:'uploaded' }
+          ? { ...photo, object_key:previous.object_key, status:previous.status }
           : photo;
       });
+      if (normalizeProductCode(record.product_code)) {
+        await normalizeProductPhotoSelection(
+          env.ARTWORK_BUCKET,
+          uploadSessionId,
+          record.product_code,
+          nextSelection
+        );
+      }
       const updated = await savePhotoUploadSelection(env.PRODUCT_CODES_DB, record, nextSelection, new Date().toISOString(), {
         photoSetCount,
         frameColour,
@@ -562,6 +590,102 @@ async function updateIndividualPhotoSelection(request, env) {
       error:error.message || 'Photo selection could not be updated',
       ...(error?.code ? { code:String(error.code) } : {})
     }, error instanceof TinyFrameInputError ? 400 : 500);
+  }
+}
+
+async function normalizeProductPhotoSelection(bucket, uploadSessionId, productCode, selection) {
+  const code = normalizeProductCode(productCode);
+  if (!code) return;
+  const selectedIdentities = new Set(selection
+    .filter(photo => photo?.photo_id && photo?.revision)
+    .map(photo => `${photo.photo_id}:${photo.revision}`));
+  let cursor;
+  do {
+    const listing = await bucket.list({
+      prefix:`uploads/${code}/photo-`,
+      ...(cursor ? { cursor } : {})
+    });
+    for (const listed of listing.objects || []) {
+      const object = await bucket.head(listed.key);
+      const metadata = object?.customMetadata || {};
+      if (
+        metadata.upload_session_id !== uploadSessionId ||
+        metadata.product_code !== code
+      ) throw new TinyFrameInputError('The product photo folder is already in use');
+      if (!selectedIdentities.has(`${metadata.photo_id}:${metadata.revision}`)) {
+        await bucket.delete(listed.key);
+      }
+    }
+    cursor = listing.truncated ? listing.cursor : undefined;
+  } while (cursor);
+
+  if (selection.some(photo => photo?.photo_id && photo.status !== 'uploaded')) {
+    let nextPosition = 1;
+    const assignedKeys = new Set();
+    for (const photo of selection) {
+      if (!photo?.photo_id) continue;
+      const reservedPosition = Number(photo.object_key?.match(/photo-(\d+)\.jpg$/)?.[1] || 0);
+      if (reservedPosition > 0 && !assignedKeys.has(photo.object_key)) {
+        assignedKeys.add(photo.object_key);
+        nextPosition = Math.max(nextPosition, reservedPosition + 1);
+      } else {
+        photo.object_key = getProductPhotoKey(code, nextPosition);
+        assignedKeys.add(photo.object_key);
+        nextPosition += 1;
+        if (photo.status === 'uploaded') photo.status = 'uploading';
+      }
+    }
+    return;
+  }
+
+  const retained = [];
+  for (const photo of selection) {
+    if (!photo?.object_key || photo.status !== 'uploaded') continue;
+    const object = await bucket.get(photo.object_key);
+    const metadata = object?.customMetadata || {};
+    if (
+      !object ||
+      metadata.upload_session_id !== uploadSessionId ||
+      metadata.product_code !== code ||
+      metadata.photo_id !== photo.photo_id ||
+      metadata.revision !== photo.revision
+    ) {
+      photo.object_key = '';
+      photo.status = 'uploading';
+      continue;
+    }
+    retained.push({ photo, objectKey:photo.object_key });
+  }
+  retained.sort((left, right) => {
+    const leftPosition = Number(left.objectKey.match(/photo-(\d+)\.jpg$/)?.[1] || 0);
+    const rightPosition = Number(right.objectKey.match(/photo-(\d+)\.jpg$/)?.[1] || 0);
+    return leftPosition - rightPosition;
+  });
+
+  for (const [index, entry] of retained.entries()) {
+    const targetKey = getProductPhotoKey(code, index + 1);
+    if (entry.objectKey !== targetKey) {
+      const object = await bucket.get(entry.objectKey);
+      const stored = await bucket.put(targetKey, object.body, {
+        httpMetadata:{ contentType:'image/jpeg' },
+        customMetadata:{
+          ...(object.customMetadata || {}),
+          position:String(entry.photo.position)
+        },
+        onlyIf:{ etagDoesNotMatch:'*' }
+      });
+      if (stored === null) throw new TinyFrameInputError('The product photo order changed while it was being saved');
+      await bucket.delete(entry.objectKey);
+    }
+    entry.photo.object_key = targetKey;
+    entry.photo.status = 'uploaded';
+  }
+
+  let nextPosition = retained.length + 1;
+  for (const photo of selection) {
+    if (!photo?.photo_id || photo.status === 'uploaded') continue;
+    photo.object_key = getProductPhotoKey(code, nextPosition);
+    nextPosition += 1;
   }
 }
 
@@ -631,9 +755,10 @@ async function uploadIndividualTinyFramePhoto(request, env) {
     if (sessionRecord) {
       const selection = photoUploadSelection(sessionRecord);
       const selected = selection.find(photo => photo?.photo_id === photoId && photo?.revision === revision);
-      if (sessionRecord.status !== 'draft' || !selected) {
+      if (sessionRecord.status !== 'draft' || !selected || Number(selected.position) !== position) {
         return jsonResponse(request, env, { error:'This photo has been replaced or removed', code:'PHOTO_SUPERSEDED' }, 409);
       }
+      const productCode = normalizeProductCode(sessionRecord.product_code);
       if (selected.status === 'uploaded' && selected.object_key) {
         const confirmed = await env.ARTWORK_BUCKET.head(selected.object_key);
         if (
@@ -659,6 +784,30 @@ async function uploadIndividualTinyFramePhoto(request, env) {
           });
         }
       }
+      const objectKey = productCode
+        ? selected.object_key || getProductPhotoKey(productCode, selected.position)
+        : getTemporaryPhotoKey(uploadSessionId, storageFolder, photoId, revision);
+      const existing = await env.ARTWORK_BUCKET.head(objectKey);
+      if (productCode && selection.some(photo =>
+        photo?.photo_id !== photoId && photo?.object_key === objectKey
+      )) {
+        return jsonResponse(request, env, {
+          error:'The selected photo position is already in use. Please retry the photo selection.',
+          code:'PHOTO_POSITION_CONFLICT'
+        }, 409);
+      }
+      if (productCode && existing && (
+        existing.customMetadata?.upload_session_id !== uploadSessionId ||
+        existing.customMetadata?.product_code !== productCode
+      )) {
+        return jsonResponse(request, env, {
+          error:'The product photo folder is already in use',
+          code:'PRODUCT_CODE_STORAGE_CONFLICT'
+        }, 409);
+      }
+      if (productCode && existing && !existing.httpEtag) {
+        throw new Error('The existing product photo could not be safely replaced');
+      }
       const bytes = await file.arrayBuffer();
       const info = await env.IMAGES.info(bytes);
       const width = Number(info?.width);
@@ -669,31 +818,49 @@ async function uploadIndividualTinyFramePhoto(request, env) {
       if (Math.abs((width / height) - (54 / 86)) > 0.015) {
         throw new TinyFrameInputError('The cropped photo does not match the 54 × 86 mm print ratio');
       }
-      const objectKey = getTemporaryPhotoKey(uploadSessionId, storageFolder, photoId, revision);
       const createdAt = new Date().toISOString();
       const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
         httpMetadata:{ contentType:'image/jpeg' },
         customMetadata:{
           upload_session_id:uploadSessionId,
+          ...(productCode ? { product_code:productCode } : {}),
           photo_id:photoId,
           revision,
+          position:String(selected.position),
           width_px:String(width),
           height_px:String(height),
           effective_ppi:String(Number(calculateEffectivePpi(width, height).toFixed(1))),
-          status:'temporary',
+          status:productCode ? 'draft' : 'temporary',
           created_at:createdAt
         },
-        onlyIf:{ etagDoesNotMatch:'*' }
+        onlyIf:existing
+          ? { etagMatches:existing.httpEtag }
+          : { etagDoesNotMatch:'*' }
       });
+      if (stored === null) {
+        const raced = await env.ARTWORK_BUCKET.head(objectKey);
+        if (
+          raced?.customMetadata?.upload_session_id !== uploadSessionId ||
+          raced?.customMetadata?.product_code !== productCode ||
+          raced?.customMetadata?.photo_id !== photoId ||
+          raced?.customMetadata?.revision !== revision
+        ) {
+          return jsonResponse(request, env, {
+            error:'The photo position changed while uploading. Please retry.',
+            code:'PHOTO_POSITION_CONFLICT'
+          }, 409);
+        }
+      }
       const confirmed = await env.ARTWORK_BUCKET.head(objectKey);
       if (
         !confirmed || Number(confirmed.size || 0) !== file.size ||
         confirmed.httpMetadata?.contentType !== 'image/jpeg' ||
         confirmed.customMetadata?.upload_session_id !== uploadSessionId ||
+        (productCode && confirmed.customMetadata?.product_code !== productCode) ||
         confirmed.customMetadata?.photo_id !== photoId ||
         confirmed.customMetadata?.revision !== revision
       ) throw new Error('R2 did not confirm the stored photo');
-      if (stored === null) {
+      if (stored === null && !productCode) {
         console.info('Photo upload recovered an immutable R2 object after a retry', {
           uploadSessionId,
           photoId
@@ -706,11 +873,27 @@ async function uploadIndividualTinyFramePhoto(request, env) {
           photo?.photo_id === photoId && photo?.revision === revision
         );
         if (!current || current.status !== 'draft' || activeIndex < 0) {
-          await env.ARTWORK_BUCKET.delete(objectKey);
+          if (!productCode) {
+            await env.ARTWORK_BUCKET.delete(objectKey);
+          } else {
+            const storedPhoto = await env.ARTWORK_BUCKET.head(objectKey);
+            const stillSelected = currentSelection.some(photo =>
+              photo?.object_key === objectKey &&
+              photo?.photo_id === photoId &&
+              photo?.revision === revision
+            );
+            if (
+              !stillSelected &&
+              storedPhoto?.customMetadata?.upload_session_id === uploadSessionId &&
+              storedPhoto.customMetadata?.product_code === productCode &&
+              storedPhoto.customMetadata?.photo_id === photoId &&
+              storedPhoto.customMetadata?.revision === revision
+            ) await env.ARTWORK_BUCKET.delete(objectKey);
+          }
           return jsonResponse(request, env, { error:'This photo was replaced while uploading', code:'PHOTO_SUPERSEDED' }, 409);
         }
-        if (currentSelection[activeIndex].object_key) {
-          await env.ARTWORK_BUCKET.delete(objectKey);
+        if (currentSelection[activeIndex].status === 'uploaded' && currentSelection[activeIndex].object_key) {
+          if (!productCode) await env.ARTWORK_BUCKET.delete(objectKey);
           const existingKey = currentSelection[activeIndex].object_key;
           return jsonResponse(request, env, {
             success:true,
@@ -732,7 +915,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
           });
         }
       }
-      await env.ARTWORK_BUCKET.delete(objectKey);
+      if (!productCode) await env.ARTWORK_BUCKET.delete(objectKey);
       throw new Error('Photo selection changed repeatedly while the upload was finishing');
     }
     const bytes = await file.arrayBuffer();
@@ -866,9 +1049,10 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
         if (stored.some((object, index) =>
           !object ||
           object.customMetadata?.upload_session_id !== uploadSessionId ||
+          (normalizeProductCode(sessionRecord.product_code) && object.customMetadata?.product_code !== sessionRecord.product_code) ||
           object.customMetadata?.photo_id !== selection[index].photo_id ||
           object.customMetadata?.revision !== selection[index].revision
-        )) throw new TinyFrameInputError('One or more selected photos could not be verified in temporary storage');
+        )) throw new TinyFrameInputError('One or more selected photos could not be verified in product storage');
         snapshot = {
           storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
           upload_session_id:uploadSessionId,
@@ -1546,6 +1730,7 @@ async function verifyUploadManifests(lineItems, env) {
         const photos = Array.isArray(snapshot?.photos) ? snapshot.photos : [];
         if (
           !record || record.cart_item_id !== item.cartItemId ||
+          (record.product_code && record.product_code !== item.productCode) ||
           !['finalized', 'checkout_pending'].includes(record.status) ||
           snapshot?.upload_session_id !== uploadSessionId ||
           snapshot.cart_item_id !== item.cartItemId ||
@@ -1559,9 +1744,10 @@ async function verifyUploadManifests(lineItems, env) {
           !photo ||
           !isValidIndividualPhotoKey(photos[index]?.objectKey, uploadSessionId, storageFolder) ||
           photo.customMetadata?.upload_session_id !== uploadSessionId ||
+          (normalizeProductCode(record.product_code) && photo.customMetadata?.product_code !== record.product_code) ||
           photo.customMetadata?.photo_id !== photos[index]?.photo_id ||
           photo.customMetadata?.revision !== photos[index]?.revision
-        )) throw new Error('One or more selected photos could not be verified in temporary storage');
+        )) throw new Error('One or more selected photos could not be verified in product storage');
         const assignedCodes = parsePhotoUploadJson(record.product_codes_json, []);
         if (Array.isArray(assignedCodes) && assignedCodes.some(code => normalizeProductCode(code) !== item.productCode)) {
           throw new Error('The upload session is already associated with another product code');
@@ -2357,6 +2543,14 @@ async function markUploadSessionsPaid(session, env) {
       .map(normalizeProductCode)
       .filter(Boolean);
     if (record?.status === 'paid' && storedProductCodes.length) {
+      const productCode = normalizeProductCode(record.product_code);
+      if (productCode && productCode === storedProductCodes[0]) {
+        const manifestKey = `${getTinyFrameUploadPrefix(uploadSessionId, productCode)}manifest.json`;
+        if (!await env.ARTWORK_BUCKET.head(manifestKey)) {
+          throw new Error(`Paid product ${productCode} is missing its photo manifest`);
+        }
+        continue;
+      }
       const paidOrderFolder = getPaidOrderFolder(record.updated_at, storedProductCodes[0]);
       if (!await env.ARTWORK_BUCKET.head(`${paidOrderFolder}/manifest.json`)) {
         throw new Error(`Paid order ${storedProductCodes[0]} is missing its photo manifest`);
@@ -2395,6 +2589,61 @@ async function markUploadSessionsPaid(session, env) {
       ) throw new Error(`Upload session ${uploadSessionId} is missing its verified paid-order snapshot`);
       const paidAt = manifest.paid_at || new Date().toISOString();
       const orderCode = productCodes[0];
+      if (normalizeProductCode(record.product_code) === orderCode) {
+        const finalPhotos = [];
+        for (const [index, photo] of snapshot.photos.entries()) {
+          const objectKey = String(photo?.objectKey || '');
+          const source = await env.ARTWORK_BUCKET.get(objectKey);
+          if (
+            !source ||
+            !isValidIndividualPhotoKey(objectKey, uploadSessionId, orderCode) ||
+            source.customMetadata?.upload_session_id !== uploadSessionId ||
+            source.customMetadata?.product_code !== orderCode ||
+            source.customMetadata?.photo_id !== photo.photo_id ||
+            source.customMetadata?.revision !== photo.revision
+          ) throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
+          const position = index + 1;
+          await env.ARTWORK_BUCKET.put(objectKey, source.body, {
+            httpMetadata:{ contentType:'image/jpeg' },
+            customMetadata:{
+              ...(source.customMetadata || {}),
+              order_code:orderCode,
+              product_codes:productCodes.join(','),
+              stripe_checkout_session_id:stripeCheckoutSessionId,
+              status:'paid',
+              paid_at:paidAt
+            }
+          });
+          finalPhotos.push({
+            photo_id:photo.photo_id,
+            revision:photo.revision,
+            position,
+            objectKey,
+            contentType:'image/jpeg'
+          });
+        }
+        await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
+          ...manifest,
+          ...snapshot,
+          order_code:orderCode,
+          product_codes:productCodes,
+          stripe_checkout_session_id:stripeCheckoutSessionId,
+          photos:finalPhotos,
+          files:finalPhotos,
+          status:'paid',
+          paid_at:paidAt
+        }), { httpMetadata:{ contentType:'application/json' } });
+        await env.PRODUCT_CODES_DB.prepare(
+          `UPDATE photo_upload_sessions
+              SET status = 'paid',
+                  state_version = state_version + 1,
+                  updated_at = ?
+            WHERE upload_session_id = ?
+              AND stripe_checkout_session_id = ?
+              AND status IN ('checkout_pending', 'paid')`
+        ).bind(paidAt, uploadSessionId, stripeCheckoutSessionId).run();
+        continue;
+      }
       const paidOrderFolder = getPaidOrderFolder(paidAt, orderCode);
       const finalPhotos = [];
       for (const [index, photo] of snapshot.photos.entries()) {
@@ -2567,7 +2816,7 @@ async function cleanupPendingUploads(env, now = Date.now()) {
   if (env.PRODUCT_CODES_DB) {
     const stale = await env.PRODUCT_CODES_DB.prepare(
       `SELECT upload_session_id, status, stripe_checkout_session_id, checkout_expires_at,
-              updated_at, storage_folder
+              updated_at, storage_folder, product_code
          FROM photo_upload_sessions
         WHERE status IN ('draft', 'finalized', 'checkout_pending', 'expired')
           AND updated_at < ?`
@@ -2797,6 +3046,12 @@ async function findPaidPhotoManifest(env, record, productCode) {
       .map(normalizeProductCode)
       .filter(Boolean);
     if (uploadRecord?.status === 'paid' && productCodes.includes(productCode)) {
+      if (normalizeProductCode(uploadRecord.product_code) === productCode) {
+        const prefix = `${getTinyFrameUploadPrefix(uploadSessionId, productCode)}`;
+        const object = await env.ARTWORK_BUCKET.get(`${prefix}manifest.json`);
+        const manifest = object ? await readR2Json(object) : null;
+        if (manifest) return { manifest, prefix };
+      }
       const prefix = `${getPaidOrderFolder(uploadRecord.updated_at, productCodes[0])}/`;
       const object = await env.ARTWORK_BUCKET.get(`${prefix}manifest.json`);
       const manifest = object ? await readR2Json(object) : null;
@@ -2836,7 +3091,7 @@ async function getAdminProductAssets(request, env, productCode) {
     if ([LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest?.storage_version))) {
         const photos = (Array.isArray(manifest.photos) ? manifest.photos : []).map((photo, index) => ({
           position:Number(photo.position || index + 1),
-          filename:`${normalizedCode}-photo-${String(photo.position || index + 1).padStart(2, '0')}.jpg`,
+          filename:`photo-${String(photo.position || index + 1).padStart(2, '0')}.jpg`,
           downloadUrl:`/admin/product-assets/${normalizedCode}/photo/${Number(photo.position || index + 1)}`
         }));
         return jsonResponse(request, env, {
@@ -2904,7 +3159,7 @@ async function downloadAdminProductAsset(request, env, productCode, assetType, p
     }
     objectKey = String(photo.objectKey);
     contentType = 'image/jpeg';
-    filename = `${normalizedCode}-photo-${String(photoPosition).padStart(2, '0')}.jpg`;
+    filename = `photo-${String(photoPosition).padStart(2, '0')}.jpg`;
   } else if (assetType === 'legacy-pdf') {
     for (const candidate of getProductPdfKeyCandidates(normalizedCode)) {
       if (await env.ARTWORK_BUCKET.head(candidate)) {

@@ -22,8 +22,7 @@ simultaneous photo requests cannot create competing replacement sessions.
 - `ARTWORK_BUCKET`: private R2 bucket (`goodframes` in production).
 - `PRODUCT_CODES_DB`: D1 database for product codes, photo selections, snapshots,
   and Stripe relationships. Apply migrations `0003_photo_upload_sessions.sql`
-  `0004_photo_upload_storage_folders.sql`, and
-  `0005_photo_upload_storage_folder_length.sql` to the production and test
+  through `0006_photo_upload_product_codes.sql` to the production and test
   databases before deploying this Worker revision.
 - `IMAGES`: validates stored JPEG dimensions and crop ratio.
 - `UPLOAD_RATE_LIMITER`: 120 upload operations per minute per client/session.
@@ -69,54 +68,51 @@ Set `ADMIN_API_KEY` as an encrypted Worker secret. It must be at least 24
 characters and is required by the authenticated order-file listing and download
 endpoints. Existing Stripe and Resend secrets remain unchanged.
 
-## Temporary selection and finalization
+## Product photo storage
 
-Every browser session gets a unique upload session ID. Each confirmed crop is
-written to a unique, immutable key in a Brisbane-time folder named
-`DD-MM-YYYY_H-MMAM/PM`. If another session starts in the same minute, the
-Worker adds a four-character suffix. For example:
+Each cart product reserves its unique five-digit product code before photo
+uploads begin. Cropped photos are written directly into that product's folder,
+and the same code is attached to its Stripe line item:
 
 ```text
-temporary/26-10-2026_8-51PM/manifest.json
-temporary/26-10-2026_8-51PM-a7b4/photos/<photo-id>-<revision>.jpg
+uploads/12345/photo-01.jpg
+uploads/12345/photo-02.jpg
 ```
 
-The upload session ID remains the durable application/Stripe reference; only
-the new R2 storage folder name changes. A short unique suffix prevents collisions
-when multiple uploads start in the same minute. Existing `tf_<session-id>`
-and previously timestamped folders remain in place and readable.
+Upload session IDs and tokens remain private application credentials in D1;
+they are not used as R2 folder names. Product codes are globally unique and
+never recycled, so one product cannot overwrite another product's photos.
+Existing temporary and timestamped folders remain readable for older sessions.
 
 The upload token is stored only as a SHA-256 hash. D1 stores the active ordered
 photo selection per cart item, including photo identity, revision, position,
 and its verified R2 key. Replacing, removing, reordering, or changing set count
 updates that selection with a compare-and-swap version. An upload that finishes
-after its photo was replaced or removed is rejected and its temporary object
-is deleted. A retry uses the same deterministic immutable key, so an interrupted
-response cannot create a duplicate object. Unselected temporary objects remain
-private and are eligible for seven-day cleanup.
+after its photo was replaced or removed is rejected. A retry uses the product
+code and photo position, and R2 conditional writes prevent a concurrent update
+from replacing another object. Abandoned draft folders are eligible for
+seven-day cleanup.
 
 Before Add to Cart, the Worker snapshots the active selection and verifies that
 every selected JPEG still exists with matching upload-session, photo, and
 revision metadata. Checkout uses this snapshot rather than client-provided
 object keys.
 
-Only a verified, paid Stripe webhook finalizes a new order. The Worker copies
-only snapshot photos, in selected order, to:
+Only a verified, paid Stripe webhook finalizes a new order. The Worker keeps
+the verified photos and manifest in the same product folder:
 
 ```text
-orders/2026-10-27_12345/manifest.json
-orders/2026-10-27_12345/photo-01.jpg
-orders/2026-10-27_12345/photo-02.jpg
+uploads/12345/manifest.json
+uploads/12345/photo-01.jpg
+uploads/12345/photo-02.jpg
 ```
 
-The folder date uses Brisbane time and the five-digit durable order/product
-code. The manifest records the Stripe order ID, all related product codes,
-frame colour, and ordered photo references. Conditional R2 writes make retries
-idempotent and refuse to replace files belonging to a different order. After
-the paid files and manifest are verified, the corresponding temporary folder
-is removed. Paid-order files are never included in temporary cleanup. Existing
-legacy product-folder PDFs, historical orders, and older photo manifests remain
-readable through the authenticated admin endpoints, but no new PDF is created.
+The manifest records the Stripe order ID, product code, frame colour, and
+ordered photo references. Conditional R2 writes make retries idempotent and
+refuse to replace files belonging to another product. Paid product folders are
+never included in temporary cleanup. Existing legacy product-folder PDFs,
+historical orders, and older photo manifests remain readable through the
+authenticated admin endpoints, but no new PDF is created.
 
 Variable photo sets have no fixed set limit. The A$50 starting price includes
 the first three photos; each additional three-photo set adds A$5. Prices are

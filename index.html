@@ -2812,8 +2812,11 @@
           const result = await readUploadJson(response);
           if (response.ok && result.success) {
             session.selectionVersion = Number(result.selectionVersion || 0);
+            session.productCode = typeof result.productCode === "string" && /^[1-9]\d{4}$/.test(result.productCode)
+              ? result.productCode
+              : "";
             session.storageFolder = typeof result.storageFolder === "string" &&
-              /^(?:\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?|\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|tf_[a-f0-9]{32})$/.test(result.storageFolder)
+              /^(?:[1-9]\d{4}|\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?|\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|tf_[a-f0-9]{32})$/.test(result.storageFolder)
               ? result.storageFolder
               : session.uploadSessionId;
             individualUploadSession = session;
@@ -3033,12 +3036,12 @@
             entry.uploadState = "verifying";
             renderIndividualUploadEntry(entry);
           }
-          const storageFolder = session.storageFolder || session.uploadSessionId;
+          const storageFolder = session.productCode || session.storageFolder || session.uploadSessionId;
           if (
             response.ok && result.success &&
             result.photo?.photoId === entry.photoId &&
             result.photo?.revision === entry.revision &&
-            new RegExp(`^temporary/${storageFolder}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg$`).test(objectKey)
+            new RegExp(`^(?:uploads/${storageFolder}/photo-\\d{2,}\\.jpg|temporary/${storageFolder}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg)$`).test(objectKey)
           ) {
             if (entry.cancelled || !uploadedImages.includes(entry)) {
               entry.objectKey = objectKey;
