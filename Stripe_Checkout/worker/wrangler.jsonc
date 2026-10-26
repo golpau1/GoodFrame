@@ -8,7 +8,7 @@
     "STRIPE_MODE": "live",
     "SITE_BASE_URL": "https://goodframe.com.au",
     "ALLOWED_ORIGINS": "https://goodframe.com.au,https://www.goodframe.com.au,http://localhost:4173,http://127.0.0.1:4173",
-    "PENDING_UPLOAD_TTL_DAYS": "10",
+    "PENDING_UPLOAD_TTL_DAYS": "7",
     // Sender shown on the order-confirmation email. The domain here must
     // be a verified sender domain in Resend before this works - update
     // once that's done (see Stripe_Checkout/worker/src/index.js).
@@ -48,7 +48,7 @@
         "STRIPE_MODE": "test",
         "SITE_BASE_URL": "http://127.0.0.1:4173",
         "ALLOWED_ORIGINS": "https://goodframe.com.au,https://www.goodframe.com.au,http://localhost:4173,http://127.0.0.1:4173",
-        "PENDING_UPLOAD_TTL_DAYS": "10",
+        "PENDING_UPLOAD_TTL_DAYS": "7",
         "RESEND_FROM_EMAIL": "Good Frame <orders@goodframe.com.au>",
         "SUPPORT_EMAIL": "contact.goodframe@gmail.com"
       },
@@ -84,7 +84,7 @@
         "STRIPE_MODE": "test",
         "SITE_BASE_URL": "http://127.0.0.1:4173",
         "ALLOWED_ORIGINS": "https://goodframe.com.au,https://www.goodframe.com.au,http://localhost:4173,http://127.0.0.1:4173",
-        "PENDING_UPLOAD_TTL_DAYS": "10",
+        "PENDING_UPLOAD_TTL_DAYS": "7",
         "RESEND_FROM_EMAIL": "Good Frame <orders@goodframe.com.au>",
         "SUPPORT_EMAIL": "contact.goodframe@gmail.com"
       },

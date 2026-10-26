@@ -48,9 +48,10 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /function preserveScrollDuringLayoutChange/);
   assert.match(html, /id=\"product-name\">Frame &amp; Photos</);
   assert.match(html, /<h2 class=\"palette-title\">FRAME COLOUR<\/h2>/);
-  assert.match(html, /const BASE_FRAME_PRICE = 50;/);
+  assert.match(html, /"price": "46\.00"/);
+  assert.match(html, /const BASE_FRAME_PRICE = 46;/);
   assert.match(html, /const PHOTO_SET_PRICE = 6;/);
-  assert.match(html, /id=\"config-price\">56\.00</);
+  assert.match(html, /id=\"config-price\">52\.00</);
   assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$6</);
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
   assert.match(html, /\.configurator\.is-open \{ height:auto; max-height:none;[^}]*overflow:visible/);
@@ -59,6 +60,7 @@ test('storefront uploads cropped photos individually in the background', async (
 
 test('individual photo upload CORS allows configured storefront origins and readable Worker errors', async () => {
   const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
   const origins = [
     'https://goodframe.com.au',
     'https://www.goodframe.com.au',
@@ -67,6 +69,7 @@ test('individual photo upload CORS allows configured storefront origins and read
   ];
   const env = {
     ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:origins.join(',')
   };
 
@@ -88,15 +91,16 @@ test('individual photo upload CORS allows configured storefront origins and read
 
     const uploadSessionId = `tf_${String(index + 1).repeat(32)}`;
     const uploadToken = `ut_${String(index + 1).repeat(64)}`;
+    const cartItemId = `ci_${String(index + 1).repeat(32)}`;
     const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
       method:'POST',
       headers:{ Origin:origin, 'Content-Type':'application/json' },
-      body:JSON.stringify({ uploadSessionId, uploadToken })
+      body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
     }), env);
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
     assert.equal((await response.json()).success, true);
-    assert.ok(bucket.objects.has(`tinyframes/${uploadSessionId}/manifest.json`));
+    assert.ok(bucket.objects.has(`temporary/${uploadSessionId}/manifest.json`));
   }
 
   const rejectedPreflight = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
@@ -135,7 +139,8 @@ test('individual photo upload CORS allows configured storefront origins and read
       headers:{ Origin:origins[0], 'Content-Type':'application/json' },
       body:JSON.stringify({
         uploadSessionId:`tf_${'f'.repeat(32)}`,
-        uploadToken:`ut_${'f'.repeat(64)}`
+        uploadToken:`ut_${'f'.repeat(64)}`,
+        cartItemId:`ci_${'f'.repeat(32)}`
       })
     }), failingEnv);
   } finally {
@@ -145,6 +150,7 @@ test('individual photo upload CORS allows configured storefront origins and read
   assert.equal(failedResponse.headers.get('Access-Control-Allow-Origin'), origins[0]);
   assert.equal((await failedResponse.json()).code, 'WORKER_REQUEST_FAILED');
   assert.equal(loggedErrors.length, 1);
+  database.close();
 });
 
 test('individual cropped photos are authenticated, resumable, finalized, and promoted after payment', async () => {
@@ -164,14 +170,32 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   const sessionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
     headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
-    body:JSON.stringify({ uploadSessionId, uploadToken })
+    body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   }), env);
   assert.equal(sessionResponse.status, 200);
 
   const photos = [];
+  const selection = [];
   for (let index = 0; index < 3; index += 1) {
     const photoId = `ph_${String(index + 1).repeat(32)}`;
     const revision = `${String(index + 4).repeat(8)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(12)}`;
+    selection.push({ photoId, revision });
+  }
+  const selectionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{ ...headers, 'Content-Type':'application/json' },
+    body:JSON.stringify({
+      uploadSessionId,
+      cartItemId,
+      selectionVersion:0,
+      photoSetCount:1,
+      frameColour:'Oak',
+      selection
+    })
+  }), env);
+  assert.equal(selectionResponse.status, 200);
+  for (let index = 0; index < 3; index += 1) {
+    const { photoId, revision } = selection[index];
     const form = new FormData();
     form.append('upload_session_id', uploadSessionId);
     form.append('photo_id', photoId);
@@ -192,6 +216,34 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   assert.equal(status.photos.length, 3);
   assert.deepEqual(status.photos.map(photo => photo.position), [1, 2, 3]);
 
+  const reorderedSelection = selection.slice().reverse();
+  const reorderResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{ ...headers, 'Content-Type':'application/json' },
+    body:JSON.stringify({
+      uploadSessionId,
+      cartItemId,
+      selectionVersion:1,
+      photoSetCount:1,
+      frameColour:'Oak',
+      selection:reorderedSelection
+    })
+  }), env);
+  assert.equal(reorderResponse.status, 200);
+  const restoreOrderResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{ ...headers, 'Content-Type':'application/json' },
+    body:JSON.stringify({
+      uploadSessionId,
+      cartItemId,
+      selectionVersion:2,
+      photoSetCount:1,
+      frameColour:'Oak',
+      selection
+    })
+  }), env);
+  assert.equal(restoreOrderResponse.status, 200);
+
   const finalizeResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/finalize', {
     method:'POST',
     headers:{ ...headers, 'Content-Type':'application/json' },
@@ -199,32 +251,41 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       uploadSessionId,
       cartItemId,
       frameColour:'Oak',
-      photoSetCount:1,
-      photos:photos.map((photo, index) => ({
-        photoId:photo.photoId,
-        objectKey:photo.objectKey,
-        revision:photo.revision,
-        position:index + 1
-      }))
+      photoSetCount:1
     })
   }), env);
   assert.equal(finalizeResponse.status, 200);
 
-  const manifestKey = `tinyframes/${uploadSessionId}/manifest.json`;
+  const manifestKey = `temporary/${uploadSessionId}/manifest.json`;
   const manifest = await (await bucket.get(manifestKey)).json();
-  await bucket.put(manifestKey, JSON.stringify({ ...manifest, product_codes:['58321'] }), { httpMetadata:{ contentType:'application/json' } });
+  database.prepare(
+    `UPDATE photo_upload_sessions
+        SET product_codes_json = '["58321"]',
+            status = 'checkout_pending',
+            stripe_checkout_session_id = 'cs_live_individual_photos',
+            checkout_expires_at = ?
+      WHERE upload_session_id = ?`
+  ).bind(new Date(Date.now() + 3600000).toISOString(), uploadSessionId).run();
   await markUploadSessionsPaid({
     id:'cs_live_individual_photos',
     metadata:{ upload_session_ids:uploadSessionId }
   }, env);
-  const finalManifest = await (await bucket.get('orders/cs_live_individual_photos/product-58321/manifest.json')).json();
+  const finalManifest = await (await bucket.get('orders/cs_live_individual_photos/58321/manifest.json')).json();
   assert.equal(finalManifest.photo_count, 3);
   assert.equal(finalManifest.photos.length, 3);
+  const paidPhotoKey = finalManifest.photos[0].objectKey;
+  const paidPhotoBeforeRetry = new Uint8Array(bucket.objects.get(paidPhotoKey).bytes);
+  await markUploadSessionsPaid({
+    id:'cs_live_individual_photos',
+    metadata:{ upload_session_ids:uploadSessionId }
+  }, env);
+  assert.deepEqual(new Uint8Array(bucket.objects.get(paidPhotoKey).bytes), paidPhotoBeforeRetry);
+  assert.equal((await (await bucket.get(manifestKey)).json()).status, 'paid');
 
   database.prepare(`INSERT INTO product_codes
     (code, cart_item_id, unit_index, product_type, upload_session_id, stripe_checkout_session_id, status, created_at, paid_at, frame_colour, unit_amount, currency)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind('58321', cartItemId, 0, 'tiny_frame_photo_sets', uploadSessionId, 'cs_live_individual_photos', 'paid', new Date().toISOString(), new Date().toISOString(), 'Oak', 5600, 'aud')
+    .bind('58321', cartItemId, 0, 'tiny_frame_photo_sets', uploadSessionId, 'cs_live_individual_photos', 'paid', new Date().toISOString(), new Date().toISOString(), 'Oak', 5200, 'aud')
     .run();
   const adminHeaders = { Authorization:'Bearer admin-key-that-is-at-least-24-characters' };
   const assetResponse = await worker.fetch(new Request('https://worker.example/admin/product-assets/58321', { headers:adminHeaders }), env);
@@ -238,27 +299,297 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   database.close();
 });
 
-test('individual upload never reports success unless R2 confirms the stored object', async () => {
+test('a replaced photo cannot become active when its in-flight upload finishes late', async () => {
   const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const uploadSessionId = `tf_${'c'.repeat(32)}`;
+  const uploadToken = `ut_${'d'.repeat(64)}`;
+  const cartItemId = `ci_${'e'.repeat(32)}`;
+  let releaseImageInfo;
+  let markImageInfoStarted;
+  const imageInfoStarted = new Promise(resolve => { markImageInfoStarted = resolve; });
+  const imageInfoGate = new Promise(resolve => { releaseImageInfo = resolve; });
   const env = {
     ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au',
+    IMAGES:{ info:async () => {
+      markImageInfoStarted();
+      await imageInfoGate;
+      return { width:1080, height:1720 };
+    } }
+  };
+  const authHeaders = { Origin:'https://goodframe.com.au', 'X-Upload-Token':uploadToken };
+  const session = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
+  }), env);
+  assert.equal(session.status, 200);
+  const oldPhoto = { photoId:`ph_${'1'.repeat(32)}`, revision:'11111111-1111-4111-8111-111111111111' };
+  const newPhoto = { photoId:`ph_${'2'.repeat(32)}`, revision:'22222222-2222-4222-8222-222222222222' };
+  const updateSelection = (selectionVersion, photo) => worker.fetch(new Request(
+    'https://worker.example/tiny-frame-upload/selection',
+    {
+      method:'POST',
+      headers:{ ...authHeaders, 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        uploadSessionId,
+        cartItemId,
+        selectionVersion,
+        photoSetCount:1,
+        frameColour:'Oak',
+        selection:[photo, null, null]
+      })
+    }
+  ), env);
+  assert.equal((await updateSelection(0, oldPhoto)).status, 200);
+
+  const oldForm = new FormData();
+  oldForm.append('upload_session_id', uploadSessionId);
+  oldForm.append('photo_id', oldPhoto.photoId);
+  oldForm.append('revision', oldPhoto.revision);
+  oldForm.append('position', '1');
+  oldForm.append('file', new File([fakeJpeg()], 'old.jpg', { type:'image/jpeg' }));
+  const oldUploadPromise = worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
+    method:'POST',
+    headers:authHeaders,
+    body:oldForm
+  }), env);
+  await imageInfoStarted;
+  assert.equal((await updateSelection(1, newPhoto)).status, 200);
+  releaseImageInfo();
+  const staleResponse = await oldUploadPromise;
+  assert.equal(staleResponse.status, 409);
+  assert.equal((await staleResponse.json()).code, 'PHOTO_SUPERSEDED');
+  assert.equal((await bucket.list({ prefix:`temporary/${uploadSessionId}/photos/` })).objects.length, 0);
+
+  const status = await worker.fetch(new Request(
+    `https://worker.example/tiny-frame-upload/status?upload_session_id=${uploadSessionId}`,
+    { headers:authHeaders }
+  ), env);
+  const active = await status.json();
+  assert.equal(active.photos.length, 0);
+  const removeResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{ ...authHeaders, 'Content-Type':'application/json' },
+    body:JSON.stringify({
+      uploadSessionId,
+      cartItemId,
+      selectionVersion:2,
+      photoSetCount:1,
+      frameColour:'Oak',
+      selection:[null, null, null]
+    })
+  }), env);
+  assert.equal(removeResponse.status, 200);
+  database.close();
+});
+
+test('individual photo sets are not capped at 100 sets or 300 photos', async () => {
+  const lineItem = buildLineItems([frameWithPhotoSets(101)])[0];
+  assert.equal(lineItem.photoSetCount, 101);
+  assert.equal(lineItem.photoCount, 303);
+  assert.equal(lineItem.unitAmount, 65200);
+
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const uploadSessionId = 'tf_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+  const uploadToken = `ut_${'9'.repeat(64)}`;
+  const cartItemId = `ci_${'8'.repeat(32)}`;
+  const create = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
+  }), { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:database, ALLOWED_ORIGINS:'https://goodframe.com.au' });
+  assert.equal(create.status, 200);
+
+  const photoId = `ph_${'9'.repeat(32)}`;
+  const revision = '99999999-9999-4999-8999-999999999999';
+  const selection = Array(303).fill(null);
+  selection[300] = { photoId, revision };
+  const selectionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Token':uploadToken },
+    body:JSON.stringify({
+      uploadSessionId,
+      cartItemId,
+      selectionVersion:0,
+      photoSetCount:101,
+      frameColour:'Oak',
+      selection
+    })
+  }), { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:database, ALLOWED_ORIGINS:'https://goodframe.com.au' });
+  assert.equal(selectionResponse.status, 200);
+  const form = new FormData();
+  form.append('upload_session_id', uploadSessionId);
+  form.append('photo_id', photoId);
+  form.append('revision', revision);
+  form.append('position', '301');
+  form.append('file', new File([fakeJpeg()], `${photoId}.jpg`, { type:'image/jpeg' }));
+  const upload = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'X-Upload-Token':uploadToken },
+    body:form
+  }), {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au',
+    IMAGES:{ info:async () => ({ width:1080, height:1720 }) }
+  });
+  assert.equal(upload.status, 200);
+  const uploaded = await upload.json();
+  assert.equal((await bucket.head(uploaded.photo.objectKey)).customMetadata.photo_id, photoId);
+  assert.equal(uploaded.photo.position, 301);
+  database.close();
+});
+
+test('Stripe metadata chunks all upload sessions for large multi-product orders', async () => {
+  const items = Array.from({ length:16 }, (_, index) => ({
+    productCode:String(10001 + index),
+    productType:'tiny_frame_photo_sets',
+    cartItemId:`ci_${String(index + 1).padStart(32, '0')}`,
+    unitIndex:0,
+    name:'Frame + 3 Photos',
+    unitAmount:5200,
+    quantity:1,
+    size:'',
+    frameColour:'Oak',
+    photoSetCount:1,
+    photoCount:3,
+    uploadReference:`tf_${String(index + 1).padStart(32, '0')}`,
+    artworkObjectKeys:[]
+  }));
+  const payload = createStripePayload(items, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
+  const metadata = Object.fromEntries([...payload.entries()]
+    .filter(([key]) => key.startsWith('metadata['))
+    .map(([key, value]) => [key.slice('metadata['.length, -1), value]));
+  const bucket = new MemoryR2Bucket();
+  for (const item of items) {
+    const photoId = `ph_${item.productCode.padStart(32, '0')}`;
+    const revision = '11111111-2222-4333-8444-555555555555';
+    const uploadSessionId = item.uploadReference;
+    const objectKey = `tinyframes/${uploadSessionId}/photos/${photoId}.jpg`;
+    await bucket.put(objectKey, fakeJpeg(), {
+      httpMetadata:{ contentType:'image/jpeg' },
+      customMetadata:{
+        upload_session_id:uploadSessionId,
+        photo_id:photoId,
+        revision,
+        position:'1'
+      }
+    });
+    await bucket.put(`tinyframes/${uploadSessionId}/manifest.json`, JSON.stringify({
+      storage_version:2,
+      upload_session_id:uploadSessionId,
+      product_codes:[item.productCode],
+      photos:[{ photo_id:photoId, objectKey, position:1, revision }],
+      status:'finalized'
+    }), { httpMetadata:{ contentType:'application/json' } });
+  }
+
+  await markUploadSessionsPaid({
+    id:'cs_live_many_products',
+    metadata
+  }, { ARTWORK_BUCKET:bucket });
+
+  for (const item of items) {
+    const finalManifest = await bucket.get(
+      `orders/cs_live_many_products/product-${item.productCode}/manifest.json`
+    );
+    assert.ok(finalManifest, `missing paid files for product ${item.productCode}`);
+  }
+  const uploadMetadataValues = Object.entries(metadata)
+    .filter(([key]) => /^upload_session_ids(?:_[1-9][0-9]*)?$/.test(key))
+    .map(([, value]) => value);
+  assert.ok(uploadMetadataValues.length > 1);
+  assert.ok(uploadMetadataValues.every(value => value.length <= 500));
+});
+
+test('paid order photo collisions fail closed without replacing existing files', async () => {
+  const bucket = new MemoryR2Bucket();
+  const uploadSessionId = 'tf_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab';
+  const photoId = `ph_${'a'.repeat(32)}`;
+  const productCode = '58321';
+  const stripeCheckoutSessionId = 'cs_live_existing_order';
+  const sourceKey = `tinyframes/${uploadSessionId}/photos/${photoId}.jpg`;
+  const finalKey = `orders/${stripeCheckoutSessionId}/product-${productCode}/photo-001.jpg`;
+  const photoMetadata = {
+    upload_session_id:uploadSessionId,
+    photo_id:photoId,
+    revision:'11111111-2222-4333-8444-555555555555',
+    position:'1'
+  };
+  await bucket.put(sourceKey, fakeJpeg(), {
+    httpMetadata:{ contentType:'image/jpeg' },
+    customMetadata:photoMetadata
+  });
+  await bucket.put(`tinyframes/${uploadSessionId}/manifest.json`, JSON.stringify({
+    storage_version:2,
+    upload_session_id:uploadSessionId,
+    product_codes:[productCode],
+    photos:[{ photo_id:photoId, objectKey:sourceKey, position:1, revision:photoMetadata.revision }],
+    status:'finalized'
+  }), { httpMetadata:{ contentType:'application/json' } });
+  const existingBytes = new Uint8Array([1, 2, 3]);
+  await bucket.put(finalKey, existingBytes, {
+    customMetadata:{
+      ...photoMetadata,
+      product_code:productCode,
+      stripe_checkout_session_id:'cs_live_another_order',
+      status:'paid'
+    }
+  });
+
+  await assert.rejects(
+    markUploadSessionsPaid({
+      id:stripeCheckoutSessionId,
+      metadata:{ upload_session_ids:uploadSessionId }
+    }, { ARTWORK_BUCKET:bucket }),
+    /Refusing to replace a different paid-order photo/
+  );
+  assert.deepEqual(new Uint8Array(bucket.objects.get(finalKey).bytes), existingBytes);
+});
+
+test('individual upload never reports success unless R2 confirms the stored object', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
     ALLOWED_ORIGINS:'https://goodframe.com.au',
     IMAGES:{ info:async () => ({ width:1080, height:1720 }) }
   };
   const uploadSessionId = 'tf_dddddddddddddddddddddddddddddddd';
   const uploadToken = `ut_${'e'.repeat(64)}`;
+  const cartItemId = `ci_${'f'.repeat(32)}`;
   const sessionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
     headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
-    body:JSON.stringify({ uploadSessionId, uploadToken })
+    body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   }), env);
   assert.equal(sessionResponse.status, 200);
+  const photoId = `ph_${'f'.repeat(32)}`;
+  const revision = '11111111-2222-3333-4444-555555555555';
+  const selectionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Token':uploadToken },
+    body:JSON.stringify({
+      uploadSessionId,
+      cartItemId,
+      selectionVersion:0,
+      photoSetCount:1,
+      frameColour:'Oak',
+      selection:[{ photoId, revision }, null, null]
+    })
+  }), env);
+  assert.equal(selectionResponse.status, 200);
   const normalPut = bucket.put.bind(bucket);
   bucket.put = async (key, body, options) => key.endsWith('.jpg') ? { key } : normalPut(key, body, options);
   const form = new FormData();
   form.append('upload_session_id', uploadSessionId);
-  form.append('photo_id', `ph_${'f'.repeat(32)}`);
-  form.append('revision', '11111111-2222-3333-4444-555555555555');
+  form.append('photo_id', photoId);
+  form.append('revision', revision);
   form.append('position', '1');
   form.append('file', new File([fakeJpeg()], 'photo.jpg', { type:'image/jpeg' }));
   const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
@@ -268,6 +599,7 @@ test('individual upload never reports success unless R2 confirms the stored obje
   }), env);
   assert.equal(response.status, 500);
   assert.equal((await response.json()).code, 'PHOTO_UPLOAD_FAILED');
+  database.close();
 });
 
 test('A4 print layout uses exact 54 x 86 mm crops in a centred 3/3/2 grid', () => {
@@ -558,11 +890,11 @@ test('legacy eight-photo carts keep their $64.95 price and client-supplied shipp
   assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
 });
 
-test('variable photo-set pricing is calculated on the server from $50 plus $6 per set', () => {
+test('variable photo-set pricing is calculated on the server from $46 plus $6 per set', () => {
   const lineItems = [0, 1, 2, 3, 4, 5].map(photoSetCount => (
     buildLineItems([frameWithPhotoSets(photoSetCount)])[0]
   ));
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [5000, 5600, 6200, 6800, 7400, 8000]);
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [4600, 5200, 5800, 6400, 7000, 7600]);
   assert.deepEqual(lineItems.map(item => item.name), [
     'Frame Only',
     'Frame + 3 Photos',
@@ -579,7 +911,7 @@ test('variable photo-set pricing is calculated on the server from $50 plus $6 pe
 test('Stripe receives the server-calculated variable total and photo counts', () => {
   const lineItems = buildLineItems([frameWithPhotoSets(4)]).map(item => ({ ...item, productCode:'73194' }));
   const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', 'co_0123456789abcdef0123456789abcdef');
-  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7400');
+  assert.equal(payload.get('line_items[0][price_data][unit_amount]'), '7000');
   assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'Frame + 12 Photos');
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_set_count]'), '4');
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_count]'), '12');
@@ -984,4 +1316,59 @@ test('cleanup removes stale pending sessions but preserves paid uploads', async 
   assert.equal(bucket.objects.has(`tinyframes/${oldPendingId}/01.jpg`), false);
   assert.equal(bucket.objects.has(`tinyframes/${paidId}/manifest.json`), true);
   assert.equal(bucket.objects.has(`tinyframes/${paidId}/01.jpg`), true);
+});
+
+test('seven-day cleanup removes abandoned drafts but retains active checkouts and paid-order photos', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const now = Date.parse('2026-10-06T00:00:00.000Z');
+  const staleUpdatedAt = new Date(now - (8 * 24 * 60 * 60 * 1000)).toISOString();
+  const sessions = [
+    { id:`tf_${'1'.repeat(32)}`, cart:`ci_${'1'.repeat(32)}`, status:'draft' },
+    { id:`tf_${'2'.repeat(32)}`, cart:`ci_${'2'.repeat(32)}`, status:'checkout_pending' },
+    { id:`tf_${'3'.repeat(32)}`, cart:`ci_${'3'.repeat(32)}`, status:'paid' }
+  ];
+  for (const [index, session] of sessions.entries()) {
+    const token = `ut_${String(index + 1).repeat(64)}`;
+    const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+      method:'POST',
+      headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        uploadSessionId:session.id,
+        uploadToken:token,
+        cartItemId:session.cart
+      })
+    }), {
+      ARTWORK_BUCKET:bucket,
+      PRODUCT_CODES_DB:database,
+      ALLOWED_ORIGINS:'https://goodframe.com.au'
+    });
+    assert.equal(response.status, 200);
+    await bucket.put(`temporary/${session.id}/photos/${String(index + 1).repeat(32)}.jpg`, 'photo');
+    database.prepare(
+      `UPDATE photo_upload_sessions
+          SET status = ?,
+              stripe_checkout_session_id = ?,
+              checkout_expires_at = ?,
+              updated_at = ?
+        WHERE upload_session_id = ?`
+    ).bind(
+      session.status,
+      session.status === 'draft' ? null : `cs_test_cleanup${index}`,
+      session.status === 'checkout_pending' ? new Date(now + 3600000).toISOString() : null,
+      staleUpdatedAt,
+      session.id
+    ).run();
+  }
+  const deleted = await cleanupPendingUploads({
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    PENDING_UPLOAD_TTL_DAYS:'7'
+  }, now);
+  assert.equal(deleted, 1);
+  assert.equal(bucket.objects.has(`temporary/${sessions[0].id}/manifest.json`), false);
+  assert.equal(bucket.objects.has(`temporary/${sessions[0].id}/photos/${'1'.repeat(32)}.jpg`), false);
+  assert.equal(bucket.objects.has(`temporary/${sessions[1].id}/manifest.json`), true);
+  assert.equal(bucket.objects.has(`temporary/${sessions[2].id}/manifest.json`), true);
+  database.close();
 });

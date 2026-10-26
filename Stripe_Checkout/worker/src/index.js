@@ -39,7 +39,7 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
   tiny_frame_photo_sets: Object.freeze({
     orderType: 'photo-sets',
     name: 'Frame',
-    baseUnitAmount: 5000,
+    baseUnitAmount: 4600,
     photoSetUnitAmount: 600,
     requiresPictures: false
   }),
@@ -54,13 +54,14 @@ const SHIPPING_AMOUNT = 1000;
 const LIVE_INTERNATIONAL_SHIPPING_RATE_ID = 'shr_1UQbhPBqoMGy9EwIyslTEhqQ';
 const STRIPE_SHIPPING_COUNTRIES = Object.freeze(['AU', 'NZ', 'US', 'CA', 'GB', 'JP', 'SG', 'DE', 'FR', 'NL']);
 const STRIPE_SHIPPING_COUNTRY_SET = new Set(STRIPE_SHIPPING_COUNTRIES);
-const TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
+const TINY_FRAME_UPLOAD_PREFIX = 'temporary/';
+const LEGACY_TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
 const TINY_FRAME_UPLOAD_IMAGE_COUNT = 8;
 const TINY_FRAME_PHOTOS_PER_SET = 3;
 const TINY_FRAME_PHOTOS_PER_PAGE = 9;
 const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
-const MAX_TINY_FRAME_PHOTOS_PER_PRODUCT = 300;
-const INDIVIDUAL_PHOTO_STORAGE_VERSION = 2;
+const LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION = 2;
+const INDIVIDUAL_PHOTO_STORAGE_VERSION = 3;
 const MAX_TINY_FRAME_UPLOAD_BYTES = 96 * 1024 * 1024;
 // Keep the multipart request safely below Cloudflare's 100 MB request limit.
 const MAX_TINY_FRAME_PDF_BYTES = 95 * 1024 * 1024;
@@ -79,12 +80,12 @@ const TINY_FRAME_PHOTO_WIDTH_INCHES = 54 / 25.4;
 const TINY_FRAME_PHOTO_HEIGHT_INCHES = 86 / 25.4;
 const TINY_FRAME_LOW_RESOLUTION_PPI = 200;
 const SUPPORTED_TINY_FRAME_IMAGE_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/gif']);
-const DEFAULT_PENDING_UPLOAD_TTL_DAYS = 10;
+const DEFAULT_PENDING_UPLOAD_TTL_DAYS = 7;
 
 class TinyFrameInputError extends Error {}
 function normalizePhotoSetCount(value) {
   const count = Number(value);
-  return Number.isInteger(count) && count >= 0 && count <= (MAX_TINY_FRAME_PHOTOS_PER_PRODUCT / TINY_FRAME_PHOTOS_PER_SET) ? count : null;
+  return Number.isSafeInteger(count) && count >= 0 && Number.isSafeInteger(count * TINY_FRAME_PHOTOS_PER_SET) ? count : null;
 }
 
 function getTinyFramePhotoCount(productType, photoSetCount) {
@@ -97,7 +98,8 @@ function getTinyFrameUnitAmount(productType, photoSetCount = 0) {
   if (productType === 'tiny_frame_8_pictures') return TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.unitAmount;
   if (productType !== 'tiny_frame_photo_sets' || normalizePhotoSetCount(photoSetCount) === null) return undefined;
   const product = TINY_FRAME_PRODUCTS.tiny_frame_photo_sets;
-  return product.baseUnitAmount + (photoSetCount * product.photoSetUnitAmount);
+  const amount = product.baseUnitAmount + (photoSetCount * product.photoSetUnitAmount);
+  return Number.isSafeInteger(amount) ? amount : undefined;
 }
 
 function tinyFrameNameFor(productType, photoCount) {
@@ -231,6 +233,10 @@ function getUploadManifestKey(uploadSessionId) {
   return `${getTinyFrameUploadPrefix(uploadSessionId)}manifest.json`;
 }
 
+function getLegacyIndividualUploadManifestKey(uploadSessionId) {
+  return `${LEGACY_TINY_FRAME_UPLOAD_PREFIX}${uploadSessionId}/manifest.json`;
+}
+
 function normalizeUploadToken(value) {
   const token = String(value || '').trim().toLowerCase();
   return /^ut_[a-f0-9]{64}$/.test(token) ? token : '';
@@ -245,14 +251,71 @@ function getIndividualPhotoKey(uploadSessionId, photoId) {
   const sessionId = normalizeUploadReference(uploadSessionId);
   const normalizedPhotoId = normalizePhotoId(photoId);
   return sessionId && normalizedPhotoId
-    ? `${getTinyFrameUploadPrefix(sessionId)}photos/${normalizedPhotoId}.jpg`
+    ? `${LEGACY_TINY_FRAME_UPLOAD_PREFIX}${sessionId}/photos/${normalizedPhotoId}.jpg`
+    : '';
+}
+
+function getTemporaryPhotoKey(uploadSessionId) {
+  const sessionId = normalizeUploadReference(uploadSessionId);
+  return sessionId
+    ? `${getTinyFrameUploadPrefix(sessionId)}photos/${crypto.randomUUID().replaceAll('-', '')}.jpg`
     : '';
 }
 
 function isValidIndividualPhotoKey(value, uploadSessionId = '') {
   const key = String(value || '');
-  const match = key.match(/^tinyframes\/(tf_[a-f0-9]{32})\/photos\/(ph_[a-f0-9]{32})\.jpg$/);
-  return Boolean(match && (!uploadSessionId || match[1] === uploadSessionId));
+  const match = key.match(/^(?:temporary\/(tf_[a-f0-9]{32})\/photos\/[a-f0-9]{32}\.jpg|tinyframes\/(tf_[a-f0-9]{32})\/photos\/ph_[a-f0-9]{32}\.jpg)$/);
+  const keySessionId = match?.[1] || match?.[2];
+  return Boolean(match && (!uploadSessionId || keySessionId === uploadSessionId));
+}
+
+function parsePhotoUploadJson(value, fallback) {
+  try {
+    const parsed = JSON.parse(String(value || ''));
+    return parsed && typeof parsed === 'object' ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function getPhotoUploadSession(database, uploadSessionId) {
+  if (!database) return null;
+  return database.prepare(
+    'SELECT * FROM photo_upload_sessions WHERE upload_session_id = ?'
+  ).bind(uploadSessionId).first();
+}
+
+function photoUploadSelection(record) {
+  const selection = parsePhotoUploadJson(record?.selection_json, []);
+  return Array.isArray(selection) ? selection : [];
+}
+
+async function savePhotoUploadSelection(database, record, selection, updatedAt, {
+  photoSetCount = Number(record.photo_set_count || 0),
+  frameColour = record.frame_colour || null,
+  selectionChanged = false
+} = {}) {
+  const result = await database.prepare(
+    `UPDATE photo_upload_sessions
+        SET selection_json = ?,
+            selection_version = selection_version + ?,
+            state_version = state_version + 1,
+            photo_set_count = ?,
+            frame_colour = ?,
+            updated_at = ?
+      WHERE upload_session_id = ?
+        AND state_version = ?
+        AND status = 'draft'`
+  ).bind(
+    JSON.stringify(selection),
+    selectionChanged ? 1 : 0,
+    photoSetCount,
+    frameColour,
+    updatedAt,
+    record.upload_session_id,
+    Number(record.state_version)
+  ).run();
+  return Number(result?.meta?.changes ?? result?.changes ?? 0) === 1;
 }
 
 function getLegacyUploadManifestKey(uploadReference) {
@@ -607,18 +670,27 @@ async function requireIndividualUploadSession(request, env, uploadSessionId) {
   const sessionId = normalizeUploadReference(uploadSessionId);
   const token = normalizeUploadToken(request.headers.get('X-Upload-Token'));
   if (!sessionId || !token) throw new TinyFrameInputError('Upload session credentials are invalid');
-  const manifestKey = getUploadManifestKey(sessionId);
-  const object = await env.ARTWORK_BUCKET.get(manifestKey);
+  const sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, sessionId);
+  const manifestKey = sessionRecord
+    ? getUploadManifestKey(sessionId)
+    : getLegacyIndividualUploadManifestKey(sessionId);
+  let object = await env.ARTWORK_BUCKET.get(manifestKey);
+  if (!object && !sessionRecord) object = await env.ARTWORK_BUCKET.get(getLegacyUploadManifestKey(sessionId));
   const manifest = await readR2Json(object);
+  const expectedTokenHash = sessionRecord
+    ? String(sessionRecord.upload_token_hash || '')
+    : String(manifest?.upload_token_hash || '');
   if (
-    !manifest || manifest.storage_version !== INDIVIDUAL_PHOTO_STORAGE_VERSION ||
+    !manifest || ![LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest.storage_version)) ||
     manifest.upload_session_id !== sessionId ||
-    manifest.upload_token_hash !== await sha256Hex(token)
+    expectedTokenHash !== await sha256Hex(token)
   ) {
     throw new TinyFrameInputError('Upload session could not be authenticated');
   }
-  if (manifest.status === 'paid') throw new TinyFrameInputError('Paid order photos cannot be changed');
-  return { manifestKey, manifest };
+  if (sessionRecord?.status === 'paid' || manifest.status === 'paid') {
+    throw new TinyFrameInputError('Paid order photos cannot be changed');
+  }
+  return { manifestKey, manifest, sessionRecord };
 }
 
 async function enforceIndividualUploadRateLimit(env, uploadSessionId) {
@@ -632,14 +704,15 @@ async function enforceIndividualUploadRateLimit(env, uploadSessionId) {
 }
 
 async function createIndividualUploadSession(request, env) {
-  if (!env.ARTWORK_BUCKET) return jsonResponse(request, env, { error:'Artwork storage is not configured' }, 503);
+  if (!env.ARTWORK_BUCKET || !env.PRODUCT_CODES_DB) return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
   if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
   let body;
   try { body = await request.json(); }
   catch { return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400); }
   const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
   const uploadToken = normalizeUploadToken(body?.uploadToken);
-  if (!uploadSessionId || !uploadToken) {
+  const cartItemId = normalizeCartItemId(body?.cartItemId);
+  if (!uploadSessionId || !uploadToken || !cartItemId) {
     return jsonResponse(request, env, { error:'Upload session credentials are invalid' }, 400);
   }
   try {
@@ -648,33 +721,126 @@ async function createIndividualUploadSession(request, env) {
     return jsonResponse(request, env, { error:error.message }, Number(error?.status) || 429);
   }
   const manifestKey = getUploadManifestKey(uploadSessionId);
+  const tokenHash = await sha256Hex(uploadToken);
+  const createdAt = new Date().toISOString();
+  await env.PRODUCT_CODES_DB.prepare(
+    `INSERT OR IGNORE INTO photo_upload_sessions
+      (upload_session_id, cart_item_id, upload_token_hash, status, selection_json,
+       selection_version, state_version, photo_set_count, product_codes_json, created_at, updated_at)
+     VALUES (?, ?, ?, 'draft', '[]', 0, 0, 1, '[]', ?, ?)`
+  ).bind(uploadSessionId, cartItemId, tokenHash, createdAt, createdAt).run();
+  const sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
+  if (
+    !sessionRecord || sessionRecord.cart_item_id !== cartItemId ||
+    sessionRecord.upload_token_hash !== tokenHash
+  ) return jsonResponse(request, env, { error:'This upload session is already in use' }, 409);
   const existing = await env.ARTWORK_BUCKET.get(manifestKey);
   if (existing) {
     const manifest = await readR2Json(existing);
-    if (
-      manifest?.storage_version !== INDIVIDUAL_PHOTO_STORAGE_VERSION ||
-      manifest?.upload_token_hash !== await sha256Hex(uploadToken)
-    ) return jsonResponse(request, env, { error:'This upload session is already in use' }, 409);
-    return jsonResponse(request, env, { success:true, uploadSessionId, recovered:true });
+    if (manifest?.upload_session_id !== uploadSessionId || ![LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest.storage_version))) {
+      return jsonResponse(request, env, { error:'This upload session is already in use' }, 409);
+    }
+    return jsonResponse(request, env, { success:true, uploadSessionId, selectionVersion:Number(sessionRecord.selection_version), recovered:true });
   }
-  const createdAt = new Date().toISOString();
   const stored = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
     storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
     upload_session_id:uploadSessionId,
-    upload_token_hash:await sha256Hex(uploadToken),
+    cart_item_id:cartItemId,
+    upload_token_hash:tokenHash,
     product_type:'tiny_frame_photo_sets',
     photos:[],
     files:[],
     status:'draft',
     created_at:createdAt,
     updated_at:createdAt,
-    uploaded_at:createdAt
+    uploaded_at:createdAt,
+    expires_at:new Date(Date.parse(createdAt) + 7 * 24 * 60 * 60 * 1000).toISOString()
   }), {
     httpMetadata:{ contentType:'application/json' },
     onlyIf:{ etagDoesNotMatch:'*' }
   });
   if (stored === null) return jsonResponse(request, env, { error:'Upload session could not be created' }, 409);
-  return jsonResponse(request, env, { success:true, uploadSessionId });
+  return jsonResponse(request, env, { success:true, uploadSessionId, selectionVersion:Number(sessionRecord.selection_version) });
+}
+
+async function updateIndividualPhotoSelection(request, env) {
+  if (!env.ARTWORK_BUCKET || !env.PRODUCT_CODES_DB) {
+    return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
+  }
+  if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  let body;
+  try { body = await request.json(); }
+  catch { return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400); }
+  const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
+  const cartItemId = normalizeCartItemId(body?.cartItemId);
+  const frameColour = normalizeFrameColour(body?.frameColour);
+  const photoSetCount = normalizePhotoSetCount(body?.photoSetCount);
+  const expectedVersion = Number(body?.selectionVersion);
+  const requestedSelection = Array.isArray(body?.selection) ? body.selection : null;
+  if (
+    !uploadSessionId || !cartItemId || photoSetCount === null ||
+    !Number.isSafeInteger(expectedVersion) || expectedVersion < 0 ||
+    !requestedSelection || requestedSelection.length !== photoSetCount * TINY_FRAME_PHOTOS_PER_SET
+  ) return jsonResponse(request, env, { error:'Photo selection details are invalid' }, 400);
+  try {
+    const { sessionRecord } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    if (!sessionRecord || sessionRecord.cart_item_id !== cartItemId) {
+      throw new TinyFrameInputError('Photo selection does not match this product');
+    }
+    const requested = requestedSelection.map((photo, index) => {
+      if (photo === null) return { position:index + 1, photo_id:null, revision:'', object_key:'', status:'empty' };
+      const photoId = normalizePhotoId(photo?.photoId);
+      const revision = String(photo?.revision || '').trim().toLowerCase();
+      if (!photoId || !/^[a-f0-9-]{32,36}$/.test(revision)) {
+        throw new TinyFrameInputError('Photo selection identity is invalid');
+      }
+      return { position:index + 1, photo_id:photoId, revision, object_key:'', status:'uploading' };
+    });
+    const requestedIds = requested.filter(photo => photo.photo_id).map(photo => photo.photo_id);
+    if (new Set(requestedIds).size !== requestedIds.length) {
+      throw new TinyFrameInputError('A photo cannot be selected in more than one position');
+    }
+    let record = sessionRecord;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      if (record.status !== 'draft') throw new TinyFrameInputError('This photo selection is locked for checkout');
+      if (Number(record.selection_version) !== expectedVersion) {
+        return jsonResponse(request, env, {
+          error:'Photo selection changed. Please retry the selection update.',
+          code:'SELECTION_VERSION_CONFLICT',
+          selectionVersion:Number(record.selection_version)
+        }, 409);
+      }
+      const previousSelection = photoUploadSelection(record);
+      const previousByIdentity = new Map(previousSelection
+        .filter(photo => photo?.photo_id && photo?.revision)
+        .map(photo => [`${photo.photo_id}:${photo.revision}`, photo]));
+      const nextSelection = requested.map(photo => {
+        if (!photo.photo_id) return photo;
+        const previous = previousByIdentity.get(`${photo.photo_id}:${photo.revision}`);
+        return previous?.object_key && isValidIndividualPhotoKey(previous.object_key, uploadSessionId)
+          ? { ...photo, object_key:previous.object_key, status:'uploaded' }
+          : photo;
+      });
+      const updated = await savePhotoUploadSelection(env.PRODUCT_CODES_DB, record, nextSelection, new Date().toISOString(), {
+        photoSetCount,
+        frameColour,
+        selectionChanged:true
+      });
+      if (updated) {
+        return jsonResponse(request, env, {
+          success:true,
+          uploadSessionId,
+          selectionVersion:Number(record.selection_version) + 1,
+          selection:nextSelection
+        });
+      }
+      record = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
+      if (!record) throw new TinyFrameInputError('Photo upload session could not be found');
+    }
+    return jsonResponse(request, env, { error:'Photo selection is busy. Please retry.' }, 409);
+  } catch (error) {
+    return jsonResponse(request, env, { error:error.message || 'Photo selection could not be updated' }, error instanceof TinyFrameInputError ? 400 : 500);
+  }
 }
 
 async function uploadIndividualTinyFramePhoto(request, env) {
@@ -692,7 +858,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
   const file = formData.get('file');
   if (
     !uploadSessionId || !photoId || !/^[a-f0-9-]{32,36}$/.test(revision) ||
-    !Number.isInteger(position) || position < 1 || position > MAX_TINY_FRAME_PHOTOS_PER_PRODUCT
+    !Number.isSafeInteger(position) || position < 1
   ) return jsonResponse(request, env, { error:'Photo upload details are invalid' }, 400);
   if (!file || typeof file.arrayBuffer !== 'function' || file.type !== 'image/jpeg') {
     return jsonResponse(request, env, { error:'Cropped photos must be high-quality JPEG files' }, 400);
@@ -701,8 +867,104 @@ async function uploadIndividualTinyFramePhoto(request, env) {
     return jsonResponse(request, env, { error:'Each cropped photo must be 20 MB or smaller' }, 413);
   }
   try {
-    await requireIndividualUploadSession(request, env, uploadSessionId);
+    const { sessionRecord } = await requireIndividualUploadSession(request, env, uploadSessionId);
     await enforceIndividualUploadRateLimit(env, `${request.headers.get('CF-Connecting-IP') || 'unknown'}:${uploadSessionId}`);
+    if (sessionRecord) {
+      const selection = photoUploadSelection(sessionRecord);
+      const selected = selection.find(photo => photo?.photo_id === photoId && photo?.revision === revision);
+      if (sessionRecord.status !== 'draft' || !selected) {
+        return jsonResponse(request, env, { error:'This photo has been replaced or removed', code:'PHOTO_SUPERSEDED' }, 409);
+      }
+      if (selected.status === 'uploaded' && selected.object_key) {
+        const confirmed = await env.ARTWORK_BUCKET.head(selected.object_key);
+        if (
+          confirmed &&
+          confirmed.customMetadata?.upload_session_id === uploadSessionId &&
+          confirmed.customMetadata?.photo_id === photoId &&
+          confirmed.customMetadata?.revision === revision
+        ) return jsonResponse(request, env, {
+          success:true,
+          recovered:true,
+          photo:{
+            photoId,
+            revision,
+            objectKey:selected.object_key,
+            position:selected.position,
+            width:Number(confirmed.customMetadata?.width_px || 0),
+            height:Number(confirmed.customMetadata?.height_px || 0),
+            size:Number(confirmed.size || 0)
+          }
+        });
+      }
+      const bytes = await file.arrayBuffer();
+      const info = await env.IMAGES.info(bytes);
+      const width = Number(info?.width);
+      const height = Number(info?.height);
+      if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+        throw new TinyFrameInputError('The cropped photo dimensions could not be read');
+      }
+      if (Math.abs((width / height) - (54 / 86)) > 0.015) {
+        throw new TinyFrameInputError('The cropped photo does not match the 54 × 86 mm print ratio');
+      }
+      const objectKey = getTemporaryPhotoKey(uploadSessionId);
+      const createdAt = new Date().toISOString();
+      const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
+        httpMetadata:{ contentType:'image/jpeg' },
+        customMetadata:{
+          upload_session_id:uploadSessionId,
+          photo_id:photoId,
+          revision,
+          width_px:String(width),
+          height_px:String(height),
+          effective_ppi:String(Number(calculateEffectivePpi(width, height).toFixed(1))),
+          status:'temporary',
+          created_at:createdAt
+        },
+        onlyIf:{ etagDoesNotMatch:'*' }
+      });
+      if (stored === null) throw new Error('R2 could not create an immutable photo object');
+      const confirmed = await env.ARTWORK_BUCKET.head(objectKey);
+      if (
+        !confirmed || Number(confirmed.size || 0) !== file.size ||
+        confirmed.customMetadata?.upload_session_id !== uploadSessionId ||
+        confirmed.customMetadata?.photo_id !== photoId ||
+        confirmed.customMetadata?.revision !== revision
+      ) throw new Error('R2 did not confirm the stored photo');
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const current = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
+        const currentSelection = photoUploadSelection(current);
+        const activeIndex = currentSelection.findIndex(photo =>
+          photo?.photo_id === photoId && photo?.revision === revision
+        );
+        if (!current || current.status !== 'draft' || activeIndex < 0) {
+          await env.ARTWORK_BUCKET.delete(objectKey);
+          return jsonResponse(request, env, { error:'This photo was replaced while uploading', code:'PHOTO_SUPERSEDED' }, 409);
+        }
+        if (currentSelection[activeIndex].object_key) {
+          await env.ARTWORK_BUCKET.delete(objectKey);
+          const existingKey = currentSelection[activeIndex].object_key;
+          return jsonResponse(request, env, {
+            success:true,
+            recovered:true,
+            photo:{ photoId, revision, objectKey:existingKey, position:currentSelection[activeIndex].position, width, height, size:file.size }
+          });
+        }
+        currentSelection[activeIndex] = {
+          ...currentSelection[activeIndex],
+          object_key:objectKey,
+          status:'uploaded'
+        };
+        const updated = await savePhotoUploadSelection(env.PRODUCT_CODES_DB, current, currentSelection, new Date().toISOString());
+        if (updated) {
+          return jsonResponse(request, env, {
+            success:true,
+            photo:{ photoId, revision, objectKey, position:currentSelection[activeIndex].position, width, height, size:file.size }
+          });
+        }
+      }
+      await env.ARTWORK_BUCKET.delete(objectKey);
+      throw new Error('Photo selection changed repeatedly while the upload was finishing');
+    }
     const bytes = await file.arrayBuffer();
     const info = await env.IMAGES.info(bytes);
     const width = Number(info?.width);
@@ -716,11 +978,14 @@ async function uploadIndividualTinyFramePhoto(request, env) {
     const objectKey = getIndividualPhotoKey(uploadSessionId, photoId);
     const existing = await env.ARTWORK_BUCKET.head(objectKey);
     if (existing) {
-      const sameRevision = existing.customMetadata?.revision === revision && Number(existing.size || 0) === file.size;
+      const sameRevision = existing.customMetadata?.upload_session_id === uploadSessionId &&
+        existing.customMetadata?.photo_id === photoId &&
+        existing.customMetadata?.revision === revision &&
+        Number(existing.size || 0) === file.size;
       if (!sameRevision) return jsonResponse(request, env, { error:'This photo identity is already in use' }, 409);
       return jsonResponse(request, env, { success:true, recovered:true, photo:{ photoId, objectKey, position, width, height, size:file.size } });
     }
-    await env.ARTWORK_BUCKET.put(objectKey, bytes, {
+    const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
       httpMetadata:{ contentType:'image/jpeg' },
       customMetadata:{
         upload_session_id:uploadSessionId,
@@ -738,11 +1003,28 @@ async function uploadIndividualTinyFramePhoto(request, env) {
     const confirmed = await env.ARTWORK_BUCKET.head(objectKey);
     if (
       !confirmed || Number(confirmed.size || 0) !== file.size ||
+      confirmed.customMetadata?.upload_session_id !== uploadSessionId ||
+      confirmed.customMetadata?.photo_id !== photoId ||
       confirmed.customMetadata?.revision !== revision
     ) throw new Error('R2 did not confirm the stored photo');
+    if (stored === null) {
+      console.warn('Photo upload recovered an existing object after a concurrent write', {
+        uploadSessionId,
+        photoId
+      });
+    }
     return jsonResponse(request, env, { success:true, photo:{ photoId, objectKey, position, width, height, size:file.size } });
   } catch (error) {
     const status = Number(error?.status) || (error instanceof TinyFrameInputError ? 400 : 500);
+    if (!(error instanceof TinyFrameInputError)) {
+      console.error('Individual photo upload failed', {
+        uploadSessionId,
+        photoId,
+        status,
+        errorName:String(error?.name || 'Error'),
+        message:String(error?.message || 'Unknown upload failure')
+      });
+    }
     return jsonResponse(request, env, {
       error:error instanceof TinyFrameInputError ? error.message : 'The cropped photo could not be uploaded. Please retry.',
       code:error instanceof TinyFrameInputError ? 'INVALID_PHOTO_UPLOAD' : 'PHOTO_UPLOAD_FAILED'
@@ -759,7 +1041,10 @@ async function deleteIndividualTinyFramePhoto(request, env) {
   const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
   const photoId = normalizePhotoId(body?.photoId);
   try {
-    await requireIndividualUploadSession(request, env, uploadSessionId);
+    const { sessionRecord } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    if (sessionRecord) {
+      return jsonResponse(request, env, { error:'Update the active photo selection instead of deleting an upload directly' }, 409);
+    }
     const objectKey = getIndividualPhotoKey(uploadSessionId, photoId);
     if (!objectKey) throw new TinyFrameInputError('Photo identity is invalid');
     await env.ARTWORK_BUCKET.delete(objectKey);
@@ -783,10 +1068,105 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
   const expectedPhotoCount = Number(photoSetCount) * TINY_FRAME_PHOTOS_PER_SET;
   if (
     !uploadSessionId || !cartItemId || !frameColour || !photoSetCount ||
-    expectedPhotoCount > MAX_TINY_FRAME_PHOTOS_PER_PRODUCT || photos.length !== expectedPhotoCount
+    !Number.isSafeInteger(expectedPhotoCount)
   ) return jsonResponse(request, env, { error:'Every selected photo set must contain three uploaded photos' }, 400);
   try {
-    const { manifestKey, manifest } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    const { manifestKey, manifest, sessionRecord } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    if (sessionRecord) {
+      if (sessionRecord.cart_item_id !== cartItemId) throw new TinyFrameInputError('Photo upload does not match this product');
+      let snapshot = parsePhotoUploadJson(sessionRecord.snapshot_json, null);
+      if (['finalized', 'checkout_pending', 'paid'].includes(sessionRecord.status) && snapshot) {
+        if (
+          snapshot.frame_colour !== frameColour ||
+          Number(snapshot.photo_set_count) !== photoSetCount ||
+          snapshot.photos.length !== expectedPhotoCount
+        ) throw new TinyFrameInputError('This photo selection has already been finalized');
+      } else {
+        if (sessionRecord.status !== 'draft') throw new TinyFrameInputError('This photo selection is no longer editable');
+        const selection = photoUploadSelection(sessionRecord);
+        if (
+          Number(sessionRecord.photo_set_count) !== photoSetCount ||
+          selection.length !== expectedPhotoCount ||
+          selection.some((photo, index) =>
+            !photo?.photo_id || !photo.revision || photo.status !== 'uploaded' ||
+            photo.position !== index + 1 ||
+            !isValidIndividualPhotoKey(photo.object_key, uploadSessionId)
+          )
+        ) throw new TinyFrameInputError('Every selected photo must finish uploading before checkout');
+        const stored = await Promise.all(selection.map(photo => env.ARTWORK_BUCKET.head(photo.object_key)));
+        if (stored.some((object, index) =>
+          !object ||
+          object.customMetadata?.upload_session_id !== uploadSessionId ||
+          object.customMetadata?.photo_id !== selection[index].photo_id ||
+          object.customMetadata?.revision !== selection[index].revision
+        )) throw new TinyFrameInputError('One or more selected photos could not be verified in temporary storage');
+        snapshot = {
+          storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
+          upload_session_id:uploadSessionId,
+          cart_item_id:cartItemId,
+          product_type:'tiny_frame_photo_sets',
+          photo_set_count:photoSetCount,
+          photo_count:expectedPhotoCount,
+          frame_colour:frameColour,
+          photos:selection.map((photo, index) => ({
+            photo_id:photo.photo_id,
+            revision:photo.revision,
+            objectKey:photo.object_key,
+            position:index + 1,
+            contentType:'image/jpeg',
+            size:Number(stored[index].size || 0)
+          })),
+          finalized_at:new Date().toISOString()
+        };
+        const updated = await env.PRODUCT_CODES_DB.prepare(
+          `UPDATE photo_upload_sessions
+              SET status = 'finalized',
+                  snapshot_json = ?,
+                  frame_colour = ?,
+                  photo_set_count = ?,
+                  state_version = state_version + 1,
+                  updated_at = ?
+            WHERE upload_session_id = ?
+              AND state_version = ?
+              AND selection_version = ?
+              AND status = 'draft'`
+        ).bind(
+          JSON.stringify(snapshot),
+          frameColour,
+          photoSetCount,
+          snapshot.finalized_at,
+          uploadSessionId,
+          Number(sessionRecord.state_version),
+          Number(sessionRecord.selection_version)
+        ).run();
+        if (Number(updated?.meta?.changes ?? updated?.changes ?? 0) !== 1) {
+          throw new TinyFrameInputError('The photo selection changed while checkout was starting. Please try again.');
+        }
+      }
+      const productCodes = parsePhotoUploadJson(sessionRecord.product_codes_json, []);
+      const finalizedManifest = {
+        ...manifest,
+        ...snapshot,
+        product_codes:Array.isArray(productCodes) ? productCodes : [],
+        photos:snapshot.photos,
+        files:snapshot.photos,
+        status:'finalized',
+        updated_at:snapshot.finalized_at
+      };
+      await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(finalizedManifest), {
+        httpMetadata:{ contentType:'application/json' }
+      });
+      return jsonResponse(request, env, {
+        success:true,
+        uploadSessionId,
+        cartItemId,
+        photoCount:expectedPhotoCount,
+        selectionVersion:Number(sessionRecord.selection_version)
+      });
+    }
+    if (photos.length !== expectedPhotoCount) {
+      throw new TinyFrameInputError('Every selected photo set must contain three uploaded photos');
+    }
     const normalizedPhotos = photos.map((photo, index) => ({
       photo_id:normalizePhotoId(photo?.photoId),
       objectKey:String(photo?.objectKey || ''),
@@ -827,7 +1207,23 @@ async function getIndividualTinyFrameUploadStatus(request, env) {
   if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
   const uploadSessionId = normalizeUploadReference(new URL(request.url).searchParams.get('upload_session_id'));
   try {
-    const { manifest } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    const { manifest, sessionRecord } = await requireIndividualUploadSession(request, env, uploadSessionId);
+    if (sessionRecord) {
+      const selection = photoUploadSelection(sessionRecord);
+      return jsonResponse(request, env, {
+        success:true,
+        uploadSessionId,
+        status:sessionRecord.status,
+        photoSetCount:Number(sessionRecord.photo_set_count || 0),
+        selectionVersion:Number(sessionRecord.selection_version || 0),
+        photos:selection.filter(photo => photo?.status === 'uploaded' && photo.object_key).map(photo => ({
+          photoId:photo.photo_id,
+          objectKey:photo.object_key,
+          position:Number(photo.position || 0),
+          revision:photo.revision
+        }))
+      });
+    }
     const storedPhotos = [];
     let cursor;
     do {
@@ -2170,6 +2566,23 @@ function chunkStripeMetadataEntries(entries, maximumLength = 500) {
   return chunks;
 }
 
+function chunkStripeMetadataValues(values, maximumLength = 500) {
+  const chunks = [];
+  let chunk = '';
+  for (const value of values) {
+    if (value.length > maximumLength) throw new Error('A Stripe metadata value is too long');
+    const candidate = chunk ? `${chunk},${value}` : value;
+    if (candidate.length <= maximumLength) {
+      chunk = candidate;
+      continue;
+    }
+    chunks.push(chunk);
+    chunk = value;
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks;
+}
+
 function createStripeProductMapping(lineItems) {
   const entries = lineItems
     .filter(item => item.productCode)
@@ -2251,10 +2664,14 @@ function createStripePayload(
     payload.set('payment_intent_data[metadata][frame_colours]', frameColours.join(',').slice(0, 500));
   }
   if (uploadReferences.length > 0) {
-    payload.set('metadata[upload_references]', uploadReferences.join(',').slice(0, 500));
-    payload.set('payment_intent_data[metadata][upload_references]', uploadReferences.join(',').slice(0, 500));
-    payload.set('metadata[upload_session_ids]', uploadReferences.join(',').slice(0, 500));
-    payload.set('payment_intent_data[metadata][upload_session_ids]', uploadReferences.join(',').slice(0, 500));
+    const uploadReferenceChunks = chunkStripeMetadataValues(uploadReferences);
+    uploadReferenceChunks.forEach((value, index) => {
+      const suffix = index === 0 ? '' : `_${index}`;
+      payload.set(`metadata[upload_references${suffix}]`, value);
+      payload.set(`payment_intent_data[metadata][upload_references${suffix}]`, value);
+      payload.set(`metadata[upload_session_ids${suffix}]`, value);
+      payload.set(`payment_intent_data[metadata][upload_session_ids${suffix}]`, value);
+    });
   }
 
   lineItems.forEach((item, index) => {
@@ -2373,8 +2790,12 @@ async function addProductCodesToStoredFileMetadata(files, productCodes, env) {
 }
 
 async function ensureProductCodePrintSheets(uploadReference, productCodes, env) {
-  const manifestKey = getUploadManifestKey(uploadReference);
-  const object = await env.ARTWORK_BUCKET.get(manifestKey);
+  let manifestKey = getUploadManifestKey(uploadReference);
+  let object = await env.ARTWORK_BUCKET.get(manifestKey);
+  if (!object) {
+    manifestKey = getLegacyIndividualUploadManifestKey(uploadReference);
+    object = await env.ARTWORK_BUCKET.get(manifestKey);
+  }
   if (!object) {
     if (await env.ARTWORK_BUCKET.head(getLegacyUploadManifestKey(uploadReference))) {
       throw new Error('This legacy picture upload must be added to the cart again before checkout');
@@ -2466,10 +2887,51 @@ async function verifyUploadManifests(lineItems, env) {
   const codesByUpload = new Map();
   for (const item of pictureItems) {
     if (normalizeUploadReference(item.uploadReference)) {
-      const manifestKey = getUploadManifestKey(item.uploadReference);
-      const manifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
+      let manifestKey = getUploadManifestKey(item.uploadReference);
+      let manifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
+      if (!manifestObject) {
+        manifestKey = getLegacyIndividualUploadManifestKey(item.uploadReference);
+        manifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
+      }
       const manifest = await readR2Json(manifestObject);
       if (manifest?.storage_version === INDIVIDUAL_PHOTO_STORAGE_VERSION) {
+        const uploadSessionId = item.uploadReference;
+        const record = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
+        const snapshot = parsePhotoUploadJson(record?.snapshot_json, null);
+        const photos = Array.isArray(snapshot?.photos) ? snapshot.photos : [];
+        if (
+          !record || record.cart_item_id !== item.cartItemId ||
+          !['finalized', 'checkout_pending'].includes(record.status) ||
+          snapshot?.upload_session_id !== uploadSessionId ||
+          snapshot.cart_item_id !== item.cartItemId ||
+          snapshot.frame_colour !== item.frameColour ||
+          Number(snapshot.photo_set_count) !== item.photoSetCount ||
+          Number(snapshot.photo_count) !== item.photoCount ||
+          photos.length !== item.photoCount
+        ) throw new Error('The current selected-photo snapshot could not be verified');
+        const storedPhotos = await Promise.all(photos.map(photo => env.ARTWORK_BUCKET.head(String(photo?.objectKey || ''))));
+        if (storedPhotos.some((photo, index) =>
+          !photo ||
+          !isValidIndividualPhotoKey(photos[index]?.objectKey, uploadSessionId) ||
+          photo.customMetadata?.upload_session_id !== uploadSessionId ||
+          photo.customMetadata?.photo_id !== photos[index]?.photo_id ||
+          photo.customMetadata?.revision !== photos[index]?.revision
+        )) throw new Error('One or more selected photos could not be verified in temporary storage');
+        const assignedCodes = parsePhotoUploadJson(record.product_codes_json, []);
+        if (Array.isArray(assignedCodes) && assignedCodes.some(code => normalizeProductCode(code) !== item.productCode)) {
+          throw new Error('The upload session is already associated with another product code');
+        }
+        const productCodes = [...new Set([...(Array.isArray(assignedCodes) ? assignedCodes : []), item.productCode])];
+        await env.PRODUCT_CODES_DB.prepare(
+          `UPDATE photo_upload_sessions
+              SET product_codes_json = ?, updated_at = ?
+            WHERE upload_session_id = ?
+              AND cart_item_id = ?
+              AND status IN ('finalized', 'checkout_pending')`
+        ).bind(JSON.stringify(productCodes), new Date().toISOString(), uploadSessionId, item.cartItemId).run();
+        continue;
+      }
+      if (manifest?.storage_version === LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION) {
         const photos = Array.isArray(manifest.photos) ? manifest.photos : [];
         if (
           manifest.status !== 'finalized' || manifest.cart_item_id !== item.cartItemId ||
@@ -2741,7 +3203,13 @@ async function createCheckoutSession(request, env) {
       payloadHash,
       allocation.units.map(item => item.productCode)
     );
+    await verifyUploadManifests(lineItems, env);
     if (checkoutRequest.stripe_checkout_session_id && checkoutRequest.stripe_checkout_url) {
+      const existingStripeSession = await retrieveStripeSession(
+        stripeConfiguration,
+        checkoutRequest.stripe_checkout_session_id
+      );
+      await markUploadSessionsCheckoutPending(lineItems, existingStripeSession, env);
       return jsonResponse(request, env, {
         id:checkoutRequest.stripe_checkout_session_id,
         url:checkoutRequest.stripe_checkout_url,
@@ -2750,7 +3218,6 @@ async function createCheckoutSession(request, env) {
         productCodes:allocation.units.map(item => item.productCode)
       });
     }
-    await verifyUploadManifests(lineItems, env);
   } catch (error) {
     const status = error instanceof ProductCodeCapacityError ? 503 : error instanceof ProductCodeError ? 409 : 400;
     return jsonResponse(request, env, { error:error.message }, status);
@@ -2791,6 +3258,7 @@ async function createCheckoutSession(request, env) {
   }
 
   try {
+    await markUploadSessionsCheckoutPending(lineItems, stripeResult, env);
     await completeCheckoutRequest(env.PRODUCT_CODES_DB, checkoutRequestId, stripeResult);
   } catch (error) {
     console.error('Checkout product identity persistence failed:', error);
@@ -3088,8 +3556,85 @@ async function readR2Json(object) {
 }
 
 function getCheckoutUploadSessionIds(session) {
-  const value = session?.metadata?.upload_session_ids || session?.metadata?.upload_references || '';
-  return [...new Set(String(value).split(',').map(normalizeUploadReference).filter(Boolean))];
+  const metadata = session?.metadata || {};
+  const collectChunks = prefix => Object.entries(metadata)
+    .filter(([key]) => new RegExp(`^${prefix}(?:_[1-9][0-9]*)?$`).test(key))
+    .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric:true }))
+    .flatMap(([, value]) => String(value || '').split(','));
+  const values = collectChunks('upload_session_ids');
+  const references = values.length ? values : collectChunks('upload_references');
+  return [...new Set(references.map(normalizeUploadReference).filter(Boolean))];
+}
+
+async function markUploadSessionsCheckoutPending(lineItems, stripeSession, env) {
+  if (!env.PRODUCT_CODES_DB) throw new Error('Photo selection storage is not configured');
+  const uploadItems = lineItems.filter(item =>
+    item.productType === 'tiny_frame_photo_sets' && item.photoCount > 0 && normalizeUploadReference(item.uploadReference)
+  );
+  if (!uploadItems.length) return 0;
+  const stripeSessionId = cleanText(stripeSession?.id, '');
+  const expiresAt = Number(stripeSession?.expires_at);
+  for (const item of uploadItems) {
+    const record = await getPhotoUploadSession(env.PRODUCT_CODES_DB, item.uploadReference);
+    if (!record) continue;
+    if (!stripeSessionId.startsWith('cs_') || !Number.isSafeInteger(expiresAt)) {
+      throw new Error('Stripe checkout session details could not be verified');
+    }
+    const productCodes = parsePhotoUploadJson(record?.product_codes_json, []);
+    if (
+      !record || record.cart_item_id !== item.cartItemId ||
+      !['finalized', 'checkout_pending', 'paid'].includes(record.status) ||
+      !Array.isArray(productCodes) || !productCodes.includes(item.productCode) ||
+      !parsePhotoUploadJson(record.snapshot_json, null)
+    ) throw new Error('The selected photo snapshot is not ready for checkout');
+    if (record.status === 'paid') {
+      if (record.stripe_checkout_session_id !== stripeSessionId) {
+        throw new Error('The selected photos already belong to another paid order');
+      }
+      continue;
+    }
+    if (record.status === 'checkout_pending' && record.stripe_checkout_session_id !== stripeSessionId) {
+      throw new Error('The selected photos are already attached to another checkout');
+    }
+    await env.PRODUCT_CODES_DB.prepare(
+      `UPDATE photo_upload_sessions
+          SET status = 'checkout_pending',
+              stripe_checkout_session_id = ?,
+              checkout_expires_at = ?,
+              state_version = state_version + 1,
+              updated_at = ?
+        WHERE upload_session_id = ?
+          AND status IN ('finalized', 'checkout_pending')`
+    ).bind(
+      stripeSessionId,
+      new Date(expiresAt * 1000).toISOString(),
+      new Date().toISOString(),
+      item.uploadReference
+    ).run();
+  }
+}
+
+async function releaseExpiredUploadSessions(stripeSession, env) {
+  if (!env.PRODUCT_CODES_DB) return 0;
+  const stripeSessionId = cleanText(stripeSession?.id, '');
+  if (!stripeSessionId) return 0;
+  let released = 0;
+  for (const uploadSessionId of getCheckoutUploadSessionIds(stripeSession)) {
+    const result = await env.PRODUCT_CODES_DB.prepare(
+      `UPDATE photo_upload_sessions
+          SET status = 'draft',
+              snapshot_json = NULL,
+              stripe_checkout_session_id = NULL,
+              checkout_expires_at = NULL,
+              state_version = state_version + 1,
+              updated_at = ?
+        WHERE upload_session_id = ?
+          AND stripe_checkout_session_id = ?
+          AND status = 'checkout_pending'`
+    ).bind(new Date().toISOString(), uploadSessionId, stripeSessionId).run();
+    released += Number(result?.meta?.changes ?? result?.changes ?? 0);
+  }
+  return released;
 }
 
 function getCheckoutProductCodes(session) {
@@ -3129,13 +3674,69 @@ async function markProductPdfFilesPaid(session, env) {
   return updated;
 }
 
+async function putPaidPhotoOnce(bucket, finalKey, source, productCode, stripeCheckoutSessionId, paidAt) {
+  const sourceMetadata = source.customMetadata || {};
+  const requiredMetadata = {
+    upload_session_id:String(sourceMetadata.upload_session_id || ''),
+    photo_id:String(sourceMetadata.photo_id || ''),
+    revision:String(sourceMetadata.revision || ''),
+    product_code:productCode,
+    stripe_checkout_session_id:stripeCheckoutSessionId
+  };
+  if (!requiredMetadata.upload_session_id || !requiredMetadata.photo_id || !requiredMetadata.revision) {
+    throw new Error(`Stored artwork metadata for ${finalKey} is incomplete`);
+  }
+  const customMetadata = {
+    ...sourceMetadata,
+    ...requiredMetadata,
+    status:'paid',
+    paid_at:paidAt
+  };
+  const stored = await bucket.put(finalKey, source.body, {
+    httpMetadata:{ contentType:'image/jpeg' },
+    customMetadata,
+    onlyIf:{ etagDoesNotMatch:'*' }
+  });
+  if (stored !== null) return;
+
+  const existing = await bucket.head(finalKey);
+  const samePhoto = existing &&
+    (!Number.isFinite(Number(source.size)) || Number(existing.size) === Number(source.size)) &&
+    Object.entries(requiredMetadata).every(([key, value]) => existing.customMetadata?.[key] === value) &&
+    existing.customMetadata?.status === 'paid';
+  if (!samePhoto) throw new Error(`Refusing to replace a different paid-order photo at ${finalKey}`);
+}
+
+async function putPaidManifestOnce(bucket, manifestKey, manifest) {
+  const stored = await bucket.put(manifestKey, JSON.stringify(manifest), {
+    httpMetadata:{ contentType:'application/json' },
+    onlyIf:{ etagDoesNotMatch:'*' }
+  });
+  if (stored !== null) return;
+  const existing = await readR2Json(await bucket.get(manifestKey));
+  const samePhotos = Array.isArray(existing?.photos) && existing.photos.length === manifest.photos.length &&
+    existing.photos.every((photo, index) =>
+      photo?.position === manifest.photos[index]?.position &&
+      photo?.objectKey === manifest.photos[index]?.objectKey
+    );
+  if (
+    existing?.stripe_checkout_session_id !== manifest.stripe_checkout_session_id ||
+    existing?.product_code !== manifest.product_code ||
+    existing?.status !== 'paid' ||
+    !samePhotos
+  ) throw new Error(`Refusing to replace a different paid-order manifest at ${manifestKey}`);
+}
+
 async function markUploadSessionsPaid(session, env) {
   if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
   const uploadSessionIds = getCheckoutUploadSessionIds(session);
   const stripeCheckoutSessionId = cleanText(session?.id, '');
+  if (uploadSessionIds.length && !stripeCheckoutSessionId) {
+    throw new Error('Paid checkout session ID is missing');
+  }
   for (const uploadSessionId of uploadSessionIds) {
     const currentKey = getUploadManifestKey(uploadSessionId);
-    const legacyKey = getLegacyUploadManifestKey(uploadSessionId);
+    const legacyKey = getLegacyIndividualUploadManifestKey(uploadSessionId);
     let manifestKey = currentKey;
     let object = await env.ARTWORK_BUCKET.get(currentKey);
     if (!object) {
@@ -3145,14 +3746,93 @@ async function markUploadSessionsPaid(session, env) {
     if (!object) throw new Error(`Upload session ${uploadSessionId} could not be found`);
     const manifest = await readR2Json(object);
     if (!manifest) throw new Error(`Upload session ${uploadSessionId} has an invalid manifest`);
-    if (manifest.status === 'paid') continue;
-    const paidAt = new Date().toISOString();
     if (manifest.storage_version === INDIVIDUAL_PHOTO_STORAGE_VERSION) {
+      if (!env.PRODUCT_CODES_DB) throw new Error('Photo selection storage is not configured');
+      const record = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
+      const snapshot = parsePhotoUploadJson(record?.snapshot_json, null);
+      const productCodes = (Array.isArray(parsePhotoUploadJson(record?.product_codes_json, []))
+        ? parsePhotoUploadJson(record.product_codes_json, [])
+        : []).map(normalizeProductCode).filter(Boolean);
+      if (
+        !record || !snapshot || record.cart_item_id !== snapshot.cart_item_id ||
+        !['checkout_pending', 'paid'].includes(record.status) ||
+        (record.stripe_checkout_session_id && record.stripe_checkout_session_id !== stripeCheckoutSessionId) ||
+        !stripeCheckoutSessionId || !productCodes.length ||
+        !Array.isArray(snapshot.photos) || snapshot.photos.length !== Number(snapshot.photo_count)
+      ) throw new Error(`Upload session ${uploadSessionId} is missing its verified paid-order snapshot`);
+      const paidAt = manifest.paid_at || new Date().toISOString();
+      const finalProducts = [];
+      for (const productCode of productCodes) {
+        const finalPhotos = [];
+        for (const [index, photo] of snapshot.photos.entries()) {
+          const sourceKey = String(photo?.objectKey || '');
+          const source = await env.ARTWORK_BUCKET.get(sourceKey);
+          if (
+            !source || !isValidIndividualPhotoKey(sourceKey, uploadSessionId) ||
+            source.customMetadata?.upload_session_id !== uploadSessionId ||
+            source.customMetadata?.photo_id !== photo.photo_id ||
+            source.customMetadata?.revision !== photo.revision
+          ) throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
+          const position = index + 1;
+          const finalKey = `orders/${stripeCheckoutSessionId}/${productCode}/photo-${String(position).padStart(3, '0')}.jpg`;
+          await putPaidPhotoOnce(env.ARTWORK_BUCKET, finalKey, source, productCode, stripeCheckoutSessionId, paidAt);
+          finalPhotos.push({
+            photo_id:photo.photo_id,
+            revision:photo.revision,
+            position,
+            objectKey:finalKey,
+            contentType:'image/jpeg'
+          });
+        }
+        const finalManifestKey = `orders/${stripeCheckoutSessionId}/${productCode}/manifest.json`;
+        const finalManifest = {
+          storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
+          stripe_checkout_session_id:stripeCheckoutSessionId,
+          product_code:productCode,
+          cart_item_id:snapshot.cart_item_id,
+          frame_colour:snapshot.frame_colour,
+          product_type:snapshot.product_type,
+          photo_set_count:snapshot.photo_set_count,
+          photo_count:snapshot.photo_count,
+          selected_photo_order:finalPhotos.map(photo => photo.photo_id),
+          photos:finalPhotos,
+          status:'paid',
+          paid_at:paidAt
+        };
+        await putPaidManifestOnce(env.ARTWORK_BUCKET, finalManifestKey, finalManifest);
+        finalProducts.push({ product_code:productCode, manifest_key:finalManifestKey, photos:finalPhotos });
+      }
+      await env.PRODUCT_CODES_DB.prepare(
+        `UPDATE photo_upload_sessions
+            SET status = 'paid',
+                state_version = state_version + 1,
+                updated_at = ?
+          WHERE upload_session_id = ?
+            AND stripe_checkout_session_id = ?
+            AND status IN ('checkout_pending', 'paid')`
+      ).bind(paidAt, uploadSessionId, stripeCheckoutSessionId).run();
+      await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
+        ...manifest,
+        ...snapshot,
+        product_codes:productCodes,
+        status:'paid',
+        stripe_checkout_session_id:stripeCheckoutSessionId,
+        paid_at:paidAt,
+        final_products:finalProducts
+      }), { httpMetadata:{ contentType:'application/json' } });
+      continue;
+    }
+    if (manifest.storage_version === LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION) {
+      if (
+        manifest.status === 'paid' &&
+        manifest.stripe_checkout_session_id !== stripeCheckoutSessionId
+      ) throw new Error(`Upload session ${uploadSessionId} already belongs to another paid order`);
       const productCodes = (Array.isArray(manifest.product_codes) ? manifest.product_codes : []).map(normalizeProductCode).filter(Boolean);
       const photos = Array.isArray(manifest.photos) ? manifest.photos : [];
       if (!stripeCheckoutSessionId || !productCodes.length || !photos.length) {
         throw new Error(`Upload session ${uploadSessionId} is missing paid-order relationships`);
       }
+      const paidAt = manifest.paid_at || new Date().toISOString();
       const finalProducts = [];
       for (const productCode of productCodes) {
         const finalPhotos = [];
@@ -3163,20 +3843,11 @@ async function markUploadSessionsPaid(session, env) {
             throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
           }
           const finalKey = `orders/${stripeCheckoutSessionId}/product-${productCode}/photo-${String(photo.position).padStart(3, '0')}.jpg`;
-          await env.ARTWORK_BUCKET.put(finalKey, source.body, {
-            httpMetadata:{ contentType:'image/jpeg' },
-            customMetadata:{
-              ...(source.customMetadata || {}),
-              product_code:productCode,
-              status:'paid',
-              paid_at:paidAt,
-              stripe_checkout_session_id:stripeCheckoutSessionId
-            }
-          });
+          await putPaidPhotoOnce(env.ARTWORK_BUCKET, finalKey, source, productCode, stripeCheckoutSessionId, paidAt);
           finalPhotos.push({ position:photo.position, objectKey:finalKey, contentType:'image/jpeg' });
         }
         const finalManifestKey = `orders/${stripeCheckoutSessionId}/product-${productCode}/manifest.json`;
-        await env.ARTWORK_BUCKET.put(finalManifestKey, JSON.stringify({
+        await putPaidManifestOnce(env.ARTWORK_BUCKET, finalManifestKey, {
           storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
           stripe_checkout_session_id:stripeCheckoutSessionId,
           product_code:productCode,
@@ -3188,7 +3859,7 @@ async function markUploadSessionsPaid(session, env) {
           photos:finalPhotos,
           status:'paid',
           paid_at:paidAt
-        }), { httpMetadata:{ contentType:'application/json' } });
+        });
         finalProducts.push({ product_code:productCode, manifest_key:finalManifestKey, photos:finalPhotos });
       }
       await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
@@ -3200,6 +3871,13 @@ async function markUploadSessionsPaid(session, env) {
       }), { httpMetadata:{ contentType:'application/json' } });
       continue;
     }
+    if (manifest.status === 'paid') {
+      if (manifest.stripe_checkout_session_id !== stripeCheckoutSessionId) {
+        throw new Error(`Upload session ${uploadSessionId} already belongs to another paid order`);
+      }
+      continue;
+    }
+    const paidAt = new Date().toISOString();
     const relatedFiles = [
       ...(manifest.print_sheet_object_key ? [{ objectKey:manifest.print_sheet_object_key, contentType:'application/pdf' }] : []),
       ...(Array.isArray(manifest.print_sheets) ? manifest.print_sheets : []),
@@ -3236,41 +3914,97 @@ async function markUploadSessionsPaid(session, env) {
 async function cleanupPendingUploads(env, now = Date.now()) {
   if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
   const configuredDays = Number(env.PENDING_UPLOAD_TTL_DAYS);
-  const ttlDays = Number.isFinite(configuredDays) && configuredDays >= 7 && configuredDays <= 14
+  const ttlDays = Number.isFinite(configuredDays) && configuredDays === 7
     ? configuredDays
     : DEFAULT_PENDING_UPLOAD_TTL_DAYS;
   const cutoff = now - (ttlDays * 24 * 60 * 60 * 1000);
-  let cursor;
+  const cutoffIso = new Date(cutoff).toISOString();
   let deletedSessions = 0;
-
-  do {
-    const listing = await env.ARTWORK_BUCKET.list({
-      prefix:TINY_FRAME_UPLOAD_PREFIX,
-      ...(cursor ? { cursor } : {})
-    });
-    const manifests = listing.objects.filter(object => object.key.endsWith('/manifest.json'));
-    for (const listedManifest of manifests) {
-      const object = await env.ARTWORK_BUCKET.get(listedManifest.key);
-      const manifest = await readR2Json(object);
-      const uploadedAt = Date.parse(manifest?.uploaded_at || '');
-      if (!manifest || !['draft', 'finalized', 'pending'].includes(manifest.status) || !Number.isFinite(uploadedAt) || uploadedAt >= cutoff) continue;
-      const uploadSessionId = normalizeUploadReference(manifest.upload_session_id);
-      if (!uploadSessionId) continue;
-      const prefix = getTinyFrameUploadPrefix(uploadSessionId);
-      const storedFileKeys = Array.isArray(manifest.files)
-        ? manifest.files.map(file => String(file?.objectKey || '')).filter(key => key.startsWith(prefix))
-        : [];
+  if (env.PRODUCT_CODES_DB) {
+    const stale = await env.PRODUCT_CODES_DB.prepare(
+      `SELECT upload_session_id, status, stripe_checkout_session_id, checkout_expires_at, updated_at
+         FROM photo_upload_sessions
+        WHERE status IN ('draft', 'finalized', 'checkout_pending', 'expired')
+          AND updated_at < ?`
+    ).bind(cutoffIso).all();
+    for (const record of stale.results || []) {
+      let safeToDelete = ['draft', 'finalized', 'expired'].includes(record.status);
+      if (record.status === 'checkout_pending') {
+        const expiresAt = Date.parse(record.checkout_expires_at || '');
+        const stripeConfiguration = getStripeConfiguration(env);
+        if (
+          !stripeConfiguration || !record.stripe_checkout_session_id ||
+          !Number.isFinite(expiresAt) || expiresAt > now
+        ) continue;
+        let stripeSession;
+        try {
+          stripeSession = await retrieveStripeSession(stripeConfiguration, record.stripe_checkout_session_id);
+          if (stripeSession.status === 'open') {
+            stripeSession = await expireStripeSession(stripeConfiguration, record.stripe_checkout_session_id);
+          }
+        } catch {
+          continue;
+        }
+        safeToDelete = stripeSession.status === 'expired';
+      }
+      if (!safeToDelete) continue;
+      const claim = await env.PRODUCT_CODES_DB.prepare(
+        `UPDATE photo_upload_sessions
+            SET status = 'expired',
+                snapshot_json = NULL,
+                state_version = state_version + 1
+          WHERE upload_session_id = ?
+            AND status = ?
+            AND updated_at < ?`
+      ).bind(record.upload_session_id, record.status, cutoffIso).run();
+      if (Number(claim?.meta?.changes ?? claim?.changes ?? 0) !== 1) continue;
+      const prefix = getTinyFrameUploadPrefix(record.upload_session_id);
       let sessionCursor;
       do {
-        const sessionObjects = await env.ARTWORK_BUCKET.list({ prefix, ...(sessionCursor ? { cursor:sessionCursor } : {}) });
+        const sessionObjects = await env.ARTWORK_BUCKET.list({
+          prefix,
+          ...(sessionCursor ? { cursor:sessionCursor } : {})
+        });
         await deleteObjectKeys(env.ARTWORK_BUCKET, sessionObjects.objects.map(item => item.key));
         sessionCursor = sessionObjects.truncated ? sessionObjects.cursor : undefined;
       } while (sessionCursor);
-      await deleteObjectKeys(env.ARTWORK_BUCKET, [...new Set([...storedFileKeys, listedManifest.key])]);
       deletedSessions += 1;
     }
-    cursor = listing.truncated ? listing.cursor : undefined;
-  } while (cursor);
+  }
+  for (const uploadPrefix of [TINY_FRAME_UPLOAD_PREFIX, LEGACY_TINY_FRAME_UPLOAD_PREFIX]) {
+    let cursor;
+    do {
+      const listing = await env.ARTWORK_BUCKET.list({
+        prefix:uploadPrefix,
+        ...(cursor ? { cursor } : {})
+      });
+      const manifests = listing.objects.filter(object => object.key.endsWith('/manifest.json'));
+      for (const listedManifest of manifests) {
+        const object = await env.ARTWORK_BUCKET.get(listedManifest.key);
+        const manifest = await readR2Json(object);
+        if (Number(manifest?.storage_version) === INDIVIDUAL_PHOTO_STORAGE_VERSION) continue;
+        const uploadedAt = Date.parse(manifest?.uploaded_at || '');
+        if (!manifest || !['draft', 'finalized', 'pending'].includes(manifest.status) || !Number.isFinite(uploadedAt) || uploadedAt >= cutoff) continue;
+        const uploadSessionId = normalizeUploadReference(manifest.upload_session_id);
+        if (!uploadSessionId) continue;
+        const prefix = listedManifest.key.startsWith(TINY_FRAME_UPLOAD_PREFIX)
+          ? getTinyFrameUploadPrefix(uploadSessionId)
+          : `${LEGACY_TINY_FRAME_UPLOAD_PREFIX}${uploadSessionId}/`;
+        const storedFileKeys = Array.isArray(manifest.files)
+          ? manifest.files.map(file => String(file?.objectKey || '')).filter(key => key.startsWith(prefix))
+          : [];
+        let sessionCursor;
+        do {
+          const sessionObjects = await env.ARTWORK_BUCKET.list({ prefix, ...(sessionCursor ? { cursor:sessionCursor } : {}) });
+          await deleteObjectKeys(env.ARTWORK_BUCKET, sessionObjects.objects.map(item => item.key));
+          sessionCursor = sessionObjects.truncated ? sessionObjects.cursor : undefined;
+        } while (sessionCursor);
+        await deleteObjectKeys(env.ARTWORK_BUCKET, [...new Set([...storedFileKeys, listedManifest.key])]);
+        deletedSessions += 1;
+      }
+      cursor = listing.truncated ? listing.cursor : undefined;
+    } while (cursor);
+  }
 
   return deletedSessions;
 }
@@ -3317,11 +4051,24 @@ async function handleStripeWebhook(request, env) {
     });
   }
 
-  if (event.type === 'checkout.session.completed') {
+  if (event.type === 'checkout.session.expired') {
     try {
-      await markProductCodesPaid(env.PRODUCT_CODES_DB, event.data.object);
-      await markProductPdfFilesPaid(event.data.object, env);
-      await markUploadSessionsPaid(event.data.object, env);
+      await releaseExpiredUploadSessions(event.data.object, env);
+    } catch (error) {
+      console.error('Expired checkout photo selection could not be released:', error);
+      return new Response('Expired checkout photos could not be released', { status:503 });
+    }
+  }
+
+  const completedSession = event.data?.object;
+  if (
+    ['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type) &&
+    completedSession?.payment_status === 'paid'
+  ) {
+    try {
+      await markProductCodesPaid(env.PRODUCT_CODES_DB, completedSession);
+      await markProductPdfFilesPaid(completedSession, env);
+      await markUploadSessionsPaid(completedSession, env);
     } catch (error) {
       console.error('Paid product relationship update failed:', error);
       return new Response('Paid product relationships could not be updated', { status: 503 });
@@ -3340,7 +4087,7 @@ async function handleStripeWebhook(request, env) {
       });
     }
     try {
-      await sendOrderConfirmationEmail(event.data.object, env);
+      await sendOrderConfirmationEmail(completedSession, env);
     } catch (error) {
       // The payment already succeeded regardless of whether the email
       // goes out, so log and still acknowledge the webhook - returning
@@ -3408,10 +4155,17 @@ async function getAdminProductAssets(request, env, productCode) {
     if (!record) return jsonResponse(request, env, { error:'Product code was not found' }, 404);
     const checkoutSessionId = cleanText(record.stripe_checkout_session_id, '');
     if (checkoutSessionId) {
-      const manifestKey = `orders/${checkoutSessionId}/product-${normalizedCode}/manifest.json`;
-      const object = await env.ARTWORK_BUCKET.get(manifestKey);
-      const manifest = object ? await readR2Json(object) : null;
-      if (manifest?.storage_version === INDIVIDUAL_PHOTO_STORAGE_VERSION) {
+      const manifestKeys = [
+        `orders/${checkoutSessionId}/${normalizedCode}/manifest.json`,
+        `orders/${checkoutSessionId}/product-${normalizedCode}/manifest.json`
+      ];
+      let manifest = null;
+      for (const manifestKey of manifestKeys) {
+        const object = await env.ARTWORK_BUCKET.get(manifestKey);
+        manifest = object ? await readR2Json(object) : null;
+        if (manifest) break;
+      }
+      if ([LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest?.storage_version))) {
         const photos = (Array.isArray(manifest.photos) ? manifest.photos : []).map((photo, index) => ({
           position:Number(photo.position || index + 1),
           filename:`${normalizedCode}-photo-${String(photo.position || index + 1).padStart(3, '0')}.jpg`,
@@ -3473,13 +4227,18 @@ async function downloadAdminProductAsset(request, env, productCode, assetType, p
   if (assetType === 'photo') {
     const photoPosition = Number(position);
     const checkoutSessionId = cleanText(record.stripe_checkout_session_id, '');
-    if (!checkoutSessionId || !Number.isInteger(photoPosition) || photoPosition < 1 || photoPosition > MAX_TINY_FRAME_PHOTOS_PER_PRODUCT) {
+    if (!checkoutSessionId || !Number.isSafeInteger(photoPosition) || photoPosition < 1) {
       return jsonResponse(request, env, { error:'Photo reference is invalid' }, 400);
     }
-    const manifestObject = await env.ARTWORK_BUCKET.get(`orders/${checkoutSessionId}/product-${normalizedCode}/manifest.json`);
-    const manifest = manifestObject ? await readR2Json(manifestObject) : null;
+    let manifest = null;
+    let expectedPrefix = '';
+    for (const folder of [normalizedCode, `product-${normalizedCode}`]) {
+      expectedPrefix = `orders/${checkoutSessionId}/${folder}/`;
+      const manifestObject = await env.ARTWORK_BUCKET.get(`${expectedPrefix}manifest.json`);
+      manifest = manifestObject ? await readR2Json(manifestObject) : null;
+      if (manifest) break;
+    }
     const photo = Array.isArray(manifest?.photos) ? manifest.photos.find(item => Number(item?.position) === photoPosition) : null;
-    const expectedPrefix = `orders/${checkoutSessionId}/product-${normalizedCode}/`;
     if (!photo || !String(photo.objectKey || '').startsWith(expectedPrefix)) {
       return jsonResponse(request, env, { error:'Photo was not found' }, 404);
     }
@@ -3650,6 +4409,10 @@ async function routeWorkerRequest(request, env) {
 
     if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/session') {
       return createIndividualUploadSession(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/selection') {
+      return updateIndividualPhotoSelection(request, env);
     }
 
     if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/photo') {

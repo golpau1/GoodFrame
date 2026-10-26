@@ -373,7 +373,7 @@ test('Australian photo checkout charges $64.95 plus one $10 shipping option for 
         uploadReference
       }] })
     }), env(bucket));
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 200, await response.clone().text());
     const checkoutResult = await response.clone().json();
     const productCode = checkoutResult.productCodes[0];
     const manifest = JSON.parse(new TextDecoder().decode(
@@ -962,6 +962,7 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
       data:{ object:{
         id:'cs_live_webhookproduct1',
         payment_intent:'pi_live_webhookproduct1',
+        payment_status:'paid',
         metadata:{}
       } }
     });
