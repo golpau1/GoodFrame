@@ -40,6 +40,12 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /readUploadJson/);
   assert.match(html, /PHOTO_UPLOAD_MAX_ATTEMPTS = 4/);
   assert.match(html, /waitForUploadRetry/);
+  assert.match(html, /let individualUploadSessionRecoveryPromise = null;/);
+  assert.match(html, /function isUploadSessionRecoveryError\(error\)/);
+  assert.match(html, /async function recoverIndividualUploadSession\(staleSession\)/);
+  assert.match(html, /return synchronizeActivePhotoSelectionNow\(true\);/);
+  assert.match(html, /if \(!authRecoveryAttempted && isUploadSessionRecoveryError\(error\)\)/);
+  assert.match(html, /if \(!isRetryableUploadStatus\(response\.status\)\) break;/);
   assert.match(html, /if \(individualUploadSession && individualUploadSessionRegistered\) return individualUploadSession;/);
   const restoreSessionIndex = html.indexOf('await registerIndividualUploadSession(draft.session, 1);');
   const restoreStatusIndex = html.indexOf('const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });');
@@ -79,6 +85,91 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.doesNotMatch(html, /image-remove-button/);
   assert.doesNotMatch(html, /slot-move-button/);
   assert.doesNotMatch(html, /function movePhoto/);
+  const cropNavigation = html.slice(
+    html.indexOf('async function moveThroughCropBatch(direction)'),
+    html.indexOf('backCropButton.addEventListener')
+  );
+  assert.match(cropNavigation, /void persistDraftUploads\(\);/);
+  assert.match(cropNavigation, /void synchronizeActivePhotoSelection\(\)/);
+  assert.doesNotMatch(cropNavigation, /await persistDraftUploads\(\)/);
+  assert.doesNotMatch(cropNavigation, /await synchronizeActivePhotoSelection\(\)/);
+});
+
+test('stale and malformed upload credentials return recoverable authentication codes', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  };
+  const uploadSessionId = `tf_${'7'.repeat(32)}`;
+  const uploadToken = `ut_${'8'.repeat(64)}`;
+  const cartItemId = `ci_${'9'.repeat(32)}`;
+  const sessionRequest = () => new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
+  });
+  assert.equal((await worker.fetch(sessionRequest(), env)).status, 200);
+
+  const selectionBody = JSON.stringify({
+    uploadSessionId,
+    cartItemId,
+    selectionVersion:0,
+    photoSetCount:1,
+    frameColour:'Oak',
+    selection:[null, null, null]
+  });
+  const staleResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{
+      Origin:'https://goodframe.com.au',
+      'Content-Type':'application/json',
+      'X-Upload-Token':`ut_${'a'.repeat(64)}`
+    },
+    body:selectionBody
+  }), env);
+  assert.equal(staleResponse.status, 400);
+  assert.deepEqual(await staleResponse.json(), {
+    error:'Upload session could not be authenticated',
+    code:'UPLOAD_SESSION_AUTH_FAILED'
+  });
+
+  const malformedResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{
+      Origin:'https://goodframe.com.au',
+      'Content-Type':'application/json',
+      'X-Upload-Token':'outdated-token'
+    },
+    body:selectionBody
+  }), env);
+  assert.equal(malformedResponse.status, 400);
+  assert.equal((await malformedResponse.json()).code, 'UPLOAD_SESSION_INVALID');
+
+  database.prepare("UPDATE photo_upload_sessions SET status = 'expired' WHERE upload_session_id = ?")
+    .bind(uploadSessionId).run();
+  const expiredResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
+    method:'POST',
+    headers:{
+      Origin:'https://goodframe.com.au',
+      'Content-Type':'application/json',
+      'X-Upload-Token':uploadToken
+    },
+    body:selectionBody
+  }), env);
+  assert.equal(expiredResponse.status, 400);
+  assert.equal((await expiredResponse.json()).code, 'UPLOAD_SESSION_EXPIRED');
+
+  const conflictResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'POST',
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    body:JSON.stringify({ uploadSessionId, uploadToken:`ut_${'b'.repeat(64)}`, cartItemId })
+  }), env);
+  assert.equal(conflictResponse.status, 409);
+  assert.equal((await conflictResponse.json()).code, 'UPLOAD_SESSION_CONFLICT');
+  database.close();
 });
 
 test('individual photo upload CORS allows configured storefront origins and readable Worker errors', async () => {
@@ -127,30 +218,30 @@ test('individual photo upload CORS allows configured storefront origins and read
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
     const session = await response.json();
     assert.equal(session.success, true);
-    assert.match(session.storageFolder, /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}$/);
+    assert.match(session.storageFolder, /^\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?$/);
     storageFolders.push(session.storageFolder);
     const manifest = await bucket.get(`temporary/${session.storageFolder}/manifest.json`);
     assert.ok(manifest);
     const manifestData = await manifest.json();
-    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-AU', {
       timeZone:'Australia/Brisbane',
-      year:'numeric',
-      month:'2-digit',
       day:'2-digit',
-      hour:'2-digit',
+      month:'2-digit',
+      year:'numeric',
+      hour:'numeric',
       minute:'2-digit',
-      second:'2-digit',
-      hourCycle:'h23'
+      hour12:true
     }).formatToParts(new Date(manifestData.created_at)).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
-    const expectedFolderPrefix = `${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}-${parts.second}_`;
-    assert.ok(session.storageFolder.startsWith(expectedFolderPrefix));
-    const folderGroup = foldersByMinute.get(expectedFolderPrefix) || [];
+    const expectedFolder = `${parts.day}-${parts.month}-${parts.year}_${Number(parts.hour)}-${parts.minute}${String(parts.dayPeriod).toUpperCase()}`;
+    assert.match(session.storageFolder, new RegExp(`^${expectedFolder}(?:-[a-f0-9]{4})?$`));
+    const folderGroup = foldersByMinute.get(expectedFolder) || [];
     folderGroup.push(session.storageFolder);
-    foldersByMinute.set(expectedFolderPrefix, folderGroup);
+    foldersByMinute.set(expectedFolder, folderGroup);
   }
   assert.equal(new Set(storageFolders).size, storageFolders.length);
-  for (const [folderPrefix, folders] of foldersByMinute) {
-    assert.ok(folders.every(folder => folder.startsWith(folderPrefix)));
+  for (const [folderBase, folders] of foldersByMinute) {
+    assert.ok(folders.every(folder => folder === folderBase || folder.startsWith(`${folderBase}-`)));
+    assert.equal(folders.filter(folder => folder === folderBase).length, 1);
   }
 
   const rejectedPreflight = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
@@ -205,7 +296,7 @@ test('individual photo upload CORS allows configured storefront origins and read
 
 test('photo upload folders support the longest suffixed time and remain unique in D1', () => {
   const database = createProductCodeDatabase();
-  const storageFolder = '2026-10-26_21-36-32_a7b4';
+  const storageFolder = '26-10-2026_9-36PM-a7b4';
   const insertSession = (uploadSessionId, cartItemId) => database.prepare(
     `INSERT OR IGNORE INTO photo_upload_sessions
       (upload_session_id, cart_item_id, upload_token_hash, status, storage_folder, created_at, updated_at)
@@ -219,7 +310,7 @@ test('photo upload folders support the longest suffixed time and remain unique i
     new Date().toISOString()
   ).run();
 
-  assert.equal(storageFolder.length, 24);
+  assert.equal(storageFolder.length, 22);
   assert.equal(insertSession(`tf_${'1'.repeat(32)}`, `ci_${'1'.repeat(32)}`).meta.changes, 1);
   assert.equal(insertSession(`tf_${'2'.repeat(32)}`, `ci_${'2'.repeat(32)}`).meta.changes, 0);
   database.close();
@@ -247,7 +338,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   assert.equal(sessionResponse.status, 200);
   const session = await sessionResponse.json();
   const storageFolder = session.storageFolder;
-  assert.match(storageFolder, /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}$/);
+  assert.match(storageFolder, /^\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?$/);
 
   const photos = [];
   const selection = [];

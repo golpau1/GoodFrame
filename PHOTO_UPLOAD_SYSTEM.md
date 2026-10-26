@@ -9,6 +9,12 @@ before reporting it uploaded.
 Add to Cart finalizes the server's current ordered selection; it does not create
 or upload a print-sheet PDF.
 
+If restored credentials are malformed, expired, or no longer match the
+server-side token hash, the browser preserves the saved crops, creates one new
+authenticated session, retries selection synchronization once, and re-uploads
+the preserved JPEGs. Session creation and recovery are single-flight so
+simultaneous photo requests cannot create competing replacement sessions.
+
 ## Cloudflare bindings and secrets
 
 `Stripe_Checkout/worker/wrangler.jsonc` defines the required bindings:
@@ -64,16 +70,17 @@ endpoints. Existing Stripe and Resend secrets remain unchanged.
 
 Every browser session gets a unique upload session ID. Each confirmed crop is
 written to a unique, immutable key in a Brisbane-time folder named
-`YYYY-MM-DD_HH-mm-ss_<4-hex-id>`. For example:
+`DD-MM-YYYY_H-MMAM/PM`. If another session starts in the same minute, the
+Worker adds a four-character suffix. For example:
 
 ```text
-temporary/2026-10-26_21-36-32_a7b4/manifest.json
-temporary/2026-10-26_21-36-32_a7b4/photos/<random-immutable-id>.jpg
+temporary/26-10-2026_8-51PM/manifest.json
+temporary/26-10-2026_8-51PM-a7b4/photos/<random-immutable-id>.jpg
 ```
 
 The upload session ID remains the durable application/Stripe reference; only
-the new R2 storage folder name changes. A unique suffix prevents collisions
-even when multiple uploads start in the same second. Existing `tf_<session-id>`
+the new R2 storage folder name changes. A short unique suffix prevents collisions
+when multiple uploads start in the same minute. Existing `tf_<session-id>`
 and previously timestamped folders remain in place and readable.
 
 The upload token is stored only as a SHA-256 hash. D1 stores the active ordered

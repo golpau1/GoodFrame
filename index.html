@@ -1318,6 +1318,7 @@
     let individualUploadSession = null;
     let individualUploadSessionRegistered = false;
     let individualUploadSessionPromise = null;
+    let individualUploadSessionRecoveryPromise = null;
     let photoSelectionSyncPromise = Promise.resolve();
     const individualUploadQueue = [];
     let activeIndividualUploads = 0;
@@ -1982,7 +1983,7 @@
         item.committed = true;
         entry.uploadState = "queued";
         renderSlot(imageSlots[item.slotIndex], entry);
-        await persistDraftUploads();
+        void persistDraftUploads();
         void synchronizeActivePhotoSelection()
           .then(() => enqueueIndividualPhotoUpload(entry))
           .catch((error) => failIndividualPhotoUpload(entry, error));
@@ -2509,13 +2510,16 @@
         !Number.isInteger(draft.photoSetCount) || draft.photoSetCount < 0 ||
         !Array.isArray(draft.entries) || draft.entries.length !== draft.photoSetCount * 3 ||
         !Array.isArray(draft.pendingCrop || []) ||
-        (draft.session && (
-          !/^tf_[a-f0-9]{32}$/.test(String(draft.session.uploadSessionId || "")) ||
-          !/^ut_[a-f0-9]{64}$/.test(String(draft.session.uploadToken || "")) ||
-          !/^ci_[a-f0-9]{32}$/.test(String(draft.session.cartItemId || ""))
-        )) ||
         (!draft.session && !draft.pendingCrop?.length && !draft.entries.some(Boolean))
       ) return;
+      if (draft.session && (
+        !/^tf_[a-f0-9]{32}$/.test(String(draft.session.uploadSessionId || "")) ||
+        !/^ut_[a-f0-9]{64}$/.test(String(draft.session.uploadToken || "")) ||
+        !/^ci_[a-f0-9]{32}$/.test(String(draft.session.cartItemId || ""))
+      )) {
+        console.info("Outdated saved upload credentials were replaced without removing saved photos.");
+        draft.session = null;
+      }
       let storedPhotos = [];
       if (draft.session) {
         draft.session.selectionVersion = Number.isSafeInteger(Number(draft.session.selectionVersion))
@@ -2558,9 +2562,9 @@
           revision:saved.revision,
           effectivePpi:saved.effectivePpi,
           previewBlob:saved.previewBlob,
-          printBlob:saved.printBlob,
+          printBlob:saved.printBlob instanceof Blob ? saved.printBlob : saved.previewBlob,
           url:URL.createObjectURL(saved.previewBlob),
-          uploadState:complete ? "complete" : saved.printBlob ? "queued" : "failed",
+          uploadState:complete ? "complete" : (saved.printBlob instanceof Blob || saved.previewBlob instanceof Blob) ? "queued" : "failed",
           uploadError:complete ? "" : "Upload needs to be retried",
           objectKey:complete ? stored.objectKey : "",
           uploadController:null
@@ -2803,7 +2807,7 @@
           if (response.ok && result.success) {
             session.selectionVersion = Number(result.selectionVersion || 0);
             session.storageFolder = typeof result.storageFolder === "string" &&
-              /^(?:\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|tf_[a-f0-9]{32})$/.test(result.storageFolder)
+              /^(?:\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?|\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|tf_[a-f0-9]{32})$/.test(result.storageFolder)
               ? result.storageFolder
               : session.uploadSessionId;
             individualUploadSession = session;
@@ -2814,7 +2818,7 @@
           lastError = new Error(result.error || "The photo upload could not be started.");
           lastError.status = response.status;
           lastError.code = String(result.code || "");
-          if (!retryable) break;
+          if (!isRetryableUploadStatus(response.status)) break;
         } catch (error) {
           lastError = error;
           if (!isRetryableUploadError(error)) break;
@@ -2829,6 +2833,44 @@
       sessionError.code = lastError?.code;
       throw sessionError;
     }
+    function isUploadSessionRecoveryError(error) {
+      return ["UPLOAD_SESSION_AUTH_FAILED", "UPLOAD_SESSION_CONFLICT", "UPLOAD_SESSION_INVALID", "UPLOAD_SESSION_EXPIRED"].includes(String(error?.code || "")) ||
+        String(error?.message || "").toLowerCase().includes("upload session could not be authenticated");
+    }
+    async function recoverIndividualUploadSession(staleSession) {
+      if (individualUploadSessionRecoveryPromise) return individualUploadSessionRecoveryPromise;
+      individualUploadSessionRecoveryPromise = (async () => {
+        if (individualUploadSession !== staleSession && individualUploadSessionRegistered) return individualUploadSession;
+        const replacementSession = {
+          uploadSessionId:createUploadReference(),
+          uploadToken:createUploadToken(),
+          cartItemId:createCartItemId(),
+          selectionVersion:0
+        };
+        const recoveredSession = await registerIndividualUploadSession(replacementSession);
+        uploadedImages.forEach((entry) => {
+          if (!entry) return;
+          entry.uploadController?.abort();
+          entry.uploadController = null;
+          entry.objectKey = "";
+          entry.printBlob ||= entry.previewBlob instanceof Blob ? entry.previewBlob : null;
+          entry.uploadState = entry.printBlob instanceof Blob ? "queued" : "failed";
+          entry.uploadError = entry.printBlob instanceof Blob ? "" : "This photo needs to be selected again.";
+          renderIndividualUploadEntry(entry);
+        });
+        schedulePersistDraftUploads();
+        console.info("Photo upload session recovered", {
+          previousSessionId:staleSession?.uploadSessionId || "unknown",
+          replacementSessionId:recoveredSession.uploadSessionId
+        });
+        return recoveredSession;
+      })();
+      try {
+        return await individualUploadSessionRecoveryPromise;
+      } finally {
+        individualUploadSessionRecoveryPromise = null;
+      }
+    }
     async function ensureIndividualUploadSession() {
       if (individualUploadSession && individualUploadSessionRegistered) return individualUploadSession;
       if (individualUploadSessionPromise) return individualUploadSessionPromise;
@@ -2838,14 +2880,19 @@
         cartItemId:createCartItemId(),
         selectionVersion:0
       };
-      individualUploadSessionPromise = registerIndividualUploadSession(session);
+      individualUploadSessionPromise = registerIndividualUploadSession(session).catch((error) => {
+        if (isUploadSessionRecoveryError(error) || Number(error?.status) === 409) {
+          return recoverIndividualUploadSession(session);
+        }
+        throw error;
+      });
       try {
         return await individualUploadSessionPromise;
       } finally {
         individualUploadSessionPromise = null;
       }
     }
-    async function synchronizeActivePhotoSelectionNow() {
+    async function synchronizeActivePhotoSelectionNow(authRecoveryAttempted = false) {
       const session = await ensureIndividualUploadSession();
       if (!Number.isSafeInteger(Number(session.selectionVersion))) session.selectionVersion = 0;
       for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -2881,6 +2928,10 @@
           const error = new Error(result.error || "The selected photo order could not be saved.");
           error.status = response.status;
           error.code = String(result.code || "SELECTION_SYNC_FAILED");
+          if (!authRecoveryAttempted && isUploadSessionRecoveryError(error)) {
+            await recoverIndividualUploadSession(session);
+            return synchronizeActivePhotoSelectionNow(true);
+          }
           throw error;
         }
         session.selectionVersion = Number(result.selectionVersion);
@@ -2891,6 +2942,9 @@
         });
         if (fingerprint === currentFingerprint) {
           schedulePersistDraftUploads();
+          if (authRecoveryAttempted) {
+            uploadedImages.filter((entry) => entry?.uploadState === "queued").forEach(enqueueIndividualPhotoUpload);
+          }
           return session;
         }
       }

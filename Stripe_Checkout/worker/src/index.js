@@ -226,20 +226,19 @@ function createUploadSessionId() {
   return `tf_${crypto.randomUUID().replaceAll('-', '')}`;
 }
 
-function formatBrisbaneUploadFolder(value = new Date(), suffix = crypto.randomUUID().replaceAll('-', '').slice(0, 4)) {
+function formatBrisbaneUploadFolder(value = new Date(), suffix = '') {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-AU', {
     timeZone:'Australia/Brisbane',
-    year:'numeric',
-    month:'2-digit',
     day:'2-digit',
-    hour:'2-digit',
+    month:'2-digit',
+    year:'numeric',
+    hour:'numeric',
     minute:'2-digit',
-    second:'2-digit',
-    hourCycle:'h23'
+    hour12:true
   }).formatToParts(value).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
   const uniqueSuffix = String(suffix || '').trim().toLowerCase();
-  if (!/^[a-f0-9]{4}$/.test(uniqueSuffix)) throw new Error('Upload folder suffix must be four hexadecimal characters');
-  return `${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}-${parts.second}_${uniqueSuffix}`;
+  if (uniqueSuffix && !/^[a-f0-9]{4}$/.test(uniqueSuffix)) throw new Error('Upload folder suffix must be four hexadecimal characters');
+  return `${parts.day}-${parts.month}-${parts.year}_${Number(parts.hour)}-${parts.minute}${String(parts.dayPeriod || '').toUpperCase()}${uniqueSuffix ? `-${uniqueSuffix}` : ''}`;
 }
 
 function normalizeUploadStorageFolder(value) {
@@ -704,7 +703,11 @@ async function uploadTinyFrameOriginal(request, env) {
 async function requireIndividualUploadSession(request, env, uploadSessionId) {
   const sessionId = normalizeUploadReference(uploadSessionId);
   const token = normalizeUploadToken(request.headers.get('X-Upload-Token'));
-  if (!sessionId || !token) throw new TinyFrameInputError('Upload session credentials are invalid');
+  if (!sessionId || !token) {
+    const error = new TinyFrameInputError('Upload session credentials are invalid');
+    error.code = 'UPLOAD_SESSION_INVALID';
+    throw error;
+  }
   const sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, sessionId);
   const storageFolder = getPhotoUploadStorageFolder(sessionRecord, sessionId);
   const manifestKey = sessionRecord
@@ -721,7 +724,14 @@ async function requireIndividualUploadSession(request, env, uploadSessionId) {
     manifest.upload_session_id !== sessionId ||
     expectedTokenHash !== await sha256Hex(token)
   ) {
-    throw new TinyFrameInputError('Upload session could not be authenticated');
+    const error = new TinyFrameInputError('Upload session could not be authenticated');
+    error.code = 'UPLOAD_SESSION_AUTH_FAILED';
+    throw error;
+  }
+  if (sessionRecord?.status === 'expired') {
+    const error = new TinyFrameInputError('Upload session has expired');
+    error.code = 'UPLOAD_SESSION_EXPIRED';
+    throw error;
   }
   if (sessionRecord?.status === 'paid' || manifest.status === 'paid') {
     throw new TinyFrameInputError('Paid order photos cannot be changed');
@@ -760,7 +770,10 @@ async function createIndividualUploadSession(request, env) {
   const createdAt = new Date().toISOString();
   let sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
   for (let attempt = 0; !sessionRecord && attempt < 6; attempt += 1) {
-    const storageFolder = formatBrisbaneUploadFolder(new Date(createdAt));
+    const storageFolder = formatBrisbaneUploadFolder(
+      new Date(createdAt),
+      attempt ? crypto.randomUUID().replaceAll('-', '').slice(0, 4) : ''
+    );
     await env.PRODUCT_CODES_DB.prepare(
       `INSERT OR IGNORE INTO photo_upload_sessions
         (upload_session_id, cart_item_id, upload_token_hash, status, selection_json,
@@ -773,14 +786,14 @@ async function createIndividualUploadSession(request, env) {
   if (
     !sessionRecord || sessionRecord.cart_item_id !== cartItemId ||
     sessionRecord.upload_token_hash !== tokenHash
-  ) return jsonResponse(request, env, { error:'This upload session is already in use' }, 409);
+  ) return jsonResponse(request, env, { error:'This upload session is already in use', code:'UPLOAD_SESSION_CONFLICT' }, 409);
   const storageFolder = getPhotoUploadStorageFolder(sessionRecord, uploadSessionId);
   const manifestKey = getUploadManifestKey(uploadSessionId, storageFolder);
   const existing = await env.ARTWORK_BUCKET.get(manifestKey);
   if (existing) {
     const manifest = await readR2Json(existing);
     if (manifest?.upload_session_id !== uploadSessionId || ![LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest.storage_version))) {
-      return jsonResponse(request, env, { error:'This upload session is already in use' }, 409);
+      return jsonResponse(request, env, { error:'This upload session is already in use', code:'UPLOAD_SESSION_CONFLICT' }, 409);
     }
     return jsonResponse(request, env, { success:true, uploadSessionId, storageFolder, selectionVersion:Number(sessionRecord.selection_version), recovered:true });
   }
@@ -882,7 +895,10 @@ async function updateIndividualPhotoSelection(request, env) {
     }
     return jsonResponse(request, env, { error:'Photo selection is busy. Please retry.' }, 409);
   } catch (error) {
-    return jsonResponse(request, env, { error:error.message || 'Photo selection could not be updated' }, error instanceof TinyFrameInputError ? 400 : 500);
+    return jsonResponse(request, env, {
+      error:error.message || 'Photo selection could not be updated',
+      ...(error?.code ? { code:String(error.code) } : {})
+    }, error instanceof TinyFrameInputError ? 400 : 500);
   }
 }
 
@@ -1112,7 +1128,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
     });
     return jsonResponse(request, env, {
       error:error instanceof TinyFrameInputError ? error.message : 'The cropped photo could not be uploaded. Please retry.',
-      code:error instanceof TinyFrameInputError ? 'INVALID_PHOTO_UPLOAD' : 'PHOTO_UPLOAD_FAILED'
+      code:error?.code || (error instanceof TinyFrameInputError ? 'INVALID_PHOTO_UPLOAD' : 'PHOTO_UPLOAD_FAILED')
     }, status);
   }
 }
