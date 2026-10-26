@@ -31,6 +31,7 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /readUploadJson/);
   assert.match(html, /PHOTO_UPLOAD_MAX_ATTEMPTS = 4/);
   assert.match(html, /waitForUploadRetry/);
+  assert.match(html, /if \(individualUploadSession && individualUploadSessionRegistered\) return individualUploadSession;/);
   const restoreSessionIndex = html.indexOf('await registerIndividualUploadSession(draft.session, 1);');
   const restoreStatusIndex = html.indexOf('const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });');
   assert.ok(restoreSessionIndex >= 0 && restoreSessionIndex < restoreStatusIndex);
