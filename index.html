@@ -1312,6 +1312,7 @@
     let pendingUploadScrollPosition = null;
     let cropperScrollRestoreFrame = null;
     let individualUploadSession = null;
+    let individualUploadSessionRegistered = false;
     let individualUploadSessionPromise = null;
     let photoSelectionSyncPromise = Promise.resolve();
     const individualUploadQueue = [];
@@ -2460,7 +2461,10 @@
       draft.session.selectionVersion = Number.isSafeInteger(Number(draft.session.selectionVersion))
         ? Number(draft.session.selectionVersion)
         : 0;
+      individualUploadSession = draft.session;
+      individualUploadSessionRegistered = false;
       try {
+        await registerIndividualUploadSession(draft.session, 1);
         const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });
         const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/status?${parameters}`, {
           headers:{ "X-Upload-Token":draft.session.uploadToken },
@@ -2470,9 +2474,14 @@
           const result = await readUploadJson(response);
           storedPhotos = result.photos || [];
           draft.session.selectionVersion = Number(result.selectionVersion || 0);
+        } else {
+          console.warn("Saved photo upload status could not be restored.", { status:response.status });
         }
-      } catch {
-        // Local blobs still allow interrupted photos to retry when connectivity returns.
+      } catch (error) {
+        console.warn("Saved photo upload session could not be reconnected yet.", {
+          errorName:String(error?.name || "Error"),
+          status:Number(error?.status) || undefined
+        });
       }
       const storedById = new Map(storedPhotos.map((photo) => [photo.photoId, photo]));
       individualUploadSession = draft.session;
@@ -2670,48 +2679,50 @@
       updateUploadProgress();
       schedulePersistDraftUploads();
     }
+    async function registerIndividualUploadSession(session, retryLimit = PHOTO_UPLOAD_MAX_ATTEMPTS) {
+      let lastError = null;
+      for (let attempt = 0; attempt < retryLimit; attempt += 1) {
+        try {
+          const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/session`, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify(session)
+          });
+          const result = await readUploadJson(response);
+          if (response.ok && result.success) {
+            session.selectionVersion = Number(result.selectionVersion || 0);
+            individualUploadSession = session;
+            individualUploadSessionRegistered = true;
+            schedulePersistDraftUploads();
+            return session;
+          }
+          lastError = new Error(result.error || "The photo upload could not be started.");
+          lastError.status = response.status;
+          lastError.code = String(result.code || "");
+          if (!isRetryableUploadStatus(response.status)) break;
+        } catch (error) {
+          lastError = error;
+        }
+        if (attempt < retryLimit - 1) await waitForUploadRetry(attempt);
+      }
+      if (lastError?.code === "UPLOAD_TIMEOUT") throw lastError;
+      const sessionError = new Error(isLocalPreview
+        ? "The local photo service is unavailable. Start the checkout Worker on port 8787 and retry."
+        : lastError?.message || "The photo service could not be reached. Check your connection and retry.");
+      sessionError.status = lastError?.status;
+      sessionError.code = lastError?.code;
+      throw sessionError;
+    }
     async function ensureIndividualUploadSession() {
-      if (individualUploadSession) return individualUploadSession;
+      if (individualUploadSession && individualUploadSessionRegistered) return individualUploadSession;
       if (individualUploadSessionPromise) return individualUploadSessionPromise;
-      const session = {
+      const session = individualUploadSession || {
         uploadSessionId:createUploadReference(),
         uploadToken:createUploadToken(),
         cartItemId:createCartItemId(),
         selectionVersion:0
       };
-      individualUploadSessionPromise = (async () => {
-        let lastError = null;
-        for (let attempt = 0; attempt < PHOTO_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
-          try {
-            const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/session`, {
-              method:"POST",
-              headers:{ "Content-Type":"application/json" },
-              body:JSON.stringify(session)
-            });
-            const result = await readUploadJson(response);
-            if (response.ok && result.success) {
-              session.selectionVersion = Number(result.selectionVersion || 0);
-              individualUploadSession = session;
-              schedulePersistDraftUploads();
-              return session;
-            }
-            lastError = new Error(result.error || "The photo upload could not be started.");
-            lastError.status = response.status;
-            lastError.code = String(result.code || "");
-            if (!isRetryableUploadStatus(response.status)) break;
-          } catch (error) {
-            lastError = error;
-          }
-          if (attempt < PHOTO_UPLOAD_MAX_ATTEMPTS - 1) await waitForUploadRetry(attempt);
-        }
-        if (lastError?.code === "UPLOAD_TIMEOUT") throw lastError;
-        const sessionError = new Error(isLocalPreview
-          ? "The local photo service is unavailable. Start the checkout Worker on port 8787 and retry."
-          : lastError?.message || "The photo service could not be reached. Check your connection and retry.");
-        sessionError.status = lastError?.status;
-        sessionError.code = lastError?.code;
-        throw sessionError;
-      })();
+      individualUploadSessionPromise = registerIndividualUploadSession(session);
       try {
         return await individualUploadSessionPromise;
       } finally {

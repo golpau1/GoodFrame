@@ -31,6 +31,9 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /readUploadJson/);
   assert.match(html, /PHOTO_UPLOAD_MAX_ATTEMPTS = 4/);
   assert.match(html, /waitForUploadRetry/);
+  const restoreSessionIndex = html.indexOf('await registerIndividualUploadSession(draft.session, 1);');
+  const restoreStatusIndex = html.indexOf('const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });');
+  assert.ok(restoreSessionIndex >= 0 && restoreSessionIndex < restoreStatusIndex);
   assert.match(html, /\.catch\(\(error\) => failIndividualPhotoUpload\(entry, error\)\)/);
   assert.match(html, /Upload failed · Retry/);
   assert.match(html, /entry\?\.uploadState === \"complete\"/);

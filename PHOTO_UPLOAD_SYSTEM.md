@@ -3,7 +3,9 @@
 New Tiny Frame orders upload each full-resolution 54 × 86 crop individually
 while the customer continues selecting photos. The browser runs no more than
 two uploads at once, retries transient failures, and keeps recoverable drafts
-in IndexedDB. The Worker verifies each JPEG in R2 before reporting it uploaded.
+in IndexedDB. Restored drafts re-register their upload session with the Worker
+before syncing the current selection. The Worker verifies each JPEG in R2
+before reporting it uploaded.
 Add to Cart finalizes the server's current ordered selection; it does not create
 or upload a print-sheet PDF.
 
