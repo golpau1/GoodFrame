@@ -60,7 +60,9 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$5</);
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
   assert.match(html, /\.configurator\.is-open \{ height:auto; max-height:none;[^}]*overflow:visible/);
-  assert.match(html, /hero-mobile-DSCF1619\.jpg/);
+  assert.match(html, /hero-dscf1746-landscape-2560\.webp/);
+  assert.match(html, /hero-dscf1746-portrait-960\.webp/);
+  assert.match(html, /Choose 8 Memories/);
 });
 
 test('individual photo upload CORS allows configured storefront origins and readable Worker errors', async () => {
