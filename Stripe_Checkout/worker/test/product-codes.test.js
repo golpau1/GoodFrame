@@ -3,7 +3,6 @@ import test from 'node:test';
 
 import {
   ProductCodeError,
-  attachProductPdf,
   beginCheckoutRequest,
   completeCheckoutRequest,
   findProductCode,
@@ -90,47 +89,6 @@ test('a submitted cart code is preserved exactly and cannot be reassigned', asyn
     }], 'co_ffffffffffffffffffffffffffffffff'),
     ProductCodeError
   );
-  database.close();
-});
-
-test('pre-upload reservation keeps one code when its product PDF is attached and checkout begins', async () => {
-  const database = createProductCodeDatabase();
-  const cartItemId = 'ci_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const first = await reserveCartProductCode(database, {
-    cartItemId,
-    productType:'tiny_frame_8_pictures'
-  });
-  const retry = await reserveCartProductCode(database, {
-    cartItemId,
-    productType:'tiny_frame_8_pictures'
-  });
-  assert.equal(retry.productCode, first.productCode);
-  const objectKey = `${first.productCode}/${first.productCode}-print-sheet.pdf`;
-  await attachProductPdf(database, first.productCode, cartItemId, objectKey);
-  const checkout = await reserveProductCodes(database, [{
-    cartItemId,
-    unitIndex:0,
-    productType:'tiny_frame_8_pictures',
-    uploadReference:objectKey
-  }], 'co_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
-  assert.equal(checkout.units[0].productCode, first.productCode);
-  const record = await findProductCode(database, first.productCode);
-  assert.equal(record.upload_session_id, objectKey);
-  assert.equal(record.checkout_request_id, 'co_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
-  database.close();
-});
-
-test('previous code-based PDF paths remain attached to their original products', async () => {
-  const database = createProductCodeDatabase();
-  const cartItemId = 'ci_cccccccccccccccccccccccccccccccc';
-  const reservation = await reserveCartProductCode(database, {
-    cartItemId,
-    productType:'tiny_frame_8_pictures'
-  });
-  const previousObjectKey = `tinyframes/products/${reservation.productCode}/print-sheet-${reservation.productCode}.pdf`;
-  await attachProductPdf(database, reservation.productCode, cartItemId, previousObjectKey);
-  const record = await findProductCode(database, reservation.productCode);
-  assert.equal(record.upload_session_id, previousObjectKey);
   database.close();
 });
 

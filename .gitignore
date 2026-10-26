@@ -2,3 +2,4 @@
 Stripe_Checkout/.env
 Stripe_Checkout/worker/.dev.vars
 **/.wrangler/
+**/.DS_Store

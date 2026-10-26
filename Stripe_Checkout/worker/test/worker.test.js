@@ -13,7 +13,12 @@ class MemoryBucket {
   }
   async head(key) {
     const stored = this.objects.get(key);
-    return stored ? { key, customMetadata:stored.customMetadata } : null;
+    return stored ? {
+      key,
+      size:stored.body.byteLength,
+      httpMetadata:{ contentType:stored.type },
+      customMetadata:stored.customMetadata
+    } : null;
   }
   async put(key, body, options = {}) {
     if (options.onlyIf?.etagDoesNotMatch === '*' && this.objects.has(key)) return null;
@@ -61,26 +66,36 @@ function fakeJpeg(width = 1080, height = 1720) {
   ]);
 }
 
-async function seedPictureUpload(bucket, uploadReference) {
-  const processedImages = [];
+async function seedPictureUpload(bucket, uploadReference, cartItemId, frameColour = 'Oak') {
+  const photos = [];
   for (let index = 1; index <= 8; index += 1) {
-    const objectKey = `tinyframes/${uploadReference}/processed/${String(index).padStart(2, '0')}.jpg`;
+    const photoId = `ph_${index.toString(16).padStart(32, '0')}`;
+    const revision = `${String(index).repeat(8)}-${String(index).repeat(4)}-4${String(index).repeat(3)}-8${String(index).repeat(3)}-${String(index).repeat(12)}`;
+    const objectKey = `tinyframes/${uploadReference}/photos/${photoId}.jpg`;
     await bucket.put(objectKey, fakeJpeg(), {
       httpMetadata:{ contentType:'image/jpeg' },
-      customMetadata:{ status:'pending' }
+      customMetadata:{
+        upload_session_id:uploadReference,
+        photo_id:photoId,
+        revision,
+        position:String(index),
+        status:'temporary'
+      }
     });
-    processedImages.push({ objectKey, contentType:'image/jpeg', size:23 });
+    photos.push({ photo_id:photoId, revision, position:index, objectKey, contentType:'image/jpeg', size:23 });
   }
   await bucket.put(`tinyframes/${uploadReference}/manifest.json`, JSON.stringify({
+    storage_version:2,
     upload_session_id:uploadReference,
-    frame_colour:'Oak',
-    product_type:'frame_8_pictures',
-    processed_images:processedImages,
-    originals:[],
-    files:[...processedImages],
-    print_sheets:[],
+    cart_item_id:cartItemId,
+    frame_colour:frameColour,
+    product_type:'tiny_frame_8_pictures',
+    photo_set_count:0,
+    photo_count:8,
+    photos,
+    files:photos,
     product_codes:[],
-    status:'pending',
+    status:'finalized',
     uploaded_at:new Date().toISOString()
   }), { httpMetadata:{ contentType:'application/json' } });
 }
@@ -360,13 +375,14 @@ test('Australian photo checkout charges $64.95 plus one $10 shipping option for 
   try {
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_abcdef0123456789abcdef0123456789';
-    await seedPictureUpload(bucket, uploadReference);
+    const cartItemId = 'ci_00000000000000000000000000000002';
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',
       headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
       body: JSON.stringify({ checkoutRequestId:'co_00000000000000000000000000000002', items: [{
         productType: 'tiny_frame_8_pictures',
-        cartItemId:'ci_00000000000000000000000000000002',
+        cartItemId,
         size: '80x80mm',
         frameColour: 'Oak',
         quantity: 1,
@@ -380,15 +396,12 @@ test('Australian photo checkout charges $64.95 plus one $10 shipping option for 
       bucket.objects.get(`tinyframes/${uploadReference}/manifest.json`).body
     ));
     assert.deepEqual(manifest.product_codes, [productCode]);
-    assert.equal(manifest.print_sheets[0].filename, `${productCode}-print-sheet.pdf`);
-    assert.equal(manifest.print_sheets[0].objectKey, `${productCode}/${productCode}-print-sheet.pdf`);
-    const labelledPdf = new TextDecoder('latin1').decode(
-      bucket.objects.get(manifest.print_sheets[0].objectKey).body
-    );
-    assert.match(labelledPdf, new RegExp(`\\(PRODUCT ${productCode}\\) Tj`));
+    assert.equal(manifest.photos.length, 8);
+    assert.equal(manifest.photos.every(photo => photo.objectKey.endsWith('.jpg')), true);
+    assert.equal(JSON.stringify(manifest).includes('.pdf'), false);
     assert.equal(
-      bucket.objects.get(`tinyframes/${uploadReference}/processed/01.jpg`).customMetadata.product_codes,
-      productCode
+      bucket.objects.get(manifest.photos[0].objectKey).customMetadata.upload_session_id,
+      uploadReference
     );
     assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'Frame + Eight Photos');
     assert.equal(stripeBody.has('line_items[0][price_data][product_data][description]'), false);
@@ -462,13 +475,14 @@ test('quantity creates one unique five-digit code per physical frame and retries
   try {
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_00000000000000000000000000000006';
-    await seedPictureUpload(bucket, uploadReference);
+    const cartItemId = 'ci_00000000000000000000000000000006';
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     const requestBody = JSON.stringify({
       checkoutRequestId:'co_00000000000000000000000000000006',
       items:[{
         productType:'tiny_frame_8_pictures',
-        cartItemId:'ci_00000000000000000000000000000006',
+        cartItemId,
         size:'80x80mm',
         frameColour:'Oak',
         quantity:3,
@@ -530,7 +544,7 @@ test('a new browser checkout request reuses the matching open Stripe session', a
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_10000000000000000000000000000001';
     const cartItemId = 'ci_10000000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     const first = await worker.fetch(pictureCheckoutRequest({
       checkoutRequestId:'co_10000000000000000000000000000001', cartItemId, uploadReference
@@ -569,7 +583,7 @@ test('an expired Checkout session is replaced without changing its product code'
     const uploadReference = 'tf_20000000000000000000000000000001';
     const cartItemId = 'ci_20000000000000000000000000000001';
     const requestId = 'co_20000000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     const first = await worker.fetch(pictureCheckoutRequest({
       checkoutRequestId:requestId, cartItemId, uploadReference
@@ -610,7 +624,7 @@ test('a Stripe status network failure leaves the unpaid session safe to retry', 
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_25000000000000000000000000000001';
     const cartItemId = 'ci_25000000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     const first = await worker.fetch(pictureCheckoutRequest({
       checkoutRequestId:'co_25000000000000000000000000000001', cartItemId, uploadReference
@@ -649,7 +663,7 @@ test('an interrupted session creation recovers the original Stripe idempotency k
     const uploadReference = 'tf_27500000000000000000000000000001';
     const cartItemId = 'ci_27500000000000000000000000000001';
     const originalRequestId = 'co_27500000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     const interrupted = await worker.fetch(pictureCheckoutRequest({
       checkoutRequestId:originalRequestId, cartItemId, uploadReference
@@ -702,7 +716,7 @@ test('changing checkout details expires the old unpaid session before replacemen
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_30000000000000000000000000000001';
     const cartItemId = 'ci_30000000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     const first = await worker.fetch(pictureCheckoutRequest({
       checkoutRequestId:'co_30000000000000000000000000000001', cartItemId, uploadReference
@@ -758,7 +772,7 @@ test('checkout reuse requires the same backend-validated shipping rate', async (
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_35000000000000000000000000000001';
     const cartItemId = 'ci_35000000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     testEnv.STRIPE_TEST_INTERNATIONAL_SHIPPING_RATE_ID = 'shr_test_international1';
     const first = await worker.fetch(pictureCheckoutRequest({
@@ -805,7 +819,7 @@ test('a completed paid Checkout session is never expired or replaced', async () 
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_40000000000000000000000000000001';
     const cartItemId = 'ci_40000000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = {
       ...env(bucket),
       STRIPE_MODE:'live',
@@ -846,7 +860,7 @@ test('concurrent checkout clicks use one idempotency identity and one product re
     const uploadReference = 'tf_50000000000000000000000000000001';
     const cartItemId = 'ci_50000000000000000000000000000001';
     const checkoutRequestId = 'co_50000000000000000000000000000001';
-    await seedPictureUpload(bucket, uploadReference);
+    await seedPictureUpload(bucket, uploadReference, cartItemId);
     const testEnv = env(bucket);
     const [first, second] = await Promise.all([
       worker.fetch(pictureCheckoutRequest({ checkoutRequestId, cartItemId, uploadReference }), testEnv),
@@ -873,7 +887,8 @@ test('authorized order management can find the Stripe relationship by product co
   try {
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_00000000000000000000000000000007';
-    await seedPictureUpload(bucket, uploadReference);
+    const cartItemId = 'ci_00000000000000000000000000000007';
+    await seedPictureUpload(bucket, uploadReference, cartItemId, 'Walnut');
     const testEnv = { ...env(bucket), ADMIN_API_KEY:'local-admin-key-at-least-24-characters' };
     const checkout = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method:'POST',
@@ -882,7 +897,7 @@ test('authorized order management can find the Stripe relationship by product co
         checkoutRequestId:'co_00000000000000000000000000000007',
         items:[{
           productType:'tiny_frame_8_pictures',
-          cartItemId:'ci_00000000000000000000000000000007',
+          cartItemId,
           size:'80x80mm',
           frameColour:'Walnut',
           quantity:1,
@@ -928,7 +943,8 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
   const webhookSecret = 'whsec_live_product_test';
   const bucket = new MemoryBucket();
   const uploadReference = 'tf_00000000000000000000000000000008';
-  await seedPictureUpload(bucket, uploadReference);
+  const cartItemId = 'ci_00000000000000000000000000000008';
+  await seedPictureUpload(bucket, uploadReference, cartItemId);
   const liveEnv = {
     ...env(bucket),
     STRIPE_MODE:'live',
@@ -946,7 +962,7 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
         checkoutRequestId:'co_00000000000000000000000000000008',
         items:[{
           productType:'tiny_frame_8_pictures',
-          cartItemId:'ci_00000000000000000000000000000008',
+          cartItemId,
           size:'80x80mm',
           frameColour:'Oak',
           quantity:1,
@@ -1010,12 +1026,14 @@ test('checkout adds one $10 shipping option for multiple Tiny Frames', async () 
     const bucket = new MemoryBucket();
     const firstUploadReference = 'tf_1234567890abcdef1234567890abcdef';
     const secondUploadReference = 'tf_abcdef1234567890abcdef1234567890';
-    await seedPictureUpload(bucket, firstUploadReference);
-    await seedPictureUpload(bucket, secondUploadReference);
+    const firstCartItemId = 'ci_00000000000000000000000000000004';
+    const secondCartItemId = 'ci_00000000000000000000000000000005';
+    await seedPictureUpload(bucket, firstUploadReference, firstCartItemId);
+    await seedPictureUpload(bucket, secondUploadReference, secondCartItemId, 'Walnut');
     const testEnv = env(bucket);
     const items = [
-      { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000004', size:'80x80mm', frameColour:'Oak', quantity:1, uploadReference:firstUploadReference },
-      { productType:'tiny_frame_8_pictures', cartItemId:'ci_00000000000000000000000000000005', size:'80x80mm', frameColour:'Walnut', quantity:1, uploadReference:secondUploadReference }
+      { productType:'tiny_frame_8_pictures', cartItemId:firstCartItemId, size:'80x80mm', frameColour:'Oak', quantity:1, uploadReference:firstUploadReference },
+      { productType:'tiny_frame_8_pictures', cartItemId:secondCartItemId, size:'80x80mm', frameColour:'Walnut', quantity:1, uploadReference:secondUploadReference }
     ];
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',

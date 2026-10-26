@@ -1,19 +1,13 @@
 import {
   createOriginalObjectKey,
   createThumbnailObjectKey,
+  getBrisbaneDateParts,
   isValidArtworkObjectKey,
   sanitizeUploadId
 } from './r2-keys.js';
 import {
-  PRINT_SHEET_SPECIFICATION,
-  createA4PrintSheetPdf,
-  getA4PrintLayout,
-  readJpegDimensions
-} from './print-sheet-pdf.js';
-import {
   ProductCodeCapacityError,
   ProductCodeError,
-  attachProductPdf,
   beginCheckoutRequest,
   completeCheckoutRequest,
   findCheckoutAttachment,
@@ -63,19 +57,8 @@ const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
 const LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION = 2;
 const INDIVIDUAL_PHOTO_STORAGE_VERSION = 3;
 const MAX_TINY_FRAME_UPLOAD_BYTES = 96 * 1024 * 1024;
-// Keep the multipart request safely below Cloudflare's 100 MB request limit.
-const MAX_TINY_FRAME_PDF_BYTES = 95 * 1024 * 1024;
-// Larger, already-generated PDFs are transferred to R2 in uniform 8 MiB parts.
-// This is a guardrail rather than an encoding limit: the A4 PDF bytes are not changed.
-const MAX_TINY_FRAME_MULTIPART_PDF_BYTES = 512 * 1024 * 1024;
-const TINY_FRAME_PDF_PART_BYTES = 8 * 1024 * 1024;
-const MAX_TINY_FRAME_PDF_PARTS = Math.ceil(MAX_TINY_FRAME_MULTIPART_PDF_BYTES / TINY_FRAME_PDF_PART_BYTES);
 const CORS_ALLOWED_METHODS = Object.freeze(['GET', 'POST', 'DELETE', 'OPTIONS']);
 const CORS_ALLOWED_HEADERS = Object.freeze(['content-type', 'authorization', 'x-upload-token', 'x-upload-attempt']);
-const A4_WIDTH_POINTS = 595.275591;
-const A4_HEIGHT_POINTS = 841.889764;
-const TINY_FRAME_PHOTO_WIDTH_POINTS = 54 * 72 / 25.4;
-const TINY_FRAME_PHOTO_HEIGHT_POINTS = 86 * 72 / 25.4;
 const TINY_FRAME_PHOTO_WIDTH_INCHES = 54 / 25.4;
 const TINY_FRAME_PHOTO_HEIGHT_INCHES = 86 / 25.4;
 const TINY_FRAME_LOW_RESOLUTION_PPI = 200;
@@ -194,7 +177,9 @@ function createCorsHeaders(request, env) {
   const headers = new Headers({
     'Access-Control-Allow-Methods': CORS_ALLOWED_METHODS.join(','),
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Upload-Token, X-Upload-Attempt',
-    'Content-Type': 'application/json'
+    'Cache-Control': 'no-store, max-age=0',
+    'Content-Type': 'application/json',
+    'Pragma': 'no-cache'
   });
   const allowedOrigin = getAllowedOrigin(request, env);
 
@@ -220,10 +205,6 @@ function getWorkerBaseUrl(request) {
 
 function getArtworkUrl(request, objectKey) {
   return `${getWorkerBaseUrl(request)}/artwork/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
-}
-
-function createUploadSessionId() {
-  return `tf_${crypto.randomUUID().replaceAll('-', '')}`;
 }
 
 function formatBrisbaneUploadFolder(value = new Date(), suffix = '') {
@@ -284,16 +265,21 @@ function getIndividualPhotoKey(uploadSessionId, photoId) {
     : '';
 }
 
-function getTemporaryPhotoKey(uploadSessionId, storageFolder = '') {
+function getTemporaryPhotoKey(uploadSessionId, storageFolder = '', photoId = '', revision = '') {
   const sessionId = normalizeUploadReference(uploadSessionId);
-  return sessionId
-    ? `${getTinyFrameUploadPrefix(sessionId, storageFolder)}photos/${crypto.randomUUID().replaceAll('-', '')}.jpg`
+  const normalizedPhotoId = normalizePhotoId(photoId);
+  const normalizedRevision = String(revision || '').trim().toLowerCase().replaceAll('-', '');
+  return sessionId && normalizedPhotoId && /^[a-f0-9]{32}$/.test(normalizedRevision)
+    ? `${getTinyFrameUploadPrefix(sessionId, storageFolder)}photos/${normalizedPhotoId.slice(3)}-${normalizedRevision}.jpg`
     : '';
 }
 
 function isValidIndividualPhotoKey(value, uploadSessionId = '', storageFolder = '') {
   const key = String(value || '');
-  const temporary = key.match(/^temporary\/([^/]+)\/photos\/[a-f0-9]{32}\.jpg$/);
+  // The single-ID form is retained for sessions created by the immediately
+  // preceding release. New writes include both photo and revision identities,
+  // making a retry resolve to the same immutable R2 key.
+  const temporary = key.match(/^temporary\/([^/]+)\/photos\/[a-f0-9]{32}(?:-[a-f0-9]{32})?\.jpg$/);
   if (temporary) {
     const expectedFolder = normalizeUploadStorageFolder(storageFolder) || normalizeUploadReference(uploadSessionId);
     const validFolder = normalizeUploadStorageFolder(temporary[1]) || normalizeUploadReference(temporary[1]);
@@ -356,21 +342,9 @@ function getLegacyUploadManifestKey(uploadReference) {
   return `tiny-frame-uploads/${uploadReference}.json`;
 }
 
-function isValidTinyFramePrintSheetKey(value) {
-  return /^tinyframes\/tf_[a-f0-9]{32}\/print-sheet-(?:a4|[1-9][0-9]{4})\.pdf$/.test(String(value || ''));
-}
-
 function getProductPdfKey(productCode) {
   const code = normalizeProductCode(productCode);
   return code ? `${code}/${code}-print-sheet.pdf` : '';
-}
-
-function isValidProductPdfKey(value, productCode = '') {
-  const key = String(value || '');
-  const current = key.match(/^([1-9][0-9]{4})\/([1-9][0-9]{4})-print-sheet\.pdf$/);
-  const previous = key.match(/^tinyframes\/products\/([1-9][0-9]{4})\/print-sheet-([1-9][0-9]{4})\.pdf$/);
-  const match = current || previous;
-  return Boolean(match && match[1] === match[2] && (!productCode || match[1] === productCode));
 }
 
 function getProductPdfKeyCandidates(productCode) {
@@ -381,323 +355,12 @@ function getProductPdfKeyCandidates(productCode) {
   ] : [];
 }
 
-function isValidProcessedImageKey(value) {
-  return /^tinyframes\/tf_[a-f0-9]{32}\/processed\/(?:0[1-8])\.jpg$/.test(String(value || ''));
-}
-
-function isValidTinyFrameOriginalKey(value, uploadSessionId = '', pictureNumber = 0) {
-  const key = String(value || '');
-  const match = key.match(/^tinyframes\/(tf_[a-f0-9]{32})\/originals\/(0[1-8])\.(?:jpg|png|gif)$/);
-  if (!match) return false;
-  if (uploadSessionId && match[1] !== uploadSessionId) return false;
-  if (pictureNumber && Number(match[2]) !== pictureNumber) return false;
-  return true;
-}
-
 async function deleteObjectKeys(bucket, keys) {
   await Promise.allSettled(keys.map(key => bucket.delete(key)));
 }
 
-function countAscii(bytes, value) {
-  const needle = new TextEncoder().encode(value);
-  let count = 0;
-  for (let index = 0; index <= bytes.length - needle.length; index += 1) {
-    let matches = true;
-    for (let offset = 0; offset < needle.length; offset += 1) {
-      if (bytes[index + offset] !== needle[offset]) { matches = false; break; }
-    }
-    if (matches) { count += 1; index += needle.length - 1; }
-  }
-  return count;
-}
-
-function pdfNumber(value) {
-  return Number(value).toFixed(6).replace(/\.?0+$/, '');
-}
-
-function inspectPrintSheetPdfStructure(structuralPrefix, imageCount, expectedProductCode = '', expectedPhotoCount = TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-  if (!structuralPrefix.startsWith('%PDF-')) {
-    return { valid:false, error:'The print sheet is not a PDF' };
-  }
-  const mediaBox = `/MediaBox [0 0 ${pdfNumber(A4_WIDTH_POINTS)} ${pdfNumber(A4_HEIGHT_POINTS)}]`;
-  const expectedPageCount = Math.ceil(expectedPhotoCount / TINY_FRAME_PHOTOS_PER_PAGE);
-  if (countAscii(new TextEncoder().encode(structuralPrefix), mediaBox) !== expectedPageCount) {
-    return { valid:false, error:'The print sheet must be an exact portrait A4 page' };
-  }
-  if (
-    !Number.isInteger(expectedPhotoCount) || expectedPhotoCount < 1 ||
-    (expectedPhotoCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT && expectedPhotoCount % TINY_FRAME_PHOTOS_PER_SET !== 0) ||
-    imageCount !== expectedPhotoCount
-  ) {
-    return { valid:false, error:'The print sheet photo count does not match the selected photo sets' };
-  }
-  const placements = getA4PrintLayout(expectedPhotoCount);
-  for (const placement of placements) {
-    const command = `q ${pdfNumber(TINY_FRAME_PHOTO_WIDTH_POINTS)} 0 0 ${pdfNumber(TINY_FRAME_PHOTO_HEIGHT_POINTS)} ${pdfNumber(placement.xMm * 72 / 25.4)} ${pdfNumber(placement.yMm * 72 / 25.4)} cm /Im${placement.index + 1} Do Q`;
-    if (!structuralPrefix.includes(command)) {
-      return { valid:false, error:'The print-sheet picture placements could not be verified' };
-    }
-    const trim = `${pdfNumber(placement.xMm * 72 / 25.4)} ${pdfNumber(placement.yMm * 72 / 25.4)} ${pdfNumber(TINY_FRAME_PHOTO_WIDTH_POINTS)} ${pdfNumber(TINY_FRAME_PHOTO_HEIGHT_POINTS)} re S`;
-    if (!structuralPrefix.includes(trim)) {
-      return { valid:false, error:'The print-sheet cut lines could not be verified' };
-    }
-  }
-  if (!structuralPrefix.includes(`${pdfNumber(PRINT_SHEET_SPECIFICATION.guideWidthPt)} w`)) {
-    return { valid:false, error:'The print-sheet cut-line width could not be verified' };
-  }
-  const productCode = normalizeProductCode(expectedProductCode);
-  if (expectedProductCode && !productCode) return { valid:false, error:'The product code is invalid' };
-  if (productCode && !structuralPrefix.includes(`(PRODUCT ${productCode}) Tj`)) {
-    return { valid:false, error:'The print sheet does not contain the matching product code' };
-  }
-  return { valid:true };
-}
-
-function inspectPrintSheetPdf(bytes, expectedProductCode = '', expectedPhotoCount = TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-  if (!(bytes instanceof Uint8Array) || bytes.length < 5) {
-    return { valid:false, error:'The print sheet is not a PDF' };
-  }
-  const structuralPrefix = new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length, 512 * 1024)));
-  return inspectPrintSheetPdfStructure(
-    structuralPrefix,
-    countAscii(bytes, '/Subtype /Image'),
-    expectedProductCode,
-    expectedPhotoCount
-  );
-}
-
-async function readR2Range(bucket, objectKey, offset, length) {
-  const object = await bucket.get(objectKey, { range:{ offset, length } });
-  if (!object?.body) throw new Error('The uploaded print sheet could not be read');
-  const bytes = new Uint8Array(await new Response(object.body).arrayBuffer());
-  if (bytes.length !== length) throw new Error('The uploaded print sheet range is incomplete');
-  return bytes;
-}
-
-async function inspectStoredPrintSheetPdf(bucket, objectKey, expectedSize, expectedProductCode, expectedPhotoCount = TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-  try {
-    const rangeLength = Math.min(expectedSize, 512 * 1024);
-    const tailOffset = expectedSize - rangeLength;
-    const [prefix, tail] = await Promise.all([
-      readR2Range(bucket, objectKey, 0, rangeLength),
-      tailOffset === 0
-        ? readR2Range(bucket, objectKey, 0, rangeLength)
-        : readR2Range(bucket, objectKey, tailOffset, rangeLength)
-    ]);
-    const tailText = new TextDecoder('latin1').decode(tail);
-    const xrefIndex = tailText.lastIndexOf('\nxref\n');
-    const startXrefMatch = tailText.match(/startxref\n(\d+)\n%%EOF\s*$/);
-    if (xrefIndex < 0 || !startXrefMatch || Number(startXrefMatch[1]) !== tailOffset + xrefIndex + 1) {
-      return { valid:false, error:'The uploaded print sheet cross-reference is invalid' };
-    }
-    const xrefLines = tailText.slice(xrefIndex + 1).split('\n');
-    const sectionMatch = xrefLines[1]?.match(/^0 (\d+)$/);
-    const objectCount = Number(sectionMatch?.[1] || 0);
-    if (!Number.isInteger(objectCount) || objectCount < 2 || objectCount > 10000 || xrefLines.length < objectCount + 2) {
-      return { valid:false, error:'The uploaded print sheet cross-reference is invalid' };
-    }
-    const offsets = [];
-    for (let index = 1; index < objectCount; index += 1) {
-      const entry = xrefLines[index + 2]?.match(/^(\d{10}) 00000 n $/);
-      const objectOffset = Number(entry?.[1]);
-      if (!entry || !Number.isSafeInteger(objectOffset) || objectOffset < 0 || objectOffset >= expectedSize) {
-        return { valid:false, error:'The uploaded print sheet cross-reference is invalid' };
-      }
-      offsets.push(objectOffset);
-    }
-    const objectHeaders = await Promise.all(offsets.map((objectOffset, index) => {
-      const nextOffset = index + 1 < offsets.length ? offsets[index + 1] : Number(startXrefMatch[1]);
-      return readR2Range(bucket, objectKey, objectOffset, Math.min(512, nextOffset - objectOffset));
-    }));
-    const imageCount = objectHeaders.reduce(
-      (sum, bytes) => sum + countAscii(bytes, '/Subtype /Image'),
-      0
-    );
-    return inspectPrintSheetPdfStructure(
-      new TextDecoder('latin1').decode(prefix),
-      imageCount,
-      expectedProductCode,
-      expectedPhotoCount
-    );
-  } catch (error) {
-    return { valid:false, error:String(error?.message || 'The uploaded print sheet could not be read') };
-  }
-}
-
-function getOriginalExtension(contentType) {
-  if (contentType === 'image/png') return 'png';
-  if (contentType === 'image/gif') return 'gif';
-  return 'jpg';
-}
-
-function normalizeTinyFrameCrop(value, index) {
-  if (!value || typeof value !== 'object') {
-    throw new Error(`Crop information for picture ${index + 1} is missing`);
-  }
-  const crop = {
-    x:Number(value.x),
-    y:Number(value.y),
-    width:Number(value.width),
-    height:Number(value.height),
-    sourceWidth:Number(value.sourceWidth),
-    sourceHeight:Number(value.sourceHeight),
-    rotation:Number(value.rotation || 0)
-  };
-  if (
-    !Object.values(crop).every(Number.isFinite) ||
-    crop.x < 0 || crop.y < 0 || crop.width <= 0 || crop.height <= 0 ||
-    crop.sourceWidth <= 0 || crop.sourceHeight <= 0 ||
-    ![0, 90].includes(crop.rotation)
-  ) {
-    throw new Error(`Crop information for picture ${index + 1} is invalid`);
-  }
-
-  const left = Math.max(0, Math.floor(crop.x));
-  const top = Math.max(0, Math.floor(crop.y));
-  const right = Math.min(Math.round(crop.sourceWidth), Math.ceil(crop.x + crop.width));
-  const bottom = Math.min(Math.round(crop.sourceHeight), Math.ceil(crop.y + crop.height));
-  const width = right - left;
-  const height = bottom - top;
-  const outputWidth = crop.rotation === 90 ? height : width;
-  const outputHeight = crop.rotation === 90 ? width : height;
-  if (width < 1 || height < 1 || right > crop.sourceWidth + 1 || bottom > crop.sourceHeight + 1) {
-    throw new Error(`Crop information for picture ${index + 1} is outside the original image`);
-  }
-  if (Math.abs((outputWidth / outputHeight) - (54 / 86)) > 0.01) {
-    throw new Error(`Crop information for picture ${index + 1} does not match the 54 x 86 mm print ratio`);
-  }
-  return { ...crop, left, top, width, height, outputWidth, outputHeight };
-}
-
 function calculateEffectivePpi(width, height) {
   return Math.min(width / TINY_FRAME_PHOTO_WIDTH_INCHES, height / TINY_FRAME_PHOTO_HEIGHT_INCHES);
-}
-
-async function transformOriginalForPrint(env, sourceBytes, crop) {
-  // Edge offsets map Cropper's x/y/width/height model directly and avoid
-  // ambiguity when a crop does not begin at the source image origin.
-  const right = Math.max(0, Math.round(crop.sourceWidth) - crop.left - crop.width);
-  const bottom = Math.max(0, Math.round(crop.sourceHeight) - crop.top - crop.height);
-  let transform = env.IMAGES
-    .input(sourceBytes)
-    .transform({
-      trim:{ top:crop.top, right, bottom, left:crop.left },
-      metadata:'keep'
-    });
-  if (crop.rotation === 90) {
-    transform = transform.transform({ rotate:90 });
-  }
-  const output = await transform.output({ format:'image/jpeg', quality:100 });
-  const response = output.response();
-  if (!response.ok) {
-    throw new Error(`Cloudflare Images returned ${response.status} while preparing a print crop`);
-  }
-  return new Uint8Array(await response.arrayBuffer());
-}
-
-async function uploadTinyFrameOriginal(request, env) {
-  if (!env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error:'Artwork storage is not configured' }, 503);
-  }
-  if (!env.IMAGES) {
-    return jsonResponse(request, env, { error:'Print-quality image processing is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-
-  let formData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return jsonResponse(request, env, { error:'Upload must use multipart form data' }, 400);
-  }
-  const uploadSessionId = normalizeUploadReference(formData.get('upload_session_id'));
-  const pictureNumber = Number(formData.get('picture_number'));
-  const file = formData.get('file');
-  if (!uploadSessionId) {
-    return jsonResponse(request, env, { error:'Upload session ID is invalid' }, 400);
-  }
-  if (!Number.isInteger(pictureNumber) || pictureNumber < 1 || pictureNumber > TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-    return jsonResponse(request, env, { error:'Picture number must be between 1 and 8' }, 400);
-  }
-  if (!file || typeof file.arrayBuffer !== 'function') {
-    return jsonResponse(request, env, { error:'An original photograph is required' }, 400);
-  }
-  if (!SUPPORTED_TINY_FRAME_IMAGE_TYPES.includes(file.type)) {
-    return jsonResponse(request, env, { error:'Photos must be JPEG, PNG, or GIF files' }, 400);
-  }
-  if (!file.size || file.size > MAX_TINY_FRAME_ORIGINAL_BYTES) {
-    return jsonResponse(request, env, { error:'Each original picture must be 20 MB or smaller' }, 413);
-  }
-
-  const objectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}originals/${String(pictureNumber).padStart(2, '0')}.${getOriginalExtension(file.type)}`;
-  const existing = await env.ARTWORK_BUCKET.head(objectKey);
-  if (existing) {
-    const sameFile = Number(existing.customMetadata?.original_size_bytes) === file.size &&
-      existing.customMetadata?.content_type === file.type;
-    if (!sameFile) {
-      return jsonResponse(request, env, {
-        error:'This picture slot already contains a different file.',
-        code:'UPLOAD_SLOT_CONFLICT'
-      }, 409);
-    }
-    return jsonResponse(request, env, {
-      success:true,
-      retry_recovered:true,
-      original:{ objectKey, contentType:file.type, size:file.size }
-    });
-  }
-
-  const diagnosticId = crypto.randomUUID().slice(0, 8);
-  try {
-    const sourceBuffer = await file.arrayBuffer();
-    const info = await env.IMAGES.info(sourceBuffer);
-    const sourceWidth = Number(info?.width);
-    const sourceHeight = Number(info?.height);
-    if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight)) {
-      throw new TinyFrameInputError('The picture dimensions could not be read');
-    }
-    const stored = await env.ARTWORK_BUCKET.put(objectKey, sourceBuffer, {
-      httpMetadata:{ contentType:file.type },
-      customMetadata:{
-        upload_session_id:uploadSessionId,
-        picture_number:String(pictureNumber),
-        original_filename:String(file.name || `picture-${pictureNumber}`).slice(0, 512),
-        original_size_bytes:String(file.size),
-        content_type:file.type,
-        source_width_px:String(sourceWidth),
-        source_height_px:String(sourceHeight),
-        status:'uploading',
-        created_at:new Date().toISOString()
-      },
-      onlyIf:{ etagDoesNotMatch:'*' }
-    });
-    if (stored === null) {
-      return jsonResponse(request, env, { error:'The picture slot was updated by another request' }, 409);
-    }
-    return jsonResponse(request, env, {
-      success:true,
-      original:{ objectKey, contentType:file.type, size:file.size, width:sourceWidth, height:sourceHeight }
-    });
-  } catch (error) {
-    console.error('Tiny Frame original upload failed', {
-      diagnosticId,
-      stage:'storing_original',
-      pictureNumber,
-      errorName:String(error?.name || 'Error'),
-      message:String(error?.message || 'Unknown upload failure')
-    });
-    return jsonResponse(request, env, {
-      error:error instanceof TinyFrameInputError
-        ? error.message
-        : 'We could not store this picture. Your selections are still here, so please try again.',
-      code:error instanceof TinyFrameInputError ? 'INVALID_ORIGINAL' : 'ORIGINAL_STORAGE_FAILED',
-      stage:'storing_original',
-      picture_number:pictureNumber,
-      diagnostic_id:diagnosticId
-    }, error instanceof TinyFrameInputError ? 400 : 500);
-  }
 }
 
 async function requireIndividualUploadSession(request, env, uploadSessionId) {
@@ -1006,7 +669,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
       if (Math.abs((width / height) - (54 / 86)) > 0.015) {
         throw new TinyFrameInputError('The cropped photo does not match the 54 × 86 mm print ratio');
       }
-      const objectKey = getTemporaryPhotoKey(uploadSessionId, storageFolder);
+      const objectKey = getTemporaryPhotoKey(uploadSessionId, storageFolder, photoId, revision);
       const createdAt = new Date().toISOString();
       const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
         httpMetadata:{ contentType:'image/jpeg' },
@@ -1022,7 +685,6 @@ async function uploadIndividualTinyFramePhoto(request, env) {
         },
         onlyIf:{ etagDoesNotMatch:'*' }
       });
-      if (stored === null) throw new Error('R2 could not create an immutable photo object');
       const confirmed = await env.ARTWORK_BUCKET.head(objectKey);
       if (
         !confirmed || Number(confirmed.size || 0) !== file.size ||
@@ -1031,6 +693,12 @@ async function uploadIndividualTinyFramePhoto(request, env) {
         confirmed.customMetadata?.photo_id !== photoId ||
         confirmed.customMetadata?.revision !== revision
       ) throw new Error('R2 did not confirm the stored photo');
+      if (stored === null) {
+        console.info('Photo upload recovered an immutable R2 object after a retry', {
+          uploadSessionId,
+          photoId
+        });
+      }
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const current = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
         const currentSelection = photoUploadSelection(current);
@@ -1362,985 +1030,6 @@ async function getIndividualTinyFrameUploadStatus(request, env) {
   }
 }
 
-async function finalizeTinyFrameUpload(request, env) {
-  if (!env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error:'Artwork storage is not configured' }, 503);
-  }
-  if (!env.IMAGES) {
-    return jsonResponse(request, env, { error:'Print-quality image processing is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonResponse(request, env, { error:'Finalize request must be valid JSON' }, 400);
-  }
-  const uploadSessionId = normalizeUploadReference(body?.uploadSessionId);
-  const frameColour = normalizeFrameColour(body?.frameColour);
-  const originalKeys = Array.isArray(body?.originalObjectKeys) ? body.originalObjectKeys : [];
-  let crops;
-  try {
-    if (body?.crops?.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT) throw new Error('Exactly 8 crops are required');
-    crops = body.crops.map(normalizeTinyFrameCrop);
-  } catch (error) {
-    return jsonResponse(request, env, { error:error.message || 'Crop information is invalid' }, 400);
-  }
-  if (!uploadSessionId || !frameColour) {
-    return jsonResponse(request, env, { error:'Upload session or frame colour is invalid' }, 400);
-  }
-  if (
-    originalKeys.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT ||
-    originalKeys.some((key, index) => !isValidTinyFrameOriginalKey(key, uploadSessionId, index + 1))
-  ) {
-    return jsonResponse(request, env, { error:'All 8 stored original photographs are required' }, 400);
-  }
-
-  const manifestKey = getUploadManifestKey(uploadSessionId);
-  const existingManifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
-  if (existingManifestObject) {
-    const manifest = await readR2Json(existingManifestObject);
-    const files = Array.isArray(manifest?.files) ? manifest.files : [];
-    const valid = manifest?.upload_session_id === uploadSessionId &&
-      manifest?.frame_colour === frameColour &&
-      manifest?.image_count === TINY_FRAME_UPLOAD_IMAGE_COUNT &&
-      files.length >= 16;
-    if (!valid) {
-      return jsonResponse(request, env, { error:'This upload reference is already in use' }, 409);
-    }
-    const storedFiles = await Promise.all(files.map(file => env.ARTWORK_BUCKET.head(file.objectKey)));
-    if (storedFiles.some(file => !file)) {
-      return jsonResponse(request, env, { error:'A previous upload was incomplete. Please try again.' }, 409);
-    }
-    return jsonResponse(request, env, {
-      success:true,
-      retry_recovered:true,
-      upload_session_id:uploadSessionId,
-      manifest:{ objectKey:manifestKey },
-      image_quality:Array.isArray(manifest.image_quality) ? manifest.image_quality : [],
-      warnings:(Array.isArray(manifest.image_quality) ? manifest.image_quality : [])
-        .filter(item => item.below_200_ppi)
-        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
-    });
-  }
-
-  const diagnosticId = crypto.randomUUID().slice(0, 8);
-  const createdAt = new Date().toISOString();
-  const processedFiles = [];
-  const originalFiles = [];
-  const imageQuality = [];
-  let uploadStage = 'verifying_original';
-  let pictureNumber = null;
-  try {
-    for (let index = 0; index < TINY_FRAME_UPLOAD_IMAGE_COUNT; index += 1) {
-      pictureNumber = index + 1;
-      const originalObject = await env.ARTWORK_BUCKET.get(originalKeys[index]);
-      if (!originalObject) throw new TinyFrameInputError(`Original picture ${pictureNumber} could not be found`);
-      const sourceWidth = Number(originalObject.customMetadata?.source_width_px);
-      const sourceHeight = Number(originalObject.customMetadata?.source_height_px);
-      const submittedCrop = crops[index];
-      if (
-        !Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) ||
-        Math.abs(sourceWidth - submittedCrop.sourceWidth) > 1 ||
-        Math.abs(sourceHeight - submittedCrop.sourceHeight) > 1
-      ) {
-        throw new TinyFrameInputError(`Original picture ${pictureNumber} does not match its saved crop information`);
-      }
-      uploadStage = 'reading_original';
-      const sourceBuffer = await new Response(originalObject.body).arrayBuffer();
-      uploadStage = 'processing_crop';
-      const processedBytes = await transformOriginalForPrint(env, sourceBuffer, submittedCrop);
-      const processedDimensions = readJpegDimensions(processedBytes);
-      const processedObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}processed/${String(pictureNumber).padStart(2, '0')}.jpg`;
-      uploadStage = 'storing_processed_crop';
-      await env.ARTWORK_BUCKET.put(processedObjectKey, processedBytes, {
-        httpMetadata:{ contentType:'image/jpeg' },
-        customMetadata:{
-          upload_session_id:uploadSessionId,
-          picture_number:String(pictureNumber),
-          status:'pending',
-          created_at:createdAt
-        }
-      });
-      const effectivePpi = calculateEffectivePpi(processedDimensions.width, processedDimensions.height);
-      const quality = {
-        picture_number:pictureNumber,
-        cropped_width_px:processedDimensions.width,
-        cropped_height_px:processedDimensions.height,
-        effective_ppi:Number(effectivePpi.toFixed(1)),
-        below_200_ppi:effectivePpi < TINY_FRAME_LOW_RESOLUTION_PPI
-      };
-      imageQuality.push(quality);
-      processedFiles.push({
-        filename:`processed-${String(pictureNumber).padStart(2, '0')}.jpg`,
-        objectKey:processedObjectKey,
-        contentType:'image/jpeg',
-        size:processedBytes.length,
-        ...quality
-      });
-      originalFiles.push({
-        filename:String(originalObject.customMetadata?.original_filename || `picture-${pictureNumber}`).slice(0, 512),
-        objectKey:originalKeys[index],
-        contentType:String(originalObject.customMetadata?.content_type || 'application/octet-stream'),
-        size:Number(originalObject.customMetadata?.original_size_bytes || 0),
-        width_px:sourceWidth,
-        height_px:sourceHeight,
-        crop:{
-          x:submittedCrop.left,
-          y:submittedCrop.top,
-          width:submittedCrop.width,
-          height:submittedCrop.height,
-          rotation:submittedCrop.rotation
-        },
-        ...quality
-      });
-    }
-
-    pictureNumber = null;
-    uploadStage = 'storing_manifest';
-    const manifest = {
-      upload_session_id:uploadSessionId,
-      frame_colour:frameColour,
-      product_type:'frame_8_pictures',
-      image_count:TINY_FRAME_UPLOAD_IMAGE_COUNT,
-      page_size_mm:{ width:210, height:297 },
-      photo_width_mm:54,
-      photo_height_mm:86,
-      photo_size_mm:{ width:54, height:86 },
-      cutting_guides:{
-        line_width_pt:PRINT_SHEET_SPECIFICATION.guideWidthPt,
-        colour:'light-grey',
-        crop_mark_gap_mm:PRINT_SHEET_SPECIFICATION.cropMarkGapMm,
-        crop_mark_length_mm:PRINT_SHEET_SPECIFICATION.cropMarkLengthMm
-      },
-      image_quality:imageQuality,
-      quality_warning_count:imageQuality.filter(item => item.below_200_ppi).length,
-      originals:originalFiles,
-      processed_images:processedFiles,
-      product_codes:[],
-      print_sheets:[],
-      files:[...processedFiles, ...originalFiles],
-      status:'pending',
-      created_at:createdAt,
-      generated_at:createdAt,
-      uploaded_at:createdAt
-    };
-    const stored = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(manifest), {
-      httpMetadata:{ contentType:'application/json' },
-      onlyIf:{ etagDoesNotMatch:'*' }
-    });
-    if (stored === null) throw new Error('Upload session was finalized by another request');
-    return jsonResponse(request, env, {
-      success:true,
-      upload_session_id:uploadSessionId,
-      manifest:{ objectKey:manifestKey },
-      image_quality:imageQuality,
-      warnings:imageQuality
-        .filter(item => item.below_200_ppi)
-        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
-    });
-  } catch (error) {
-    console.error('Tiny Frame upload finalization failed', {
-      diagnosticId,
-      stage:uploadStage,
-      pictureNumber,
-      errorName:String(error?.name || 'Error'),
-      message:String(error?.message || 'Unknown upload failure')
-    });
-    return jsonResponse(request, env, {
-      error:error instanceof TinyFrameInputError
-        ? error.message
-        : 'We could not prepare your photos. Your uploaded originals are safe, so please try again.',
-      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_INPUT' : 'UPLOAD_PROCESSING_FAILED',
-      stage:uploadStage,
-      picture_number:pictureNumber,
-      diagnostic_id:diagnosticId
-    }, error instanceof TinyFrameInputError ? 400 : 500);
-  }
-}
-
-async function uploadTinyFramePrintSheet(request, env) {
-  if (!env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error: 'Artwork storage is not configured' }, 503);
-  }
-  if (!env.IMAGES) {
-    return jsonResponse(request, env, { error: 'Print-quality image processing is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error: 'Origin is not allowed' }, 403);
-  }
-
-  let formData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return jsonResponse(request, env, { error: 'Upload must use multipart form data' }, 400);
-  }
-
-  const requestedSessionId = String(formData.get('upload_session_id') || '').trim().toLowerCase();
-  const uploadSessionId = requestedSessionId || createUploadSessionId();
-  const frameColour = normalizeFrameColour(formData.get('frame_colour'));
-  const imageCount = Number(formData.get('image_count'));
-  const originals = Array.from(
-    { length:TINY_FRAME_UPLOAD_IMAGE_COUNT },
-    (_, index) => formData.get(`original_${index + 1}`)
-  );
-  let crops;
-  try {
-    const cropValues = JSON.parse(String(formData.get('crop_metadata') || ''));
-    if (!Array.isArray(cropValues) || cropValues.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-      throw new Error('Exactly 8 crops are required');
-    }
-    crops = cropValues.map(normalizeTinyFrameCrop);
-  } catch (error) {
-    return jsonResponse(request, env, { error:error.message || 'Crop information is invalid' }, 400);
-  }
-  if (!normalizeUploadReference(uploadSessionId)) {
-    return jsonResponse(request, env, { error: 'Upload session ID is invalid' }, 400);
-  }
-  if (!frameColour) {
-    return jsonResponse(request, env, { error: 'Frame colour must be Oak or Walnut' }, 400);
-  }
-  if (imageCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) {
-    return jsonResponse(request, env, { error: 'The print sheet must represent exactly 8 cropped images' }, 400);
-  }
-  if (originals.some(file => !file || typeof file.arrayBuffer !== 'function')) {
-    return jsonResponse(request, env, { error: 'All 8 original photographs are required' }, 400);
-  }
-  if (originals.some(file => !SUPPORTED_TINY_FRAME_IMAGE_TYPES.includes(file.type))) {
-    return jsonResponse(request, env, { error: 'Photos must be JPEG, PNG, or GIF files' }, 400);
-  }
-  if (originals.some(file => !file.size || file.size > MAX_TINY_FRAME_ORIGINAL_BYTES)) {
-    return jsonResponse(request, env, { error: 'Each original picture must be 20 MB or smaller' }, 413);
-  }
-  if (originals.reduce((sum, file) => sum + file.size, 0) > MAX_TINY_FRAME_UPLOAD_BYTES) {
-    return jsonResponse(request, env, { error: 'The combined original photos exceed the 96 MB upload limit' }, 413);
-  }
-
-  const manifestKey = getUploadManifestKey(uploadSessionId);
-  const existingManifestObject = await env.ARTWORK_BUCKET.get(manifestKey);
-  if (existingManifestObject) {
-    const existingManifest = await readR2Json(existingManifestObject);
-    const existingFiles = Array.isArray(existingManifest?.files) ? existingManifest.files : [];
-    const expectedPrefix = getTinyFrameUploadPrefix(uploadSessionId);
-    const validExistingUpload = existingManifest?.upload_session_id === uploadSessionId &&
-      existingManifest?.frame_colour === frameColour &&
-      existingManifest?.image_count === TINY_FRAME_UPLOAD_IMAGE_COUNT &&
-      existingFiles.length === 17 &&
-      existingFiles.every(file => String(file?.objectKey || '').startsWith(expectedPrefix));
-    if (!validExistingUpload) {
-      return jsonResponse(request, env, {
-        error:'This upload reference is already in use. Please try adding the product again.',
-        code:'UPLOAD_REFERENCE_CONFLICT'
-      }, 409);
-    }
-    const storedFiles = await Promise.all(existingFiles.map(file => env.ARTWORK_BUCKET.head(file.objectKey)));
-    if (storedFiles.some(file => !file)) {
-      return jsonResponse(request, env, {
-        error:'A previous upload was incomplete. Please try again.',
-        code:'UPLOAD_INCOMPLETE'
-      }, 409);
-    }
-    return jsonResponse(request, env, {
-      success:true,
-      upload_session_id:uploadSessionId,
-      retry_recovered:true,
-      print_sheet:{
-        filename:existingManifest.print_sheet_filename,
-        objectKey:existingManifest.print_sheet_object_key,
-        contentType:'application/pdf',
-        size:Number(existingFiles.find(file => file.objectKey === existingManifest.print_sheet_object_key)?.size || 0),
-        downloadUrl:getArtworkUrl(request, existingManifest.print_sheet_object_key)
-      },
-      image_quality:Array.isArray(existingManifest.image_quality) ? existingManifest.image_quality : [],
-      warnings:(Array.isArray(existingManifest.image_quality) ? existingManifest.image_quality : [])
-        .filter(item => item.below_200_ppi)
-        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
-    });
-  }
-
-  const storedKeys = [];
-  const printSheetFilename = 'print-sheet-a4.pdf';
-  const printSheetObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}${printSheetFilename}`;
-  const createdAt = new Date().toISOString();
-  const diagnosticId = crypto.randomUUID().slice(0, 8);
-  let uploadStage = 'initializing';
-  let pictureNumber = null;
-  try {
-    const processedImages = [];
-    const processedFiles = [];
-    const originalFiles = [];
-    const imageQuality = [];
-
-    for (let index = 0; index < originals.length; index += 1) {
-      pictureNumber = index + 1;
-      const file = originals[index];
-      uploadStage = 'reading_original';
-      const sourceBuffer = await file.arrayBuffer();
-      const sourceBytes = new Uint8Array(sourceBuffer);
-      uploadStage = 'reading_dimensions';
-      const info = await env.IMAGES.info(sourceBuffer);
-      const sourceWidth = Number(info?.width);
-      const sourceHeight = Number(info?.height);
-      if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight)) {
-        throw new Error(`The dimensions of original picture ${index + 1} could not be read`);
-      }
-      const submittedCrop = crops[index];
-      if (
-        Math.abs(sourceWidth - submittedCrop.sourceWidth) > 1 ||
-        Math.abs(sourceHeight - submittedCrop.sourceHeight) > 1
-      ) {
-        throw new TinyFrameInputError(`Original picture ${index + 1} does not match its saved crop information`);
-      }
-
-      const originalObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}originals/${String(index + 1).padStart(2, '0')}.${getOriginalExtension(file.type)}`;
-      uploadStage = 'storing_original';
-      const storedOriginal = await env.ARTWORK_BUCKET.put(originalObjectKey, sourceBytes, {
-        httpMetadata:{ contentType:file.type },
-        customMetadata:{
-          upload_session_id:uploadSessionId,
-          picture_number:String(index + 1),
-          original_filename:String(file.name || `picture-${index + 1}`).slice(0, 512),
-          source_width_px:String(sourceWidth),
-          source_height_px:String(sourceHeight),
-          status:'pending',
-          created_at:createdAt
-        },
-        onlyIf:{ etagDoesNotMatch:'*' }
-      });
-      if (storedOriginal === null) throw new Error('Upload session already exists');
-      storedKeys.push(originalObjectKey);
-
-      uploadStage = 'processing_crop';
-      const processedBytes = await transformOriginalForPrint(env, sourceBuffer, submittedCrop);
-      const processedDimensions = readJpegDimensions(processedBytes);
-      const processedObjectKey = `${getTinyFrameUploadPrefix(uploadSessionId)}processed/${String(index + 1).padStart(2, '0')}.jpg`;
-      uploadStage = 'storing_processed_crop';
-      const storedProcessed = await env.ARTWORK_BUCKET.put(processedObjectKey, processedBytes, {
-        httpMetadata:{ contentType:'image/jpeg' },
-        customMetadata:{
-          upload_session_id:uploadSessionId,
-          picture_number:String(index + 1),
-          status:'pending',
-          created_at:createdAt
-        },
-        onlyIf:{ etagDoesNotMatch:'*' }
-      });
-      if (storedProcessed === null) throw new Error('Upload session already exists');
-      storedKeys.push(processedObjectKey);
-      const effectivePpi = calculateEffectivePpi(processedDimensions.width, processedDimensions.height);
-      const quality = {
-        picture_number:index + 1,
-        cropped_width_px:processedDimensions.width,
-        cropped_height_px:processedDimensions.height,
-        effective_ppi:Number(effectivePpi.toFixed(1)),
-        below_200_ppi:effectivePpi < TINY_FRAME_LOW_RESOLUTION_PPI
-      };
-      imageQuality.push(quality);
-      processedImages.push({ bytes:processedBytes });
-      processedFiles.push({
-        filename:`processed-${String(index + 1).padStart(2, '0')}.jpg`,
-        objectKey:processedObjectKey,
-        contentType:'image/jpeg',
-        size:processedBytes.length,
-        ...quality
-      });
-      originalFiles.push({
-        filename:String(file.name || `picture-${index + 1}`).slice(0, 512),
-        objectKey:originalObjectKey,
-        contentType:file.type,
-        size:file.size,
-        width_px:sourceWidth,
-        height_px:sourceHeight,
-        crop:{
-          x:submittedCrop.left,
-          y:submittedCrop.top,
-          width:submittedCrop.width,
-          height:submittedCrop.height,
-          rotation:submittedCrop.rotation
-        },
-        ...quality
-      });
-    }
-
-    pictureNumber = null;
-    uploadStage = 'generating_pdf';
-    const pdfBytes = createA4PrintSheetPdf(processedImages);
-    if (pdfBytes.length > MAX_TINY_FRAME_PDF_BYTES) {
-      throw new Error('The generated PDF exceeds the 95 MB storage limit');
-    }
-    const pdfInspection = inspectPrintSheetPdf(pdfBytes);
-    if (!pdfInspection.valid) throw new Error(pdfInspection.error);
-
-    uploadStage = 'storing_pdf';
-    const storedPrintSheet = await env.ARTWORK_BUCKET.put(printSheetObjectKey, pdfBytes, {
-      httpMetadata: { contentType:'application/pdf' },
-      customMetadata: {
-        upload_session_id:uploadSessionId,
-        product_type:'frame_8_pictures',
-        frame_colour:frameColour.toLowerCase(),
-        image_count:String(TINY_FRAME_UPLOAD_IMAGE_COUNT),
-        photo_width_mm:'54',
-        photo_height_mm:'86',
-        status:'pending',
-        created_at:createdAt
-      },
-      onlyIf: { etagDoesNotMatch:'*' }
-    });
-    if (storedPrintSheet === null) throw new Error('Upload session already exists');
-    storedKeys.push(printSheetObjectKey);
-
-    const manifest = {
-      upload_session_id:uploadSessionId,
-      frame_colour:frameColour,
-      product_type:'frame_8_pictures',
-      image_count:TINY_FRAME_UPLOAD_IMAGE_COUNT,
-      print_sheet_filename:printSheetFilename,
-      print_sheet_object_key:printSheetObjectKey,
-      page_size_mm:{ width:210, height:297 },
-      photo_width_mm:54,
-      photo_height_mm:86,
-      photo_size_mm:{ width:54, height:86 },
-      cutting_guides:{
-        line_width_pt:PRINT_SHEET_SPECIFICATION.guideWidthPt,
-        colour:'light-grey',
-        crop_mark_gap_mm:PRINT_SHEET_SPECIFICATION.cropMarkGapMm,
-        crop_mark_length_mm:PRINT_SHEET_SPECIFICATION.cropMarkLengthMm
-      },
-      image_quality:imageQuality,
-      quality_warning_count:imageQuality.filter(item => item.below_200_ppi).length,
-      originals:originalFiles,
-      processed_images:processedFiles,
-      product_codes:[],
-      print_sheets:[],
-      files:[{
-        filename:printSheetFilename,
-        objectKey:printSheetObjectKey,
-        contentType:'application/pdf',
-        size:pdfBytes.length
-      }, ...processedFiles, ...originalFiles],
-      status:'pending',
-      created_at:createdAt,
-      generated_at:createdAt,
-      uploaded_at:createdAt
-    };
-    uploadStage = 'storing_manifest';
-    const storedManifest = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(manifest), {
-      httpMetadata: { contentType:'application/json' },
-      onlyIf: { etagDoesNotMatch:'*' }
-    });
-    if (storedManifest === null) {
-      throw new Error('Upload session already exists');
-    }
-    storedKeys.push(manifestKey);
-
-    return jsonResponse(request, env, {
-      success:true,
-      upload_session_id:uploadSessionId,
-      print_sheet:{
-        filename:printSheetFilename,
-        objectKey:printSheetObjectKey,
-        contentType:'application/pdf',
-        size:pdfBytes.length,
-        downloadUrl:getArtworkUrl(request, printSheetObjectKey)
-      },
-      image_quality:imageQuality,
-      warnings:imageQuality
-        .filter(item => item.below_200_ppi)
-        .map(item => `Picture ${item.picture_number} is ${Math.round(item.effective_ppi)} PPI at 54 x 86 mm`)
-    });
-  } catch (error) {
-    await deleteObjectKeys(env.ARTWORK_BUCKET, storedKeys);
-    if (error instanceof TinyFrameInputError) {
-      return jsonResponse(request, env, {
-        error:error.message,
-        code:'INVALID_UPLOAD_INPUT',
-        stage:uploadStage,
-        diagnostic_id:diagnosticId
-      }, 400);
-    }
-    console.error('Tiny Frame print-sheet upload failed', {
-      diagnosticId,
-      stage:uploadStage,
-      pictureNumber,
-      errorName:String(error?.name || 'Error'),
-      message:String(error?.message || 'Unknown upload failure')
-    });
-    return jsonResponse(request, env, {
-      error:'We could not prepare your photos. Your selections are still here, so please try again.',
-      code:'UPLOAD_PROCESSING_FAILED',
-      stage:uploadStage,
-      diagnostic_id:diagnosticId
-    }, 500);
-  }
-}
-
-async function reserveTinyFrameProductPdf(request, env) {
-  if (!env.PRODUCT_CODES_DB) {
-    return jsonResponse(request, env, { error:'Product identification database is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400);
-  }
-  const cartItemId = normalizeCartItemId(body?.cartItemId);
-  const frameColour = normalizeFrameColour(body?.frameColour);
-  const productType = TINY_FRAME_PRODUCTS[body?.productType]
-    ? body.productType
-    : 'tiny_frame_8_pictures';
-  const photoSetCount = productType === 'tiny_frame_8_pictures' ? 0 : normalizePhotoSetCount(body?.photoSetCount);
-  if (!cartItemId || !frameColour || photoSetCount === null) {
-    return jsonResponse(request, env, { error:'Cart product identity or frame colour is invalid' }, 400);
-  }
-  try {
-    const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
-      cartItemId,
-      productType,
-      frameColour,
-      unitAmount:getTinyFrameUnitAmount(productType, photoSetCount)
-    }, body?.productCode ? { preferredCode:body.productCode } : {});
-    if (reservation.capacity?.low) {
-      console.warn('Five-digit product code capacity is running low', reservation.capacity);
-    }
-    const productCode = reservation.productCode;
-    return jsonResponse(request, env, {
-      success:true,
-      productCode,
-      filename:`${productCode}-print-sheet.pdf`,
-      objectKey:getProductPdfKey(productCode)
-    });
-  } catch (error) {
-    const status = error instanceof ProductCodeCapacityError ? 503 : error instanceof ProductCodeError ? 409 : 500;
-    return jsonResponse(request, env, {
-      error:error instanceof ProductCodeError ? error.message : 'A product code could not be reserved',
-      code:String(error?.code || 'PRODUCT_CODE_RESERVATION_FAILED')
-    }, status);
-  }
-}
-
-async function uploadTinyFrameProductPdf(request, env) {
-  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-  let formData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return jsonResponse(request, env, { error:'Upload must use multipart form data' }, 400);
-  }
-  const cartItemId = normalizeCartItemId(formData.get('cart_item_id'));
-  const requestedProductCode = normalizeProductCode(formData.get('product_code'));
-  const frameColour = normalizeFrameColour(formData.get('frame_colour'));
-  const submittedPhotoSetCount = formData.get('photo_set_count');
-  const submittedPhotoCount = formData.get('photo_count');
-  const legacyUpload = submittedPhotoSetCount === null && submittedPhotoCount === null;
-  const photoSetCount = legacyUpload ? 0 : normalizePhotoSetCount(submittedPhotoSetCount);
-  const photoCount = legacyUpload ? TINY_FRAME_UPLOAD_IMAGE_COUNT : Number(submittedPhotoCount);
-  const productType = legacyUpload ? 'tiny_frame_8_pictures' : 'tiny_frame_photo_sets';
-  const pdf = formData.get('pdf');
-  if (
-    !cartItemId || !pdf || typeof pdf.arrayBuffer !== 'function' ||
-    (!legacyUpload && (photoSetCount === null || photoSetCount < 1 || photoCount !== photoSetCount * TINY_FRAME_PHOTOS_PER_SET))
-  ) {
-    return jsonResponse(request, env, { error:'Cart identity and print-sheet PDF are required' }, 400);
-  }
-  const submittedFilename = String(pdf.name || '');
-  const validSubmittedFilename = requestedProductCode
-    ? submittedFilename === `${requestedProductCode}-print-sheet.pdf`
-    : submittedFilename === 'print-sheet.pdf';
-  if (pdf.type !== 'application/pdf' || !validSubmittedFilename || (!requestedProductCode && !frameColour)) {
-    return jsonResponse(request, env, { error:'The print-sheet PDF filename or file type is invalid' }, 400);
-  }
-  if (!pdf.size || pdf.size > MAX_TINY_FRAME_PDF_BYTES) {
-    return jsonResponse(request, env, {
-      error:'This print-sheet PDF must use the multipart upload endpoint',
-      code:'MULTIPART_UPLOAD_REQUIRED'
-    }, 413);
-  }
-
-  const diagnosticId = crypto.randomUUID().slice(0, 8);
-  try {
-    const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
-      cartItemId,
-      productType,
-      frameColour,
-      unitAmount:getTinyFrameUnitAmount(productType, photoSetCount)
-    }, requestedProductCode ? { preferredCode:requestedProductCode } : {});
-    const productCode = reservation.productCode;
-    if (reservation.capacity?.low) {
-      console.warn('Five-digit product code capacity is running low', reservation.capacity);
-    }
-    if (requestedProductCode && requestedProductCode !== productCode) {
-      throw new TinyFrameInputError('The reserved product code does not belong to this cart product');
-    }
-    const filename = `${productCode}-print-sheet.pdf`;
-    const objectKey = getProductPdfKey(productCode);
-    const existing = await env.ARTWORK_BUCKET.head(objectKey);
-    if (existing) {
-      const sameUpload = existing.customMetadata?.product_code === productCode &&
-        existing.customMetadata?.cart_item_id === cartItemId &&
-        existing.customMetadata?.product_type === productType &&
-        Number(existing.customMetadata?.image_count || 0) === photoCount &&
-        Number(existing.size || existing.contentLength || 0) === pdf.size;
-      if (!sameUpload) throw new TinyFrameInputError('A different PDF is already stored for this product');
-      await attachProductPdf(env.PRODUCT_CODES_DB, productCode, cartItemId, objectKey);
-      return jsonResponse(request, env, {
-        success:true,
-        retry_recovered:true,
-        productCode,
-        pdf:{ filename, objectKey, size:pdf.size }
-      });
-    }
-
-    const bytes = new Uint8Array(await pdf.arrayBuffer());
-    const inspection = inspectPrintSheetPdf(bytes, requestedProductCode ? productCode : '', photoCount);
-    if (!inspection.valid) throw new TinyFrameInputError(inspection.error);
-    const createdAt = new Date().toISOString();
-    const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
-      httpMetadata:{ contentType:'application/pdf' },
-      customMetadata:{
-        product_code:productCode,
-        cart_item_id:cartItemId,
-        product_type:productType,
-        ...(frameColour ? { frame_colour:frameColour.toLowerCase() } : {}),
-        photo_set_count:String(photoSetCount),
-        image_count:String(photoCount),
-        photo_width_mm:'54',
-        photo_height_mm:'86',
-        status:'pending',
-        created_at:createdAt
-      },
-      onlyIf:{ etagDoesNotMatch:'*' }
-    });
-    if (stored === null) throw new Error('The PDF was stored by another request; please retry');
-    try {
-      await attachProductPdf(env.PRODUCT_CODES_DB, productCode, cartItemId, objectKey);
-    } catch (error) {
-      await env.ARTWORK_BUCKET.delete(objectKey);
-      throw error;
-    }
-    return jsonResponse(request, env, {
-      success:true,
-      productCode,
-      pdf:{ filename, objectKey, size:bytes.length }
-    });
-  } catch (error) {
-    console.error('Tiny Frame PDF upload failed', {
-      diagnosticId,
-      stage:error instanceof TinyFrameInputError ? 'pdf_validation' : 'pdf_storage',
-      code:error instanceof ProductCodeError ? 'PRODUCT_IDENTITY_ERROR' : 'PDF_UPLOAD_FAILED',
-      errorName:String(error?.name || 'Error')
-    });
-    const expected = error instanceof TinyFrameInputError || error instanceof ProductCodeError;
-    return jsonResponse(request, env, {
-      error:expected ? error.message : 'We could not store the print sheet. Your photos are still selected, so please try again.',
-      code:String(error?.code || (expected ? 'INVALID_PRINT_SHEET' : 'PDF_STORAGE_FAILED')),
-      stage:expected ? 'pdf_validation' : 'pdf_storage',
-      diagnostic_id:diagnosticId
-    }, expected ? 400 : 500);
-  }
-}
-
-function normalizeMultipartUploadId(value) {
-  const uploadId = String(value || '');
-  return uploadId.length > 0 && uploadId.length <= 1024 && !/[\u0000-\u001f\u007f]/.test(uploadId)
-    ? uploadId
-    : '';
-}
-
-function normalizeMultipartPdfSize(value) {
-  const size = Number(value);
-  return Number.isSafeInteger(size) && size > 0 && size <= MAX_TINY_FRAME_MULTIPART_PDF_BYTES ? size : 0;
-}
-
-async function getCompletedProductPdf(env, { cartItemId, productCode, fileSize }) {
-  const objectKey = getProductPdfKey(productCode);
-  const stored = await env.ARTWORK_BUCKET.head(objectKey);
-  const storedSize = Number(stored?.size || stored?.contentLength || 0);
-  if (!stored) return null;
-  const productType = String(stored.customMetadata?.product_type || '');
-  const photoCount = Number(stored.customMetadata?.image_count || (productType === 'tiny_frame_8_pictures' ? TINY_FRAME_UPLOAD_IMAGE_COUNT : 0));
-  const storedPhotoSetCount = Number(stored.customMetadata?.photo_set_count || 0);
-  if (
-    storedSize !== fileSize ||
-    stored.customMetadata?.product_code !== productCode ||
-    stored.customMetadata?.cart_item_id !== cartItemId ||
-    !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(productType) ||
-    (productType === 'tiny_frame_8_pictures' && photoCount !== TINY_FRAME_UPLOAD_IMAGE_COUNT) ||
-    (productType === 'tiny_frame_photo_sets' && (
-      !Number.isInteger(storedPhotoSetCount) || storedPhotoSetCount < 1 ||
-      photoCount !== storedPhotoSetCount * TINY_FRAME_PHOTOS_PER_SET
-    ))
-  ) {
-    throw new TinyFrameInputError('A different PDF is already stored for this product');
-  }
-  const inspection = await inspectStoredPrintSheetPdf(env.ARTWORK_BUCKET, objectKey, fileSize, productCode, photoCount);
-  if (!inspection.valid) throw new TinyFrameInputError(inspection.error);
-  await attachProductPdf(env.PRODUCT_CODES_DB, productCode, cartItemId, objectKey);
-  return {
-    success:true,
-    retry_recovered:true,
-    productCode,
-    pdf:{ filename:`${productCode}-print-sheet.pdf`, objectKey, size:fileSize }
-  };
-}
-
-async function createTinyFrameProductPdfMultipart(request, env) {
-  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400);
-  }
-  const cartItemId = normalizeCartItemId(body?.cartItemId);
-  const productCode = normalizeProductCode(body?.productCode);
-  const frameColour = normalizeFrameColour(body?.frameColour);
-  const legacyUpload = body?.photoSetCount === undefined && body?.photoCount === undefined;
-  const photoSetCount = legacyUpload ? 0 : normalizePhotoSetCount(body?.photoSetCount);
-  const photoCount = legacyUpload ? TINY_FRAME_UPLOAD_IMAGE_COUNT : Number(body?.photoCount);
-  const productType = legacyUpload ? 'tiny_frame_8_pictures' : 'tiny_frame_photo_sets';
-  const fileSize = normalizeMultipartPdfSize(body?.fileSize);
-  if (!cartItemId || !productCode || !frameColour || !fileSize || (!legacyUpload && (photoSetCount === null || photoSetCount < 1 || photoCount !== photoSetCount * TINY_FRAME_PHOTOS_PER_SET))) {
-    return jsonResponse(request, env, { error:'Multipart print-sheet details are invalid' }, 400);
-  }
-
-  try {
-    const reservation = await reserveCartProductCode(env.PRODUCT_CODES_DB, {
-      cartItemId,
-      productType,
-      frameColour,
-      unitAmount:getTinyFrameUnitAmount(productType, photoSetCount)
-    }, { preferredCode:productCode });
-    if (reservation.productCode !== productCode) {
-      throw new TinyFrameInputError('The reserved product code does not belong to this cart product');
-    }
-    const completed = await getCompletedProductPdf(env, { cartItemId, productCode, fileSize });
-    if (completed) return jsonResponse(request, env, completed);
-
-    const objectKey = getProductPdfKey(productCode);
-    const createdAt = new Date().toISOString();
-    const multipart = await env.ARTWORK_BUCKET.createMultipartUpload(objectKey, {
-      httpMetadata:{ contentType:'application/pdf' },
-      customMetadata:{
-        product_code:productCode,
-        cart_item_id:cartItemId,
-        product_type:productType,
-        frame_colour:frameColour.toLowerCase(),
-        photo_set_count:String(photoSetCount),
-        image_count:String(photoCount),
-        photo_width_mm:'54',
-        photo_height_mm:'86',
-        expected_size:String(fileSize),
-        status:'pending',
-        created_at:createdAt
-      }
-    });
-    return jsonResponse(request, env, {
-      success:true,
-      productCode,
-      uploadId:multipart.uploadId,
-      partSize:TINY_FRAME_PDF_PART_BYTES,
-      partCount:Math.ceil(fileSize / TINY_FRAME_PDF_PART_BYTES)
-    });
-  } catch (error) {
-    const expected = error instanceof TinyFrameInputError || error instanceof ProductCodeError;
-    return jsonResponse(request, env, {
-      error:expected ? error.message : 'The large print-sheet upload could not be started',
-      code:String(error?.code || (expected ? 'INVALID_PRINT_SHEET' : 'MULTIPART_CREATE_FAILED'))
-    }, expected ? 400 : 500);
-  }
-}
-
-async function uploadTinyFrameProductPdfPart(request, env) {
-  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-  const url = new URL(request.url);
-  const cartItemId = normalizeCartItemId(url.searchParams.get('cart_item_id'));
-  const productCode = normalizeProductCode(url.searchParams.get('product_code'));
-  const uploadId = normalizeMultipartUploadId(url.searchParams.get('upload_id'));
-  const fileSize = normalizeMultipartPdfSize(url.searchParams.get('file_size'));
-  const partNumber = Number(url.searchParams.get('part_number'));
-  const partCount = fileSize ? Math.ceil(fileSize / TINY_FRAME_PDF_PART_BYTES) : 0;
-  if (
-    !cartItemId || !productCode || !uploadId || !fileSize ||
-    !Number.isInteger(partNumber) || partNumber < 1 ||
-    partNumber > partCount || partCount > MAX_TINY_FRAME_PDF_PARTS
-  ) {
-    return jsonResponse(request, env, { error:'Multipart upload part details are invalid' }, 400);
-  }
-
-  const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
-  if (!record || record.cart_item_id !== cartItemId || !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(record.product_type)) {
-    return jsonResponse(request, env, { error:'This multipart upload does not belong to the cart product' }, 403);
-  }
-  let bytes;
-  try {
-    bytes = await request.arrayBuffer();
-  } catch {
-    return jsonResponse(request, env, { error:'The upload part could not be read' }, 400);
-  }
-  const expectedPartSize = partNumber === partCount
-    ? fileSize - ((partCount - 1) * TINY_FRAME_PDF_PART_BYTES)
-    : TINY_FRAME_PDF_PART_BYTES;
-  if (bytes.byteLength !== expectedPartSize) {
-    return jsonResponse(request, env, { error:'The upload part size is invalid' }, 400);
-  }
-
-  try {
-    const multipart = env.ARTWORK_BUCKET.resumeMultipartUpload(getProductPdfKey(productCode), uploadId);
-    const uploaded = await multipart.uploadPart(partNumber, bytes);
-    return jsonResponse(request, env, {
-      success:true,
-      partNumber:uploaded.partNumber,
-      etag:uploaded.etag
-    });
-  } catch (error) {
-    console.error('Tiny Frame multipart part upload failed', {
-      productCode,
-      partNumber,
-      errorName:String(error?.name || 'Error')
-    });
-    return jsonResponse(request, env, {
-      error:'This part of the print sheet could not be uploaded. Please retry.',
-      code:'MULTIPART_PART_FAILED'
-    }, 503);
-  }
-}
-
-async function completeTinyFrameProductPdfMultipart(request, env) {
-  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400);
-  }
-  const cartItemId = normalizeCartItemId(body?.cartItemId);
-  const productCode = normalizeProductCode(body?.productCode);
-  const uploadId = normalizeMultipartUploadId(body?.uploadId);
-  const fileSize = normalizeMultipartPdfSize(body?.fileSize);
-  const partCount = fileSize ? Math.ceil(fileSize / TINY_FRAME_PDF_PART_BYTES) : 0;
-  const parts = Array.isArray(body?.parts) ? body.parts.map((part) => ({
-    partNumber:Number(part?.partNumber),
-    etag:String(part?.etag || '')
-  })) : [];
-  const validParts = parts.length === partCount && partCount > 0 && partCount <= MAX_TINY_FRAME_PDF_PARTS &&
-    parts.every((part, index) => (
-      part.partNumber === index + 1 && part.etag.length > 0 && part.etag.length <= 256 &&
-      !/[\u0000-\u001f\u007f]/.test(part.etag)
-    ));
-  if (!cartItemId || !productCode || !uploadId || !fileSize || !validParts) {
-    return jsonResponse(request, env, { error:'Multipart completion details are invalid' }, 400);
-  }
-
-  const diagnosticId = crypto.randomUUID().slice(0, 8);
-  const objectKey = getProductPdfKey(productCode);
-  try {
-    const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
-    if (!record || record.cart_item_id !== cartItemId || !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(record.product_type)) {
-      return jsonResponse(request, env, { error:'This multipart upload does not belong to the cart product' }, 403);
-    }
-    const recovered = await getCompletedProductPdf(env, { cartItemId, productCode, fileSize });
-    if (recovered) return jsonResponse(request, env, recovered);
-
-    const multipart = env.ARTWORK_BUCKET.resumeMultipartUpload(objectKey, uploadId);
-    await multipart.complete(parts);
-    const completed = await getCompletedProductPdf(env, { cartItemId, productCode, fileSize });
-    if (!completed) throw new TinyFrameInputError('The uploaded print sheet could not be found');
-    return jsonResponse(request, env, { ...completed, retry_recovered:false });
-  } catch (error) {
-    const expected = error instanceof TinyFrameInputError || error instanceof ProductCodeError;
-    console.error('Tiny Frame multipart completion failed', {
-      diagnosticId,
-      productCode,
-      errorName:String(error?.name || 'Error')
-    });
-    return jsonResponse(request, env, {
-      error:expected ? error.message : 'The print sheet could not be completed. Your pictures are still selected, so please try again.',
-      code:String(error?.code || (expected ? 'INVALID_PRINT_SHEET' : 'MULTIPART_COMPLETE_FAILED')),
-      diagnostic_id:diagnosticId
-    }, expected ? 400 : 503);
-  }
-}
-
-async function getTinyFrameProductPdfStatus(request, env) {
-  if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET) {
-    return jsonResponse(request, env, { error:'Product storage is not configured' }, 503);
-  }
-  if (!getAllowedOrigin(request, env)) {
-    return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  }
-  const url = new URL(request.url);
-  const cartItemId = normalizeCartItemId(url.searchParams.get('cart_item_id'));
-  const productCode = normalizeProductCode(url.searchParams.get('product_code'));
-  if (!cartItemId || !productCode) {
-    return jsonResponse(request, env, { error:'Cart identity and product code are required' }, 400);
-  }
-  try {
-    const record = await findProductCode(env.PRODUCT_CODES_DB, productCode);
-    const objectKey = getProductPdfKey(productCode);
-    if (
-      !record ||
-      record.cart_item_id !== cartItemId ||
-      !['tiny_frame_8_pictures', 'tiny_frame_photo_sets'].includes(record.product_type) ||
-      record.upload_session_id !== objectKey
-    ) {
-      return jsonResponse(request, env, { error:'The print sheet has not finished uploading', code:'PDF_NOT_READY' }, 404);
-    }
-    const stored = await env.ARTWORK_BUCKET.head(objectKey);
-    const size = Number(stored?.size || stored?.contentLength || 0);
-    if (
-      !stored ||
-      size < 1 ||
-      stored.customMetadata?.product_code !== productCode ||
-      stored.customMetadata?.cart_item_id !== cartItemId
-    ) {
-      return jsonResponse(request, env, { error:'The print sheet has not finished uploading', code:'PDF_NOT_READY' }, 404);
-    }
-    return jsonResponse(request, env, {
-      success:true,
-      recovered:true,
-      productCode,
-      pdf:{ filename:`${productCode}-print-sheet.pdf`, objectKey, size }
-    });
-  } catch (error) {
-    console.error('Tiny Frame PDF status check failed', {
-      productCode,
-      errorName:String(error?.name || 'Error')
-    });
-    return jsonResponse(request, env, {
-      error:'The print-sheet upload could not be verified yet',
-      code:'PDF_STATUS_FAILED'
-    }, 503);
-  }
-}
-
 async function uploadArtwork(request, env) {
   if (!env.ARTWORK_BUCKET) {
     return jsonResponse(request, env, { error: 'Artwork storage is not configured' }, 503);
@@ -2505,8 +1194,7 @@ function normalizeUploadReference(value) {
 }
 
 function normalizePictureUploadReference(value) {
-  const reference = cleanText(value, '');
-  return normalizeUploadReference(reference) || (isValidProductPdfKey(reference) ? reference : '');
+  return normalizeUploadReference(cleanText(value, ''));
 }
 
 function getUnitAmount(item, size, productType) {
@@ -2689,11 +1377,9 @@ function createStripeProductMapping(lineItems) {
     .filter(item => item.productCode)
     .map((item, index) => {
       const price = `AUD ${(item.unitAmount / 100).toFixed(2)}`;
-      const artwork = item.productType === 'tiny_frame_8_pictures' || isValidProductPdfKey(item.uploadReference)
-        ? ` | PDF ${getProductPdfKey(item.productCode)}`
-        : item.photoCount > 0
-          ? ` | ${item.photoCount} photos | Upload ${item.uploadReference}`
-          : '';
+      const artwork = item.photoCount > 0
+        ? ` | ${item.photoCount} photos | Upload ${item.uploadReference}`
+        : '';
       return `${index + 1}:${item.productCode} | ${item.frameColour} | ${item.name} | ${price}${artwork}`;
     });
   return chunkStripeMetadataEntries(entries);
@@ -2839,155 +1525,10 @@ function createCheckoutPayloadFingerprint(lineItems, shippingCountry, shippingRa
   });
 }
 
-async function loadProcessedImagesForManifest(manifest, env) {
-  const storedProcessed = Array.isArray(manifest.processed_images) ? manifest.processed_images : [];
-  if (
-    storedProcessed.length === TINY_FRAME_UPLOAD_IMAGE_COUNT &&
-    storedProcessed.every(file => isValidProcessedImageKey(file?.objectKey))
-  ) {
-    const images = [];
-    for (const file of storedProcessed) {
-      const object = await env.ARTWORK_BUCKET.get(file.objectKey);
-      if (!object) throw new Error('A processed print image could not be found');
-      images.push({ bytes:new Uint8Array(await new Response(object.body).arrayBuffer()) });
-    }
-    return images;
-  }
-
-  const originals = Array.isArray(manifest.originals) ? manifest.originals : [];
-  if (originals.length !== TINY_FRAME_UPLOAD_IMAGE_COUNT || !env.IMAGES) {
-    throw new Error('This picture upload must be added to the cart again before checkout');
-  }
-  const images = [];
-  for (const [index, original] of originals.entries()) {
-    const object = await env.ARTWORK_BUCKET.get(String(original?.objectKey || ''));
-    if (!object) throw new Error(`Original picture ${index + 1} could not be found`);
-    const crop = normalizeTinyFrameCrop({
-      ...original.crop,
-      sourceWidth:original.width_px,
-      sourceHeight:original.height_px
-    }, index);
-    const sourceBytes = await new Response(object.body).arrayBuffer();
-    images.push({ bytes:await transformOriginalForPrint(env, sourceBytes, crop) });
-  }
-  return images;
-}
-
-async function addProductCodesToStoredFileMetadata(files, productCodes, env) {
-  const productCodeValue = productCodes.join(',');
-  for (const file of files) {
-    const objectKey = String(file?.objectKey || '');
-    if (!objectKey) continue;
-    const object = await env.ARTWORK_BUCKET.get(objectKey);
-    if (!object) throw new Error(`Stored artwork ${objectKey} could not be found`);
-    await env.ARTWORK_BUCKET.put(objectKey, object.body, {
-      httpMetadata:{ contentType:String(file.contentType || 'application/octet-stream') },
-      customMetadata:{
-        ...(object.customMetadata || {}),
-        product_codes:productCodeValue
-      }
-    });
-  }
-}
-
-async function ensureProductCodePrintSheets(uploadReference, productCodes, env) {
-  const sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadReference);
-  const storageFolder = getPhotoUploadStorageFolder(sessionRecord, uploadReference);
-  let manifestKey = getUploadManifestKey(uploadReference, storageFolder);
-  let object = await env.ARTWORK_BUCKET.get(manifestKey);
-  if (!object) {
-    manifestKey = getLegacyIndividualUploadManifestKey(uploadReference);
-    object = await env.ARTWORK_BUCKET.get(manifestKey);
-  }
-  if (!object) {
-    if (await env.ARTWORK_BUCKET.head(getLegacyUploadManifestKey(uploadReference))) {
-      throw new Error('This legacy picture upload must be added to the cart again before checkout');
-    }
-    throw new Error('One or more picture uploads could not be verified');
-  }
-  const manifest = await readR2Json(object);
-  if (!manifest) throw new Error('A picture upload manifest is invalid');
-
-  const normalizedCodes = productCodes.map(normalizeProductCode);
-  if (normalizedCodes.some(code => !code) || new Set(normalizedCodes).size !== normalizedCodes.length) {
-    throw new Error('Picture product codes are invalid');
-  }
-  const existingSheets = new Map(
-    (Array.isArray(manifest.print_sheets) ? manifest.print_sheets : [])
-      .filter(sheet => normalizeProductCode(sheet?.product_code) && (
-        isValidTinyFramePrintSheetKey(sheet?.objectKey) || isValidProductPdfKey(sheet?.objectKey, sheet?.product_code)
-      ))
-      .map(sheet => [sheet.product_code, sheet])
-  );
-  const missingCodes = normalizedCodes.filter(code => !existingSheets.has(code));
-  const processedImages = missingCodes.length ? await loadProcessedImagesForManifest(manifest, env) : [];
-  const generatedSheets = [];
-  for (const productCode of missingCodes) {
-    const filename = `${productCode}-print-sheet.pdf`;
-    const objectKey = getProductPdfKey(productCode);
-    const pdfBytes = createA4PrintSheetPdf(processedImages, { productCode });
-    if (pdfBytes.length > MAX_TINY_FRAME_PDF_BYTES) {
-      throw new Error('The generated PDF exceeds the 95 MB upload limit');
-    }
-    const pdfInspection = inspectPrintSheetPdf(pdfBytes);
-    if (!pdfInspection.valid) throw new Error(pdfInspection.error);
-    await env.ARTWORK_BUCKET.put(objectKey, pdfBytes, {
-      httpMetadata:{ contentType:'application/pdf' },
-      customMetadata:{
-        upload_session_id:uploadReference,
-        product_code:productCode,
-        product_type:'frame_8_pictures',
-        frame_colour:String(manifest.frame_colour || '').toLowerCase(),
-        image_count:String(TINY_FRAME_UPLOAD_IMAGE_COUNT),
-        photo_width_mm:'54',
-        photo_height_mm:'86',
-        status:'pending',
-        created_at:new Date().toISOString()
-      },
-      onlyIf:{ etagDoesNotMatch:'*' }
-    });
-    const sheet = {
-      product_code:productCode,
-      filename,
-      objectKey,
-      contentType:'application/pdf',
-      size:pdfBytes.length
-    };
-    existingSheets.set(productCode, sheet);
-    generatedSheets.push(sheet);
-  }
-
-  const filesToTag = [
-    ...(Array.isArray(manifest.originals) ? manifest.originals : []),
-    ...(Array.isArray(manifest.processed_images) ? manifest.processed_images : [])
-  ];
-  await addProductCodesToStoredFileMetadata(filesToTag, normalizedCodes, env);
-  const printSheets = normalizedCodes.map(code => existingSheets.get(code));
-  const generatedAt = new Date().toISOString();
-  const updatedManifest = {
-    ...manifest,
-    product_codes:normalizedCodes,
-    print_sheets:printSheets,
-    files:[
-      ...(Array.isArray(manifest.files)
-        ? manifest.files.filter(file => !/^(?:print-sheet-[1-9][0-9]{4}|[1-9][0-9]{4}-print-sheet)\.pdf$/.test(String(file?.filename || '')))
-        : []),
-      ...printSheets
-    ],
-    product_codes_assigned_at:manifest.product_codes_assigned_at || generatedAt,
-    updated_at:generatedAt
-  };
-  await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(updatedManifest), {
-    httpMetadata:{ contentType:'application/json' }
-  });
-  return generatedSheets.length;
-}
-
 async function verifyUploadManifests(lineItems, env) {
   const pictureItems = lineItems.filter(item => item.productType === 'tiny_frame_8_pictures' || (item.productType === 'tiny_frame_photo_sets' && item.photoCount > 0));
   if (!pictureItems.length) return;
   if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
-  const codesByUpload = new Map();
   for (const item of pictureItems) {
     if (normalizeUploadReference(item.uploadReference)) {
       const uploadSessionId = item.uploadReference;
@@ -3053,30 +1594,7 @@ async function verifyUploadManifests(lineItems, env) {
         continue;
       }
     }
-    if (isValidProductPdfKey(item.uploadReference)) {
-      if (!isValidProductPdfKey(item.uploadReference, item.productCode)) {
-        throw new Error('The uploaded PDF does not match its product code');
-      }
-      const object = await env.ARTWORK_BUCKET.head(item.uploadReference);
-      if (
-        !object ||
-        object.customMetadata?.product_code !== item.productCode ||
-        object.customMetadata?.cart_item_id !== item.cartItemId ||
-        object.customMetadata?.product_type !== item.productType ||
-        Number(object.customMetadata?.image_count || 0) !== item.photoCount ||
-        (item.productType === 'tiny_frame_photo_sets' && Number(object.customMetadata?.photo_set_count || 0) !== item.photoSetCount)
-      ) {
-        throw new Error('One or more print-sheet PDFs could not be verified');
-      }
-      continue;
-    }
-    if (item.productType === 'tiny_frame_photo_sets') throw new Error('Variable photo sets require completed individual photo uploads');
-    const codes = codesByUpload.get(item.uploadReference) || [];
-    codes.push(item.productCode);
-    codesByUpload.set(item.uploadReference, codes);
-  }
-  for (const [uploadReference, productCodes] of codesByUpload) {
-    await ensureProductCodePrintSheets(uploadReference, productCodes, env);
+    throw new Error('This older photo upload must be added to the cart again before checkout');
   }
 }
 
@@ -3752,39 +2270,22 @@ function getCheckoutProductCodes(session) {
   return [...new Set(values)];
 }
 
-async function markProductPdfFilesPaid(session, env) {
-  if (!env.ARTWORK_BUCKET) throw new Error('Artwork storage is not configured');
-  const stripeCheckoutSessionId = cleanText(session?.id, '');
-  const productCodes = getCheckoutProductCodes(session);
-  const paidAt = new Date().toISOString();
-  let updated = 0;
-  for (const productCode of productCodes) {
-    for (const objectKey of getProductPdfKeyCandidates(productCode)) {
-      const object = await env.ARTWORK_BUCKET.get(objectKey);
-      if (!object) continue;
-      await env.ARTWORK_BUCKET.put(objectKey, object.body, {
-        httpMetadata:{ contentType:'application/pdf' },
-        customMetadata:{
-          ...(object.customMetadata || {}),
-          status:'paid',
-          paid_at:paidAt,
-          ...(stripeCheckoutSessionId ? { stripe_checkout_session_id:stripeCheckoutSessionId } : {})
-        }
-      });
-      updated += 1;
-      break;
-    }
-  }
-  return updated;
+function getPaidOrderFolder(paidAt, orderCode) {
+  const code = normalizeProductCode(orderCode);
+  const date = new Date(paidAt);
+  if (!code || Number.isNaN(date.getTime())) throw new Error('Paid order folder details are invalid');
+  const { year, month, day } = getBrisbaneDateParts(date);
+  return `orders/${year}-${month}-${day}_${code}`;
 }
 
-async function putPaidPhotoOnce(bucket, finalKey, source, productCode, stripeCheckoutSessionId, paidAt) {
+async function putPaidPhotoOnce(bucket, finalKey, source, orderCode, productCodes, stripeCheckoutSessionId, paidAt) {
   const sourceMetadata = source.customMetadata || {};
   const requiredMetadata = {
     upload_session_id:String(sourceMetadata.upload_session_id || ''),
     photo_id:String(sourceMetadata.photo_id || ''),
     revision:String(sourceMetadata.revision || ''),
-    product_code:productCode,
+    order_code:orderCode,
+    product_codes:productCodes.join(','),
     stripe_checkout_session_id:stripeCheckoutSessionId
   };
   if (!requiredMetadata.upload_session_id || !requiredMetadata.photo_id || !requiredMetadata.revision) {
@@ -3825,10 +2326,20 @@ async function putPaidManifestOnce(bucket, manifestKey, manifest) {
     );
   if (
     existing?.stripe_checkout_session_id !== manifest.stripe_checkout_session_id ||
-    existing?.product_code !== manifest.product_code ||
+    existing?.order_code !== manifest.order_code ||
     existing?.status !== 'paid' ||
     !samePhotos
   ) throw new Error(`Refusing to replace a different paid-order manifest at ${manifestKey}`);
+}
+
+async function deleteTemporaryUploadObjects(bucket, uploadSessionId, storageFolder) {
+  const prefix = getTinyFrameUploadPrefix(uploadSessionId, storageFolder);
+  let cursor;
+  do {
+    const listing = await bucket.list({ prefix, ...(cursor ? { cursor } : {}) });
+    await deleteObjectKeys(bucket, listing.objects.map(object => object.key));
+    cursor = listing.truncated ? listing.cursor : undefined;
+  } while (cursor);
 }
 
 async function markUploadSessionsPaid(session, env) {
@@ -3841,6 +2352,25 @@ async function markUploadSessionsPaid(session, env) {
   for (const uploadSessionId of uploadSessionIds) {
     const record = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
     const storageFolder = getPhotoUploadStorageFolder(record, uploadSessionId);
+    const parsedProductCodes = parsePhotoUploadJson(record?.product_codes_json, []);
+    const storedProductCodes = (Array.isArray(parsedProductCodes) ? parsedProductCodes : [])
+      .map(normalizeProductCode)
+      .filter(Boolean);
+    if (record?.status === 'paid' && storedProductCodes.length) {
+      const paidOrderFolder = getPaidOrderFolder(record.updated_at, storedProductCodes[0]);
+      if (!await env.ARTWORK_BUCKET.head(`${paidOrderFolder}/manifest.json`)) {
+        throw new Error(`Paid order ${storedProductCodes[0]} is missing its photo manifest`);
+      }
+      try {
+        await deleteTemporaryUploadObjects(env.ARTWORK_BUCKET, uploadSessionId, storageFolder);
+      } catch (error) {
+        console.warn('Paid temporary upload cleanup will be retried later', {
+          uploadSessionId,
+          errorName:String(error?.name || 'Error')
+        });
+      }
+      continue;
+    }
     const currentKey = getUploadManifestKey(uploadSessionId, storageFolder);
     const legacyKey = getLegacyIndividualUploadManifestKey(uploadSessionId);
     let manifestKey = currentKey;
@@ -3855,9 +2385,7 @@ async function markUploadSessionsPaid(session, env) {
     if (manifest.storage_version === INDIVIDUAL_PHOTO_STORAGE_VERSION) {
       if (!env.PRODUCT_CODES_DB) throw new Error('Photo selection storage is not configured');
       const snapshot = parsePhotoUploadJson(record?.snapshot_json, null);
-      const productCodes = (Array.isArray(parsePhotoUploadJson(record?.product_codes_json, []))
-        ? parsePhotoUploadJson(record.product_codes_json, [])
-        : []).map(normalizeProductCode).filter(Boolean);
+      const productCodes = storedProductCodes;
       if (
         !record || !snapshot || record.cart_item_id !== snapshot.cart_item_id ||
         !['checkout_pending', 'paid'].includes(record.status) ||
@@ -3866,47 +2394,53 @@ async function markUploadSessionsPaid(session, env) {
         !Array.isArray(snapshot.photos) || snapshot.photos.length !== Number(snapshot.photo_count)
       ) throw new Error(`Upload session ${uploadSessionId} is missing its verified paid-order snapshot`);
       const paidAt = manifest.paid_at || new Date().toISOString();
-      const finalProducts = [];
-      for (const productCode of productCodes) {
-        const finalPhotos = [];
-        for (const [index, photo] of snapshot.photos.entries()) {
-          const sourceKey = String(photo?.objectKey || '');
-          const source = await env.ARTWORK_BUCKET.get(sourceKey);
-          if (
-            !source || !isValidIndividualPhotoKey(sourceKey, uploadSessionId, storageFolder) ||
-            source.customMetadata?.upload_session_id !== uploadSessionId ||
-            source.customMetadata?.photo_id !== photo.photo_id ||
-            source.customMetadata?.revision !== photo.revision
-          ) throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
-          const position = index + 1;
-          const finalKey = `orders/${stripeCheckoutSessionId}/${productCode}/photo-${String(position).padStart(3, '0')}.jpg`;
-          await putPaidPhotoOnce(env.ARTWORK_BUCKET, finalKey, source, productCode, stripeCheckoutSessionId, paidAt);
-          finalPhotos.push({
-            photo_id:photo.photo_id,
-            revision:photo.revision,
-            position,
-            objectKey:finalKey,
-            contentType:'image/jpeg'
-          });
-        }
-        const finalManifestKey = `orders/${stripeCheckoutSessionId}/${productCode}/manifest.json`;
-        const finalManifest = {
-          storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
-          stripe_checkout_session_id:stripeCheckoutSessionId,
-          product_code:productCode,
-          cart_item_id:snapshot.cart_item_id,
-          frame_colour:snapshot.frame_colour,
-          product_type:snapshot.product_type,
-          photo_set_count:snapshot.photo_set_count,
-          photo_count:snapshot.photo_count,
-          selected_photo_order:finalPhotos.map(photo => photo.photo_id),
-          photos:finalPhotos,
-          status:'paid',
-          paid_at:paidAt
-        };
-        await putPaidManifestOnce(env.ARTWORK_BUCKET, finalManifestKey, finalManifest);
-        finalProducts.push({ product_code:productCode, manifest_key:finalManifestKey, photos:finalPhotos });
+      const orderCode = productCodes[0];
+      const paidOrderFolder = getPaidOrderFolder(paidAt, orderCode);
+      const finalPhotos = [];
+      for (const [index, photo] of snapshot.photos.entries()) {
+        const sourceKey = String(photo?.objectKey || '');
+        const source = await env.ARTWORK_BUCKET.get(sourceKey);
+        if (
+          !source || !isValidIndividualPhotoKey(sourceKey, uploadSessionId, storageFolder) ||
+          source.customMetadata?.upload_session_id !== uploadSessionId ||
+          source.customMetadata?.photo_id !== photo.photo_id ||
+          source.customMetadata?.revision !== photo.revision
+        ) throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
+        const position = index + 1;
+        const finalKey = `${paidOrderFolder}/photo-${String(position).padStart(2, '0')}.jpg`;
+        await putPaidPhotoOnce(
+          env.ARTWORK_BUCKET,
+          finalKey,
+          source,
+          orderCode,
+          productCodes,
+          stripeCheckoutSessionId,
+          paidAt
+        );
+        finalPhotos.push({
+          photo_id:photo.photo_id,
+          revision:photo.revision,
+          position,
+          objectKey:finalKey,
+          contentType:'image/jpeg'
+        });
       }
+      const finalManifestKey = `${paidOrderFolder}/manifest.json`;
+      await putPaidManifestOnce(env.ARTWORK_BUCKET, finalManifestKey, {
+        storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
+        stripe_checkout_session_id:stripeCheckoutSessionId,
+        order_code:orderCode,
+        product_codes:productCodes,
+        cart_item_id:snapshot.cart_item_id,
+        frame_colour:snapshot.frame_colour,
+        product_type:snapshot.product_type,
+        photo_set_count:snapshot.photo_set_count,
+        photo_count:snapshot.photo_count,
+        selected_photo_order:finalPhotos.map(photo => photo.photo_id),
+        photos:finalPhotos,
+        status:'paid',
+        paid_at:paidAt
+      });
       await env.PRODUCT_CODES_DB.prepare(
         `UPDATE photo_upload_sessions
             SET status = 'paid',
@@ -3916,15 +2450,14 @@ async function markUploadSessionsPaid(session, env) {
             AND stripe_checkout_session_id = ?
             AND status IN ('checkout_pending', 'paid')`
       ).bind(paidAt, uploadSessionId, stripeCheckoutSessionId).run();
-      await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
-        ...manifest,
-        ...snapshot,
-        product_codes:productCodes,
-        status:'paid',
-        stripe_checkout_session_id:stripeCheckoutSessionId,
-        paid_at:paidAt,
-        final_products:finalProducts
-      }), { httpMetadata:{ contentType:'application/json' } });
+      try {
+        await deleteTemporaryUploadObjects(env.ARTWORK_BUCKET, uploadSessionId, storageFolder);
+      } catch (error) {
+        console.warn('Paid temporary upload cleanup will be retried later', {
+          uploadSessionId,
+          errorName:String(error?.name || 'Error')
+        });
+      }
       continue;
     }
     if (manifest.storage_version === LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION) {
@@ -3938,41 +2471,49 @@ async function markUploadSessionsPaid(session, env) {
         throw new Error(`Upload session ${uploadSessionId} is missing paid-order relationships`);
       }
       const paidAt = manifest.paid_at || new Date().toISOString();
-      const finalProducts = [];
-      for (const productCode of productCodes) {
-        const finalPhotos = [];
-        for (const photo of photos) {
-          const sourceKey = String(photo?.objectKey || '');
-          const source = await env.ARTWORK_BUCKET.get(sourceKey);
-          if (!source || !isValidIndividualPhotoKey(sourceKey, uploadSessionId)) {
-            throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
-          }
-          const finalKey = `orders/${stripeCheckoutSessionId}/product-${productCode}/photo-${String(photo.position).padStart(3, '0')}.jpg`;
-          await putPaidPhotoOnce(env.ARTWORK_BUCKET, finalKey, source, productCode, stripeCheckoutSessionId, paidAt);
-          finalPhotos.push({ position:photo.position, objectKey:finalKey, contentType:'image/jpeg' });
+      const orderCode = productCodes[0];
+      const paidOrderFolder = getPaidOrderFolder(paidAt, orderCode);
+      const finalPhotos = [];
+      for (const [index, photo] of photos.entries()) {
+        const sourceKey = String(photo?.objectKey || '');
+        const source = await env.ARTWORK_BUCKET.get(sourceKey);
+        if (!source || !isValidIndividualPhotoKey(sourceKey, uploadSessionId)) {
+          throw new Error(`Stored artwork for ${uploadSessionId} could not be found`);
         }
-        const finalManifestKey = `orders/${stripeCheckoutSessionId}/product-${productCode}/manifest.json`;
-        await putPaidManifestOnce(env.ARTWORK_BUCKET, finalManifestKey, {
-          storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
-          stripe_checkout_session_id:stripeCheckoutSessionId,
-          product_code:productCode,
-          cart_item_id:manifest.cart_item_id,
-          frame_colour:manifest.frame_colour,
-          product_type:manifest.product_type,
-          photo_count:manifest.photo_count,
-          photo_set_count:manifest.photo_set_count,
-          photos:finalPhotos,
-          status:'paid',
-          paid_at:paidAt
-        });
-        finalProducts.push({ product_code:productCode, manifest_key:finalManifestKey, photos:finalPhotos });
+        const position = index + 1;
+        const finalKey = `${paidOrderFolder}/photo-${String(position).padStart(2, '0')}.jpg`;
+        await putPaidPhotoOnce(
+          env.ARTWORK_BUCKET,
+          finalKey,
+          source,
+          orderCode,
+          productCodes,
+          stripeCheckoutSessionId,
+          paidAt
+        );
+        finalPhotos.push({ position, objectKey:finalKey, contentType:'image/jpeg' });
       }
+      const finalManifestKey = `${paidOrderFolder}/manifest.json`;
+      await putPaidManifestOnce(env.ARTWORK_BUCKET, finalManifestKey, {
+        storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
+        stripe_checkout_session_id:stripeCheckoutSessionId,
+        order_code:orderCode,
+        product_codes:productCodes,
+        cart_item_id:manifest.cart_item_id,
+        frame_colour:manifest.frame_colour,
+        product_type:manifest.product_type,
+        photo_count:manifest.photo_count,
+        photo_set_count:manifest.photo_set_count,
+        photos:finalPhotos,
+        status:'paid',
+        paid_at:paidAt
+      });
       await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
         ...manifest,
         status:'paid',
         stripe_checkout_session_id:stripeCheckoutSessionId,
         paid_at:paidAt,
-        final_products:finalProducts
+        final_order:{ order_code:orderCode, manifest_key:finalManifestKey, photos:finalPhotos }
       }), { httpMetadata:{ contentType:'application/json' } });
       continue;
     }
@@ -3984,8 +2525,6 @@ async function markUploadSessionsPaid(session, env) {
     }
     const paidAt = new Date().toISOString();
     const relatedFiles = [
-      ...(manifest.print_sheet_object_key ? [{ objectKey:manifest.print_sheet_object_key, contentType:'application/pdf' }] : []),
-      ...(Array.isArray(manifest.print_sheets) ? manifest.print_sheets : []),
       ...(Array.isArray(manifest.processed_images) ? manifest.processed_images : []),
       ...(Array.isArray(manifest.originals) ? manifest.originals : [])
     ];
@@ -4176,7 +2715,6 @@ async function handleStripeWebhook(request, env) {
   ) {
     try {
       await markProductCodesPaid(env.PRODUCT_CODES_DB, completedSession);
-      await markProductPdfFilesPaid(completedSession, env);
       await markUploadSessionsPaid(completedSession, env);
     } catch (error) {
       console.error('Paid product relationship update failed:', error);
@@ -4250,6 +2788,38 @@ async function getProductCodeRecord(request, env, productCode) {
   }
 }
 
+async function findPaidPhotoManifest(env, record, productCode) {
+  const uploadSessionId = normalizeUploadReference(record?.upload_session_id);
+  if (uploadSessionId) {
+    const uploadRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
+    const parsedProductCodes = parsePhotoUploadJson(uploadRecord?.product_codes_json, []);
+    const productCodes = (Array.isArray(parsedProductCodes) ? parsedProductCodes : [])
+      .map(normalizeProductCode)
+      .filter(Boolean);
+    if (uploadRecord?.status === 'paid' && productCodes.includes(productCode)) {
+      const prefix = `${getPaidOrderFolder(uploadRecord.updated_at, productCodes[0])}/`;
+      const object = await env.ARTWORK_BUCKET.get(`${prefix}manifest.json`);
+      const manifest = object ? await readR2Json(object) : null;
+      if (manifest) return { manifest, prefix };
+    }
+  }
+  if (record?.paid_at) {
+    const prefix = `${getPaidOrderFolder(record.paid_at, productCode)}/`;
+    const object = await env.ARTWORK_BUCKET.get(`${prefix}manifest.json`);
+    const manifest = object ? await readR2Json(object) : null;
+    if (manifest) return { manifest, prefix };
+  }
+  const checkoutSessionId = cleanText(record?.stripe_checkout_session_id, '');
+  if (!checkoutSessionId) return { manifest:null, prefix:'' };
+  for (const folder of [productCode, `product-${productCode}`]) {
+    const prefix = `orders/${checkoutSessionId}/${folder}/`;
+    const object = await env.ARTWORK_BUCKET.get(`${prefix}manifest.json`);
+    const manifest = object ? await readR2Json(object) : null;
+    if (manifest) return { manifest, prefix };
+  }
+  return { manifest:null, prefix:'' };
+}
+
 async function getAdminProductAssets(request, env, productCode) {
   if (!env.PRODUCT_CODES_DB || !env.ARTWORK_BUCKET || !env.ADMIN_API_KEY) {
     return jsonResponse(request, env, { error:'Order management is not configured' }, 503);
@@ -4262,34 +2832,23 @@ async function getAdminProductAssets(request, env, productCode) {
   try {
     const record = await findProductCode(env.PRODUCT_CODES_DB, normalizedCode);
     if (!record) return jsonResponse(request, env, { error:'Product code was not found' }, 404);
-    const checkoutSessionId = cleanText(record.stripe_checkout_session_id, '');
-    if (checkoutSessionId) {
-      const manifestKeys = [
-        `orders/${checkoutSessionId}/${normalizedCode}/manifest.json`,
-        `orders/${checkoutSessionId}/product-${normalizedCode}/manifest.json`
-      ];
-      let manifest = null;
-      for (const manifestKey of manifestKeys) {
-        const object = await env.ARTWORK_BUCKET.get(manifestKey);
-        manifest = object ? await readR2Json(object) : null;
-        if (manifest) break;
-      }
-      if ([LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest?.storage_version))) {
+    const { manifest, prefix } = await findPaidPhotoManifest(env, record, normalizedCode);
+    if ([LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION, INDIVIDUAL_PHOTO_STORAGE_VERSION].includes(Number(manifest?.storage_version))) {
         const photos = (Array.isArray(manifest.photos) ? manifest.photos : []).map((photo, index) => ({
           position:Number(photo.position || index + 1),
-          filename:`${normalizedCode}-photo-${String(photo.position || index + 1).padStart(3, '0')}.jpg`,
+          filename:`${normalizedCode}-photo-${String(photo.position || index + 1).padStart(2, '0')}.jpg`,
           downloadUrl:`/admin/product-assets/${normalizedCode}/photo/${Number(photo.position || index + 1)}`
         }));
         return jsonResponse(request, env, {
           productCode:normalizedCode,
           status:record.status,
+          orderFolder:prefix.replace(/\/$/, ''),
           frameColour:manifest.frame_colour || record.frame_colour,
           photoSetCount:Number(manifest.photo_set_count || 0),
           photoCount:photos.length,
           photos,
           legacyPdf:null
         });
-      }
     }
     for (const objectKey of getProductPdfKeyCandidates(normalizedCode)) {
       if (await env.ARTWORK_BUCKET.head(objectKey)) {
@@ -4335,25 +2894,17 @@ async function downloadAdminProductAsset(request, env, productCode, assetType, p
   let filename = '';
   if (assetType === 'photo') {
     const photoPosition = Number(position);
-    const checkoutSessionId = cleanText(record.stripe_checkout_session_id, '');
-    if (!checkoutSessionId || !Number.isSafeInteger(photoPosition) || photoPosition < 1) {
+    if (!Number.isSafeInteger(photoPosition) || photoPosition < 1) {
       return jsonResponse(request, env, { error:'Photo reference is invalid' }, 400);
     }
-    let manifest = null;
-    let expectedPrefix = '';
-    for (const folder of [normalizedCode, `product-${normalizedCode}`]) {
-      expectedPrefix = `orders/${checkoutSessionId}/${folder}/`;
-      const manifestObject = await env.ARTWORK_BUCKET.get(`${expectedPrefix}manifest.json`);
-      manifest = manifestObject ? await readR2Json(manifestObject) : null;
-      if (manifest) break;
-    }
+    const { manifest, prefix:expectedPrefix } = await findPaidPhotoManifest(env, record, normalizedCode);
     const photo = Array.isArray(manifest?.photos) ? manifest.photos.find(item => Number(item?.position) === photoPosition) : null;
     if (!photo || !String(photo.objectKey || '').startsWith(expectedPrefix)) {
       return jsonResponse(request, env, { error:'Photo was not found' }, 404);
     }
     objectKey = String(photo.objectKey);
     contentType = 'image/jpeg';
-    filename = `${normalizedCode}-photo-${String(photoPosition).padStart(3, '0')}.jpg`;
+    filename = `${normalizedCode}-photo-${String(photoPosition).padStart(2, '0')}.jpg`;
   } else if (assetType === 'legacy-pdf') {
     for (const candidate of getProductPdfKeyCandidates(normalizedCode)) {
       if (await env.ARTWORK_BUCKET.head(candidate)) {
@@ -4447,7 +2998,6 @@ export {
   claimWebhookEvent,
   cleanupPendingUploads,
   createStripePayload,
-  markProductPdfFilesPaid,
   markUploadSessionsPaid,
   normalizeShippingCountry,
   normalizeTinyFrameProductType,
@@ -4538,34 +3088,6 @@ async function routeWorkerRequest(request, env) {
 
     if (request.method === 'GET' && url.pathname === '/tiny-frame-upload/status') {
       return getIndividualTinyFrameUploadStatus(request, env);
-    }
-
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/reserve') {
-      return reserveTinyFrameProductPdf(request, env);
-    }
-
-    if (request.method === 'POST' && url.pathname === '/product-code/assign') {
-      return reserveTinyFrameProductPdf(request, env);
-    }
-
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/upload') {
-      return uploadTinyFrameProductPdf(request, env);
-    }
-
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/multipart/create') {
-      return createTinyFrameProductPdfMultipart(request, env);
-    }
-
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/multipart/part') {
-      return uploadTinyFrameProductPdfPart(request, env);
-    }
-
-    if (request.method === 'POST' && url.pathname === '/tiny-frame-pdf/multipart/complete') {
-      return completeTinyFrameProductPdfMultipart(request, env);
-    }
-
-    if (request.method === 'GET' && url.pathname === '/tiny-frame-pdf/status') {
-      return getTinyFrameProductPdfStatus(request, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/checkout-session-status') {

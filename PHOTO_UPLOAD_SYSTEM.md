@@ -51,10 +51,13 @@ allows; a visible warning is shown if the browser cannot save recovery data.
 Recovery depends on the browser retaining its local data.
 
 Each upload response is checked against the `storageFolder` returned by the
-Worker (not the separate `tf_...` session ID). The Worker confirms object size,
-JPEG content type, and session/photo/revision metadata in R2 before marking the
-selection uploaded. Checkout remains blocked until every configured photo is
-confirmed and the Worker finalizes the same session-bound selection.
+Worker (not the separate `tf_...` session ID). Upload API responses are marked
+`no-store`, and browser upload requests explicitly omit cookies, so stale
+browser cache or unrelated site credentials cannot affect authentication. The
+Worker confirms object size, JPEG content type, and session/photo/revision
+metadata in R2 before marking the selection uploaded. Checkout remains blocked
+until every configured photo is confirmed and the Worker finalizes the same
+session-bound selection.
 
 Client and Worker diagnostics record Brisbane time, anonymous session/photo
 references, a broad browser category, stage, HTTP status, safe error code,
@@ -75,7 +78,7 @@ Worker adds a four-character suffix. For example:
 
 ```text
 temporary/26-10-2026_8-51PM/manifest.json
-temporary/26-10-2026_8-51PM-a7b4/photos/<random-immutable-id>.jpg
+temporary/26-10-2026_8-51PM-a7b4/photos/<photo-id>-<revision>.jpg
 ```
 
 The upload session ID remains the durable application/Stripe reference; only
@@ -88,8 +91,9 @@ photo selection per cart item, including photo identity, revision, position,
 and its verified R2 key. Replacing, removing, reordering, or changing set count
 updates that selection with a compare-and-swap version. An upload that finishes
 after its photo was replaced or removed is rejected and its temporary object
-is deleted. Unselected temporary objects remain private and are eligible for
-seven-day cleanup.
+is deleted. A retry uses the same deterministic immutable key, so an interrupted
+response cannot create a duplicate object. Unselected temporary objects remain
+private and are eligible for seven-day cleanup.
 
 Before Add to Cart, the Worker snapshots the active selection and verifies that
 every selected JPEG still exists with matching upload-session, photo, and
@@ -100,16 +104,19 @@ Only a verified, paid Stripe webhook finalizes a new order. The Worker copies
 only snapshot photos, in selected order, to:
 
 ```text
-orders/<stripe-checkout-session-id>/<five-digit-product-code>/manifest.json
-orders/<stripe-checkout-session-id>/<five-digit-product-code>/photo-001.jpg
-orders/<stripe-checkout-session-id>/<five-digit-product-code>/photo-002.jpg
+orders/2026-10-27_12345/manifest.json
+orders/2026-10-27_12345/photo-01.jpg
+orders/2026-10-27_12345/photo-02.jpg
 ```
 
-The manifest records the Stripe order ID, product code, frame colour, and
-ordered photo references. Conditional R2 writes make retries idempotent and
-refuse to replace files belonging to a different order. Paid-order files are
-never included in temporary cleanup. Existing legacy product-folder PDFs,
-historical orders, and older photo manifests remain readable.
+The folder date uses Brisbane time and the five-digit durable order/product
+code. The manifest records the Stripe order ID, all related product codes,
+frame colour, and ordered photo references. Conditional R2 writes make retries
+idempotent and refuse to replace files belonging to a different order. After
+the paid files and manifest are verified, the corresponding temporary folder
+is removed. Paid-order files are never included in temporary cleanup. Existing
+legacy product-folder PDFs, historical orders, and older photo manifests remain
+readable through the authenticated admin endpoints, but no new PDF is created.
 
 Variable photo sets have no fixed set limit. The A$50 starting price includes
 the first three photos; each additional three-photo set adds A$5. Prices are

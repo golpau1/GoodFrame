@@ -971,7 +971,7 @@
       <div class="upload-progress-track is-indeterminate" id="upload-progress-track" role="progressbar" aria-label="Picture upload progress">
         <div class="upload-progress-bar" id="upload-progress-bar"></div>
       </div>
-      <p class="upload-progress-detail" id="upload-progress-detail" aria-live="polite">Preparing print sheet…</p>
+      <p class="upload-progress-detail" id="upload-progress-detail" aria-live="polite">Checking your photos…</p>
       <p class="upload-progress-error" id="upload-progress-error" role="alert" hidden></p>
       <div class="upload-progress-actions" id="upload-progress-actions" hidden>
         <button class="cart-action cart-action--primary" id="upload-progress-retry" type="button">Retry</button>
@@ -1232,10 +1232,8 @@
     });
     const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
-    const CROP_SOURCE_MAX_DIMENSION = 3200;
-    const PRINT_EXPORT_SHORT_EDGE = 1600;
-    const PRINT_EXPORT_LONG_EDGE = Math.round(PRINT_EXPORT_SHORT_EDGE / frameAspectRatio);
-    const PRINT_JPEG_QUALITY = .96;
+    const CROP_SOURCE_MAX_DIMENSION = 4096;
+    const PRINT_JPEG_QUALITY = .98;
     const BASE_FRAME_PRICE = 50;
     const PHOTO_SET_PRICE = 5;
     const VARIABLE_PRODUCT_ID = "tiny_frame_photo_sets";
@@ -1579,7 +1577,7 @@
             canvas.height = 1;
             if (blob) resolve(URL.createObjectURL(blob));
             else reject(new Error("The picture could not be prepared for cropping."));
-          }, outputType, .96);
+          }, outputType, PRINT_JPEG_QUALITY);
         };
         sourceImage.onerror = () => {
           revoke(originalUrl);
@@ -1916,12 +1914,7 @@
       let printCanvas;
       let previewCanvas;
       try {
-        croppedCanvas = cropper.getCroppedCanvas({
-          maxWidth:cropFrameIsPortrait ? PRINT_EXPORT_SHORT_EDGE : PRINT_EXPORT_LONG_EDGE,
-          maxHeight:cropFrameIsPortrait ? PRINT_EXPORT_LONG_EDGE : PRINT_EXPORT_SHORT_EDGE,
-          imageSmoothingEnabled:true,
-          imageSmoothingQuality:"high"
-        });
+        croppedCanvas = cropper.getCroppedCanvas({ imageSmoothingEnabled:true, imageSmoothingQuality:"high" });
         if (!croppedCanvas?.width || !croppedCanvas?.height) {
           throw new Error("The full-resolution crop could not be created.");
         }
@@ -1971,6 +1964,11 @@
       cropperError.hidden = true;
       setCropperProcessing(true);
       const pictureNumber = cropBatch.currentIndex + 1;
+      const finishing = direction !== "back" && cropBatch.currentIndex === cropBatch.items.length - 1;
+      if (finishing) {
+        saveCropButton.textContent = "Finishing…";
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
       try {
         const entry = await saveCurrentCropDraft();
         const item = cropBatch.items[cropBatch.currentIndex];
@@ -2546,6 +2544,9 @@
             errorName:String(error?.name || "Error"),
             status:Number(error?.status) || undefined
           });
+          if (isUploadSessionRecoveryError(error) || Number(error?.status) === 409) {
+            draft.session = await recoverIndividualUploadSession(draft.session);
+          }
         }
       }
       const storedById = new Map(storedPhotos.map((photo) => [photo.photoId, photo]));
@@ -2686,8 +2687,8 @@
     }
     const PHOTO_UPLOAD_REQUEST_TIMEOUT_MS = Number.isFinite(Number(window.GOOD_FRAME_UPLOAD_TIMEOUT_MS))
       ? Math.max(50, Number(window.GOOD_FRAME_UPLOAD_TIMEOUT_MS))
-      : 90000;
-    const PHOTO_UPLOAD_MAX_ATTEMPTS = 4;
+      : 120000;
+    const PHOTO_UPLOAD_MAX_ATTEMPTS = 5;
     function isRetryableUploadStatus(status) {
       return [408, 425, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524].includes(Number(status));
     }
@@ -2745,7 +2746,12 @@
         controller.abort();
       }, PHOTO_UPLOAD_REQUEST_TIMEOUT_MS);
       try {
-        return await fetch(url, { ...options, signal:controller.signal });
+        return await fetch(url, {
+          ...options,
+          cache:"no-store",
+          credentials:"omit",
+          signal:controller.signal
+        });
       } catch (error) {
         if (timedOut) {
           const timeoutError = new Error("The upload timed out. Please retry.");
@@ -3017,6 +3023,12 @@
           });
           const result = await readUploadJson(response);
           const objectKey = String(result.photo?.objectKey || "");
+          if (!response.ok && isUploadSessionRecoveryError({ code:result.code, message:result.error })) {
+            await recoverIndividualUploadSession(session);
+            await synchronizeActivePhotoSelection();
+            enqueueIndividualPhotoUpload(entry);
+            return;
+          }
           if (response.ok && result.success) {
             entry.uploadState = "verifying";
             renderIndividualUploadEntry(entry);
@@ -3026,7 +3038,7 @@
             response.ok && result.success &&
             result.photo?.photoId === entry.photoId &&
             result.photo?.revision === entry.revision &&
-            new RegExp(`^temporary/${storageFolder}/photos/[a-f0-9]{32}\\.jpg$`).test(objectKey)
+            new RegExp(`^temporary/${storageFolder}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg$`).test(objectKey)
           ) {
             if (entry.cancelled || !uploadedImages.includes(entry)) {
               entry.objectKey = objectKey;
@@ -3373,7 +3385,7 @@
         uploadProgressTrack.removeAttribute("aria-valuenow");
         uploadProgressBar.style.width = "";
         uploadProgressDetail.textContent = phase === "preparing"
-          ? "Preparing print sheet…"
+          ? "Checking your photos…"
           : phase === "confirming"
             ? "Confirming upload…"
             : "Uploading securely…";
