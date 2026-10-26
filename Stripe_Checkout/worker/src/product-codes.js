@@ -101,7 +101,6 @@ function assertExistingUnitMatches(row, unit) {
     String(row.product_type) !== unit.productType ||
     String(row.upload_session_id || '') !== unit.uploadSessionId ||
     (unit.productCode && String(row.code) !== unit.productCode) ||
-    (row.frame_colour && unit.frameColour && String(row.frame_colour) !== unit.frameColour) ||
     (row.unit_amount && unit.unitAmount && Number(row.unit_amount) !== unit.unitAmount)
   ) {
     throw new ProductCodeError('A cart product identity was reused for different product details');
@@ -112,7 +111,7 @@ async function persistUnitDetails(database, row, unit) {
   await run(
     database,
     `UPDATE product_codes
-       SET frame_colour = COALESCE(frame_colour, ?),
+       SET frame_colour = COALESCE(?, frame_colour),
            unit_amount = COALESCE(unit_amount, ?),
            currency = COALESCE(currency, 'aud')
      WHERE code = ?`,
@@ -122,7 +121,7 @@ async function persistUnitDetails(database, row, unit) {
   );
   return {
     ...row,
-    frame_colour:row.frame_colour || unit.frameColour || null,
+    frame_colour:unit.frameColour || row.frame_colour || null,
     unit_amount:row.unit_amount || unit.unitAmount,
     currency:row.currency || 'aud'
   };

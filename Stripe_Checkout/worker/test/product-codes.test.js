@@ -74,21 +74,38 @@ test('a submitted cart code is preserved exactly and cannot be reassigned', asyn
   const assigned = await reserveProductCodes(database, [{
     ...units(1)[0],
     productCode:'58321',
-    frameColour:'Oak'
+    frameColour:'Natural Oak'
   }], requestId);
   assert.equal(assigned.units[0].productCode, '58321');
   const record = await findProductCode(database, '58321');
-  assert.equal(record.frame_colour, 'Oak');
+  assert.equal(record.frame_colour, 'Natural Oak');
   assert.equal(record.unit_amount, 7000);
   await assert.rejects(
     reserveProductCodes(database, [{
       ...units(1)[0],
       cartItemId:'ci_ffffffffffffffffffffffffffffffff',
       productCode:'58321',
-      frameColour:'Walnut'
+      frameColour:'Legacy finish'
     }], 'co_ffffffffffffffffffffffffffffffff'),
     ProductCodeError
   );
+  database.close();
+});
+
+test('existing cart products retain their code when the finish is normalized', async () => {
+  const database = createProductCodeDatabase();
+  const product = {
+    ...units(1)[0],
+    productCode:'58322',
+    frameColour:'Legacy finish'
+  };
+  await reserveProductCodes(database, [product], requestId);
+  const retry = await reserveProductCodes(database, [{
+    ...product,
+    frameColour:'Natural Oak'
+  }], requestId);
+  assert.equal(retry.units[0].productCode, '58322');
+  assert.equal((await findProductCode(database, '58322')).frame_colour, 'Natural Oak');
   database.close();
 });
 

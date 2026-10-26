@@ -1029,7 +1029,7 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
       let snapshot = parsePhotoUploadJson(sessionRecord.snapshot_json, null);
       if (['finalized', 'checkout_pending', 'paid'].includes(sessionRecord.status) && snapshot) {
         if (
-          snapshot.frame_colour !== frameColour ||
+          normalizeFrameColour(snapshot.frame_colour) !== frameColour ||
           Number(snapshot.photo_set_count) !== photoSetCount ||
           snapshot.photos.length !== expectedPhotoCount
         ) throw new TinyFrameInputError('This photo selection has already been finalized');
@@ -1365,11 +1365,8 @@ function normalizeTinyFrameProductType(item) {
   return '';
 }
 
-function normalizeFrameColour(value) {
-  const colour = cleanText(value, '').toLowerCase();
-  if (colour === 'oak') return 'Oak';
-  if (colour === 'walnut') return 'Walnut';
-  return '';
+function normalizeFrameColour() {
+  return 'Natural Oak';
 }
 
 function normalizeUploadReference(value) {
@@ -1463,9 +1460,6 @@ function buildLineItems(items) {
     const artworkObjectKeys = Array.isArray(item.artworkObjectKeys)
       ? item.artworkObjectKeys.filter(isValidArtworkObjectKey).slice(0, 8)
       : [];
-    if (tinyFrameProduct && !frameColour) {
-      throw new Error('One or more Tiny Frames has an invalid frame colour');
-    }
     if (!cartItemId) {
       throw new Error('One or more cart products has an invalid durable identity');
     }
@@ -1734,7 +1728,7 @@ async function verifyUploadManifests(lineItems, env) {
           !['finalized', 'checkout_pending'].includes(record.status) ||
           snapshot?.upload_session_id !== uploadSessionId ||
           snapshot.cart_item_id !== item.cartItemId ||
-          snapshot.frame_colour !== item.frameColour ||
+          normalizeFrameColour(snapshot.frame_colour) !== item.frameColour ||
           Number(snapshot.photo_set_count) !== item.photoSetCount ||
           Number(snapshot.photo_count) !== item.photoCount ||
           photos.length !== item.photoCount
@@ -1766,7 +1760,7 @@ async function verifyUploadManifests(lineItems, env) {
         const photos = Array.isArray(manifest.photos) ? manifest.photos : [];
         if (
           manifest.status !== 'finalized' || manifest.cart_item_id !== item.cartItemId ||
-          manifest.frame_colour !== item.frameColour || Number(manifest.photo_set_count) !== item.photoSetCount ||
+          normalizeFrameColour(manifest.frame_colour) !== item.frameColour || Number(manifest.photo_set_count) !== item.photoSetCount ||
           Number(manifest.photo_count) !== item.photoCount || photos.length !== item.photoCount
         ) throw new Error('One or more individual-photo manifests could not be verified');
         const storedPhotos = await Promise.all(photos.map(photo => env.ARTWORK_BUCKET.head(String(photo?.objectKey || ''))));

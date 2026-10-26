@@ -50,7 +50,7 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /\.catch\(\(error\) => failIndividualPhotoUpload\(entry, error\)\)/);
   assert.match(html, /Upload failed · Retry/);
   assert.match(html, /entry\?\.uploadState === \"complete\"/);
-  assert.match(html, /finalizeIndividualUploads\(uploadedImages, selections\.colour\)/);
+  assert.match(html, /finalizeIndividualUploads\(uploadedImages, FRAME_COLOUR\)/);
   assert.match(html, /photoFiles:uploadSession\.photos/);
   assert.doesNotMatch(html, /<script src=\"print-sheet\.js\"><\/script>/);
   assert.doesNotMatch(html, /GoodFramePrintSheet/);
@@ -62,8 +62,10 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /selectedFiles\.slice\(0, targetSlots\.length\)/);
   assert.match(html, /function appendPhotoSet\(setIndex\)/);
   assert.match(html, /function preserveScrollDuringLayoutChange/);
-  assert.match(html, /id=\"product-name\">Frame &amp; Photos</);
-  assert.match(html, /<h2 class=\"palette-title\">FRAME COLOUR<\/h2>/);
+  assert.match(html, /id=\"product-name\">Natural Oak Frame &amp; Photos</);
+  assert.match(html, /const FRAME_COLOUR = \"Natural Oak\";/);
+  assert.match(html, /frameColour:FRAME_COLOUR,/);
+  assert.doesNotMatch(html, /swatch-button|data-colour/);
   assert.match(html, /"price": "50\.00"/);
   assert.match(html, /const BASE_FRAME_PRICE = 50;/);
   assert.match(html, /const PHOTO_SET_PRICE = 5;/);
@@ -71,7 +73,7 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /id=\"config-price\">50\.00</);
   assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$5</);
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
-  assert.match(html, /\.configurator\.is-open \{ height:auto; max-height:none;[^}]*overflow:visible/);
+  assert.match(html, /\.configurator \{ width:min\(60%,350px\); height:auto; max-height:none;/);
   assert.match(html, /hero-dscf1744-effect-landscape-2560\.webp/);
   assert.match(html, /hero-dscf1744-effect-portrait-960\.webp/);
   assert.match(html, /Upload Photos/);
@@ -116,7 +118,7 @@ test('stale and malformed upload credentials return recoverable authentication c
     cartItemId,
     selectionVersion:0,
     photoSetCount:1,
-    frameColour:'Oak',
+    frameColour:'Natural Oak',
     selection:[null, null, null]
   });
   const staleResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
@@ -342,7 +344,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       cartItemId,
       selectionVersion:0,
       photoSetCount:1,
-      frameColour:'Oak',
+      frameColour:'Natural Oak',
       selection
     })
   }), env);
@@ -394,7 +396,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       cartItemId,
       selectionVersion:1,
       photoSetCount:1,
-      frameColour:'Oak',
+      frameColour:'Natural Oak',
       selection:reorderedSelection
     })
   }), env);
@@ -407,7 +409,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       cartItemId,
       selectionVersion:2,
       photoSetCount:1,
-      frameColour:'Oak',
+      frameColour:'Natural Oak',
       selection
     })
   }), env);
@@ -419,7 +421,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     body:JSON.stringify({
       uploadSessionId,
       cartItemId,
-      frameColour:'Oak',
+      frameColour:'Natural Oak',
       photoSetCount:1
     })
   }), env);
@@ -450,7 +452,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
           productType:'tiny_frame_photo_sets',
           cartItemId,
           size:'80x80mm',
-          frameColour:'Oak',
+          frameColour:'Natural Oak',
           photoSetCount:1,
           photoCount:3,
           quantity:1,
@@ -545,7 +547,7 @@ test('a replaced photo cannot become active when its in-flight upload finishes l
         cartItemId,
         selectionVersion,
         photoSetCount:1,
-        frameColour:'Oak',
+        frameColour:'Natural Oak',
         selection:[photo, null, null]
       })
     }
@@ -585,7 +587,7 @@ test('a replaced photo cannot become active when its in-flight upload finishes l
       cartItemId,
       selectionVersion:2,
       photoSetCount:1,
-      frameColour:'Oak',
+      frameColour:'Natural Oak',
       selection:[null, null, null]
     })
   }), env);
@@ -623,7 +625,7 @@ test('individual photo sets are not capped at 100 sets or 300 photos', async () 
       cartItemId,
       selectionVersion:0,
       photoSetCount:101,
-      frameColour:'Oak',
+      frameColour:'Natural Oak',
       selection
     })
   }), { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:database, ALLOWED_ORIGINS:'https://goodframe.com.au' });
@@ -661,7 +663,7 @@ test('Stripe metadata chunks all upload sessions for large multi-product orders'
     unitAmount:5200,
     quantity:1,
     size:'',
-    frameColour:'Oak',
+    frameColour:'Natural Oak',
     photoSetCount:1,
     photoCount:3,
     uploadReference:`tf_${String(index + 1).padStart(32, '0')}`,
@@ -788,7 +790,7 @@ test('individual upload never reports success unless R2 confirms the stored obje
       cartItemId,
       selectionVersion:0,
       photoSetCount:1,
-      frameColour:'Oak',
+      frameColour:'Natural Oak',
       selection:[{ photoId, revision }, null, null]
     })
   }), env);
@@ -883,7 +885,7 @@ function frameOnly(overrides = {}) {
     productType: 'tiny_frame_only',
     cartItemId:'ci_11111111111111111111111111111111',
     size: '80x80mm',
-    frameColour: 'Oak',
+    frameColour: 'Natural Oak',
     quantity: 1,
     price: 1,
     ...overrides
@@ -895,7 +897,7 @@ function frameWithPictures(overrides = {}) {
     productType: 'tiny_frame_8_pictures',
     cartItemId:'ci_22222222222222222222222222222222',
     size: '80x80mm',
-    frameColour: 'Walnut',
+    frameColour: 'Legacy finish',
     quantity: 1,
     uploadReference,
     price: 1,
@@ -908,7 +910,7 @@ function frameWithPhotoSets(photoSetCount, overrides = {}) {
     productType:'tiny_frame_photo_sets',
     cartItemId:'ci_33333333333333333333333333333333',
     size:'80x80mm',
-    frameColour:'Oak',
+    frameColour:'Natural Oak',
     quantity:1,
     photoSetCount,
     photoCount:photoSetCount * 3,
@@ -980,16 +982,16 @@ test('Stripe payload contains safe Tiny Frame metadata and storefront return URL
   assert.equal(payload.get('line_items[0][price_data][product_data][name]'), 'Frame + Eight Photos');
   assert.equal(payload.has('line_items[0][price_data][product_data][description]'), false);
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_type]'), 'tiny_frame_8_pictures');
-  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][frame_colour]'), 'Walnut');
+  assert.equal(payload.get('line_items[0][price_data][product_data][metadata][frame_colour]'), 'Natural Oak');
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_reference]'), uploadReference);
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][upload_session_id]'), uploadReference);
   assert.equal(payload.get('line_items[0][price_data][product_data][metadata][product_code]'), '19472');
   assert.equal(payload.get('metadata[product_codes]'), '19472');
   assert.equal(payload.get('payment_intent_data[metadata][product_codes]'), '19472');
-  const productMap = `1:19472 | Walnut | Frame + Eight Photos | AUD 64.95 | 8 photos | Upload ${uploadReference}`;
+  const productMap = `1:19472 | Natural Oak | Frame + Eight Photos | AUD 64.95 | 8 photos | Upload ${uploadReference}`;
   assert.equal(payload.get('metadata[product_map]'), productMap);
   assert.equal(payload.get('payment_intent_data[metadata][product_map]'), productMap);
-  assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Walnut');
+  assert.equal(payload.get('payment_intent_data[metadata][frame_colours]'), 'Natural Oak');
   assert.equal(payload.get('payment_intent_data[description]'), 'Good Frame Order');
   assert.equal(payload.get('metadata[upload_references]'), uploadReference);
   assert.equal(payload.get('metadata[upload_session_ids]'), uploadReference);

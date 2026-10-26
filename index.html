@@ -194,12 +194,12 @@
     @font-face { font-family:"Goudy Bookletter 1911"; src:url("Assets/GoudyBookletter1911-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     @font-face { font-family:"Chunky Upload Plus"; src:url("Girthquake-Regular.ttf") format("truetype"); font-style:normal; font-weight:400; font-display:swap; }
     /* Contrast: Espresso on Cream is 12.72:1 (AAA). Burnt Terracotta is reserved for underlines, hover details and active indicators. */
-    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --walnut:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-heading:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-display:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-body:"Item Text Wide Light", "Goudy Bookletter 1911", Arial, sans-serif; --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
+    :root { --color-background:#FFF7E2; --color-primary-text:#3C2A21; --color-accent:#B66D4D; --warm-beige:var(--color-background); --dark-espresso:var(--color-primary-text); --cream:var(--color-background); --secondary-cream:var(--color-background); --brown:var(--color-primary-text); --espresso:var(--color-primary-text); --oak:#d8b589; --muted:rgba(60,42,33,.72); --light:var(--color-background); --divider:rgba(60,42,33,.28); --line:rgba(60,42,33,.32); --page-gradient:var(--color-background); --header-background:var(--color-background); --announcement-background:var(--color-primary-text); --header-foreground:var(--color-primary-text); --announcement-foreground:var(--color-background); --accent:var(--color-accent); --font-heading:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-display:"Good Frame Handmade Smooth", "Goudy Bookletter 1911", Arial, Helvetica, sans-serif; --font-body:"Item Text Wide Light", "Goudy Bookletter 1911", Arial, sans-serif; --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; scroll-padding-top:var(--header-height); font-family:var(--font-body); }
     body { margin:0; background:var(--page-gradient); color:var(--brown); font-family:var(--font-body); font-weight:500; letter-spacing:.02em; }
     button, input, select, textarea { font-family:inherit; }
-    .hero-intro-title, .hero-intro-title-mobile, .palette-title, .configurator-heading, .showcase-heading, .cart-dialog-title, .cart-item-title, .faq-title, .faq-list summary, .footer-kicker { font-family:var(--font-heading); font-synthesis:none; font-weight:400; }
+    .hero-intro-title, .hero-intro-title-mobile, .configurator-heading, .showcase-heading, .cart-dialog-title, .cart-item-title, .faq-title, .faq-list summary, .footer-kicker { font-family:var(--font-heading); font-synthesis:none; font-weight:400; }
     .option-label, .header-left-nav a, .navigation a, .cart-action { font-family:var(--font-display); }
     .hero-upload-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
     .showcase-gallery { display:none; }
@@ -238,20 +238,7 @@
     .hero-intro-link:hover .hero-intro-arrow { transform:translateX(4px); }
     .palette-spread { display:flex; flex-direction:column; min-height:0; border:1px solid var(--line); }
     .palette-panel { display:flex; flex-direction:column; justify-content:center; align-items:center; min-width:0; padding:6vw; background:var(--page-gradient); }
-    .palette { width:min(60%,350px); min-width:232px; transform:translateY(-1.5vh); }
-    .palette-heading-row { position:relative; margin-bottom:22px; text-align:center; }
-    .palette-title { margin:0; font-size:16px; letter-spacing:.06em; line-height:1.15; text-align:center; }
-    .swatches { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:14px; row-gap:18px; }
-    .swatch { min-width:0; text-align:center; }
-    .swatch-button { display:block; width:100%; padding:0; border:0; background:none; color:inherit; font:inherit; cursor:pointer; }
-    .swatch-colour { display:block; aspect-ratio:1; width:100%; }
-    .swatch-colour--oak { background:#D8B589; }
-    .swatch-colour--walnut { background:#3B2922; }
-    .swatch-button:focus-visible { outline:1px solid var(--brown); outline-offset:5px; }
-    .swatch.is-selected .swatch-colour { outline:1px solid var(--brown); outline-offset:4px; }
-    .swatch-label { display:block; margin-top:9px; color:var(--muted); font-size:10px; font-weight:500; letter-spacing:.1em; line-height:1.2; text-transform:uppercase; }
-    .configurator { width:min(60%,350px); max-height:0; margin-top:0; overflow:hidden; opacity:0; transform:translateY(12px); transition:max-height 260ms ease, margin-top 260ms ease, opacity 220ms ease, transform 260ms ease; }
-    .configurator.is-open { height:auto; max-height:none; margin-top:56px; overflow:visible; opacity:1; transform:none; }
+    .configurator { width:min(60%,350px); height:auto; max-height:none; margin-top:0; overflow:visible; opacity:1; transform:none; }
     .configurator-heading { margin:0 0 14px; font-size:13px; letter-spacing:.07em; line-height:1.15; text-transform:uppercase; }
     .product-name { margin:0; padding:0 0 24px; border-bottom:1px solid var(--divider); font-family:var(--font-display); font-size:12px; letter-spacing:.06em; line-height:1.2; text-align:center; text-transform:uppercase; }
     .option-row { border-top:1px solid var(--divider); }
@@ -355,12 +342,7 @@
       .palette-spread { display:flex; flex-direction:column; flex:none; width:100%; height:auto; min-height:0; overflow:visible; }
       .site-footer { display:block; }
       .palette-panel { display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:visible; }
-      .palette { position:static; width:min(50%,330px); transform:none; transition:transform 420ms cubic-bezier(.2,.7,.2,1); }
-      .palette-panel.has-selection .palette { transform:none; }
-      .palette-heading-row { margin-bottom:20px; }
-      .palette-title { margin-bottom:0; }
-      .configurator { position:static; width:min(86%,672px); margin:0; transform:translateY(12px); }
-      .configurator.is-open { margin-top:44px; transform:none; }
+      .configurator { position:static; width:min(86%,672px); margin:0; transform:none; }
       .configurator-heading { margin-bottom:10px; }
       .option-row[data-option="order"] .option-label { padding:10px 0 10px; }
       .option-row[data-option="order"] .option-choices { height:62px; }
@@ -370,10 +352,8 @@
       .purchase-row { margin-top:8px; padding-top:4px; }
     }
     @media (min-width:1101px) {
-      .palette { transform:scale(1.2); transform-origin:center center; }
-      .palette-panel.has-selection .palette { transform:scale(1.2); }
     }
-    .site-footer { padding:40px 7.4% 22px; background:var(--walnut); color:var(--light); font-family:var(--font-body); }
+    .site-footer { padding:40px 7.4% 22px; background:var(--espresso); color:var(--light); font-family:var(--font-body); }
     .footer-grid { display:grid; grid-template-columns:1fr 1fr; align-items:start; gap:10%; max-width:1100px; margin:0 auto; }
     .footer-brand-block { display:block; }
     .footer-brand { margin:0 0 12px; font-family:var(--font-heading); font-size:clamp(24px,2.2vw,32px); font-weight:400; letter-spacing:.06em; line-height:1; }
@@ -589,11 +569,7 @@
       .hero-upload-cta:hover { background:var(--light); color:var(--brown); }
       .palette-spread { grid-template-columns:1fr; height:auto; min-height:0; overflow-x:clip; overflow-y:visible; }
       .palette-panel { overflow:visible; }
-      .palette { width:100%; max-width:340px; min-width:0; transform:scale(.95); transform-origin:center top; }
-      .palette-heading-row { gap:12px; }
-      .swatches { column-gap:10px; }
-      .configurator { width:95%; max-width:95%; transform:translateY(12px); }
-      .configurator.is-open { height:auto; max-height:none; margin-top:48px; overflow:visible; transform:none; }
+      .configurator { width:95%; max-width:95%; transform:none; }
       .option-row[data-option="order"] .option-choices { gap:8px clamp(32px,8vw,64px); height:92px; }
       .choice { min-height:44px; font-size:11px; }
       .upload-section { width:100%; margin-right:auto; margin-left:auto; padding:20px 0 12px; }
@@ -646,7 +622,7 @@
       .mobile-graphic-281 { top:auto; right:4%; bottom:40px; left:auto; width:34px; }
     }
     @media (min-width:1101px) {
-      .brand-statement-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:center; width:100%; min-height:96px; padding:24px 7%; background:var(--walnut); color:var(--light); }
+      .brand-statement-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:center; width:100%; min-height:96px; padding:24px 7%; background:var(--espresso); color:var(--light); }
       .brand-statement { margin:0; padding:0 20px; font-family:var(--font-display); font-size:clamp(11px,.9vw,14px); font-weight:400; letter-spacing:.035em; line-height:1.35; text-align:center; }
     }
     @media (min-width:1101px) and (max-width:1400px) {
@@ -665,7 +641,7 @@
       .header > #cart-link { position:relative; right:auto; display:inline-flex; }
       .cart-icon { width:clamp(24px,3vw,26px); height:clamp(24px,3vw,26px); }
       .cart-count { top:-7px; right:-9px; min-width:15px; height:15px; font-size:8px; }
-      .brand-statement-strip { display:block; width:100%; height:54px; min-height:54px; padding:0; overflow:hidden; background:var(--walnut); color:var(--light); }
+      .brand-statement-strip { display:block; width:100%; height:54px; min-height:54px; padding:0; overflow:hidden; background:var(--espresso); color:var(--light); }
       .brand-statement { display:none; }
       .brand-statement-marquee { display:flex; align-items:center; width:100%; height:54px; overflow:hidden; white-space:nowrap; }
       .brand-statement-track { display:flex; flex:none; align-items:center; width:max-content; animation:brand-statement-scroll 32s linear infinite; }
@@ -735,8 +711,6 @@
     a:focus-visible, button:focus-visible { outline-color:var(--brown); }
     .header a:hover { color:var(--brown); opacity:1; text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; }
     .hero-intro-link:hover, .reset-images-button:hover { color:var(--brown); }
-    .swatch-button:focus-visible { outline-color:var(--brown); }
-    .swatch.is-selected .swatch-colour { outline:1px solid var(--brown); outline-offset:4px; box-shadow:none; }
     .choice:hover, .choice.is-selected { color:var(--brown); text-decoration-color:var(--accent); }
     .purchase-button #purchase-label::after { background:var(--accent); }
     .purchase-button:not(:disabled) { background:transparent; color:var(--brown); box-shadow:none; }
@@ -750,9 +724,6 @@
       .announcement-bar { font-size:clamp(13px,3.85vw,15px); font-weight:600; letter-spacing:.06em; }
       .header-faq-link { font-size:18px; font-weight:500; letter-spacing:.065em; }
 
-      .palette-title { color:var(--brown); font-size:18px; line-height:1.25; }
-      .swatch-label { margin-top:12px; color:var(--brown); font-size:14px; font-weight:600; letter-spacing:.075em; line-height:1.35; }
-      .swatch:not(.is-selected) .swatch-label { color:rgba(60,42,33,.78); font-weight:500; }
       .configurator-heading { color:var(--brown); font-size:16px; line-height:1.3; }
       .product-name { color:var(--brown); font-size:clamp(15px,3.8vw,16px); line-height:1.25; }
       .option-label, .option-value { color:var(--brown); font-size:14px; font-weight:500; line-height:1.4; }
@@ -855,7 +826,7 @@
     <nav class="header-left-nav" aria-label="Primary navigation">
       <a class="header-faq-link" href="#faq-dialog" aria-label="Open FAQ" aria-haspopup="dialog">FAQ</a>
       <a href="#showcase-gallery">Gallery</a>
-      <a href="#colour-palette">Begin Framing</a>
+      <a href="#frame-configurator">Begin Framing</a>
     </nav>
     <div class="header-brand">Good Frame</div>
     <a href="/cart" id="cart-link" aria-label="Open cart, 0 items" aria-haspopup="dialog">
@@ -875,24 +846,17 @@
     <div class="hero-intro">
       <h2 class="hero-intro-title hero-intro-title-desktop">Some memories deserve a home.</h2>
       <p class="hero-intro-copy hero-intro-copy-desktop">An 80 × 80 mm solid timber frame designed to hold the photos you actually want around you.</p>
-      <a class="hero-intro-link hero-intro-link-desktop" href="#colour-palette">Create your frame <span class="hero-intro-arrow" aria-hidden="true">→</span></a>
+      <a class="hero-intro-link hero-intro-link-desktop" href="#frame-configurator">Create your frame <span class="hero-intro-arrow" aria-hidden="true">→</span></a>
       <h2 class="hero-intro-title-mobile">Some memories deserve a home.</h2>
       <a class="hero-upload-cta" href="#upload-section">Upload Photos</a>
       <p class="hero-intro-copy-mobile">An 80 × 80 mm solid timber frame for your favourite pictures.</p>
     </div>
   </main>
 
-  <section class="palette-spread" id="colour-palette" aria-label="Editorial colour palette and frame configurator">
+  <section class="palette-spread" id="frame-configurator" aria-label="Frame configurator">
     <div class="palette-panel">
-      <div class="palette">
-        <div class="palette-heading-row"><h2 class="palette-title">FRAME COLOUR</h2></div>
-        <div class="swatches">
-          <div class="swatch is-selected"><button class="swatch-button" type="button" data-colour="Oak" aria-pressed="true"><span class="swatch-colour swatch-colour--oak"></span><span class="swatch-label">Oak</span></button></div>
-          <div class="swatch"><button class="swatch-button" type="button" data-colour="Walnut" aria-pressed="false"><span class="swatch-colour swatch-colour--walnut"></span><span class="swatch-label">Walnut</span></button></div>
-        </div>
-      </div>
-      <div class="configurator" id="configurator" aria-hidden="true">
-        <p class="product-name" id="product-name">Frame &amp; Photos</p>
+      <div class="configurator" id="configurator" aria-hidden="false">
+        <p class="product-name" id="product-name">Natural Oak Frame &amp; Photos</p>
         <div class="upload-section" id="upload-section" aria-hidden="false">
           <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress" role="status" aria-live="polite">0 / 3 Added</span></p>
           <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
@@ -1230,7 +1194,6 @@
       photos.forEach((photo) => photo.querySelector("img").addEventListener("load", measure));
       measure();
     });
-    const swatchButtons = [...document.querySelectorAll(".swatch-button")];
     const frameAspectRatio = 54 / 86;
     const CROP_SOURCE_MAX_DIMENSION = 4096;
     const PRINT_JPEG_QUALITY = .98;
@@ -1266,23 +1229,8 @@
       if (item?.productType === LEGACY_PRODUCT_ID || normalizeOrderType(order) === "legacy-eight-photos") return LEGACY_PRODUCT_ID;
       return normalizeOrderType(order) === "photo-sets" ? VARIABLE_PRODUCT_ID : "";
     }
-    const selections = { colour: "Oak", order: "Frame + 3 Photos" };
-
-    function selectColour(colour, reveal = true) {
-      selections.colour = colour;
-      swatchButtons.forEach((button) => {
-        const selected = button.dataset.colour === colour;
-        button.closest(".swatch").classList.toggle("is-selected", selected);
-        button.setAttribute("aria-pressed", selected);
-      });
-      if (reveal) {
-        configurator.closest(".palette-panel").classList.add("has-selection");
-        configurator.classList.add("is-open");
-        configurator.setAttribute("aria-hidden", "false");
-      }
-    }
-
-    swatchButtons.forEach((button) => button.addEventListener("click", () => selectColour(button.dataset.colour)));
+    const FRAME_COLOUR = "Natural Oak";
+    const selections = { order: "Frame + 3 Photos" };
     const overlay = document.getElementById("cropperOverlay");
     const cropImage = document.getElementById("cropperImage");
     const uploadedImages = Array(3).fill(null);
@@ -2025,7 +1973,6 @@
     });
     renderPhotoSets();
     updateUploadProgress();
-    selectColour("Oak", true);
     configurator.closest(".palette-panel").classList.add("has-pictures");
 
     const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
@@ -2062,12 +2009,19 @@
           if (!keep) cartIdentityWasMigrated = true;
           return keep;
         }).slice(0, 10).map((item) => {
+          if (item?.colour !== FRAME_COLOUR || item?.frameColour !== FRAME_COLOUR) cartIdentityWasMigrated = true;
           const currentPrice = productPriceFor(item);
           const cartItemId = /^ci_[a-f0-9]{32}$/.test(String(item?.cartItemId || ""))
             ? item.cartItemId
             : createCartItemId();
           if (cartItemId !== item?.cartItemId) cartIdentityWasMigrated = true;
-          return { ...item, cartItemId, ...(currentPrice === null ? {} : { price:currentPrice }) };
+          return {
+            ...item,
+            cartItemId,
+            colour:FRAME_COLOUR,
+            frameColour:FRAME_COLOUR,
+            ...(currentPrice === null ? {} : { price:currentPrice })
+          };
         }) : [];
       } catch {
         return [];
@@ -2911,7 +2865,7 @@
         const fingerprint = JSON.stringify({
           selection,
           photoSetCount,
-          frameColour:selections.colour.toLowerCase()
+          frameColour:FRAME_COLOUR.toLowerCase()
         });
         const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/selection`, {
           method:"POST",
@@ -2924,7 +2878,7 @@
             cartItemId:session.cartItemId,
             selectionVersion:session.selectionVersion,
             photoSetCount,
-            frameColour:selections.colour,
+            frameColour:FRAME_COLOUR,
             selection
           })
         });
@@ -2947,7 +2901,7 @@
         const currentFingerprint = JSON.stringify({
           selection:uploadedImages.map((entry) => entry ? { photoId:entry.photoId, revision:entry.revision } : null),
           photoSetCount,
-          frameColour:selections.colour.toLowerCase()
+          frameColour:FRAME_COLOUR.toLowerCase()
         });
         if (fingerprint === currentFingerprint) {
           schedulePersistDraftUploads();
@@ -3272,7 +3226,7 @@
               productType:productIdFor(item),
               cartItemId:item.cartItemId,
               size:"80x80mm",
-              frameColour:item.colour,
+              frameColour:FRAME_COLOUR,
               quantity:Number.isInteger(item.quantity) ? item.quantity : 1,
               photoSetCount:photoSetCountFor(item),
               photoCount:Number(item.photoCount || (normalizeOrderType(item.order) === "legacy-eight-photos" ? 8 : photoSetCountFor(item) * 3)),
@@ -3321,7 +3275,7 @@
         details.className = "cart-item-details";
         const title = document.createElement("h3");
         title.className = "cart-item-title";
-        title.textContent = `${item.colour} · ${itemName}`;
+        title.textContent = `${FRAME_COLOUR} · ${itemName}`;
         const titleRow = document.createElement("div");
         titleRow.className = "cart-item-title-row";
         titleRow.append(title);
@@ -3329,7 +3283,7 @@
           const previewButton = document.createElement("button");
           previewButton.className = "cart-photo-preview-button";
           previewButton.type = "button";
-          previewButton.setAttribute("aria-label", `Preview ${itemPhotoCount} photos for ${item.colour} frame`);
+          previewButton.setAttribute("aria-label", `Preview ${itemPhotoCount} photos for ${FRAME_COLOUR} frame`);
           previewButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.2-4 3 2.7 2.2-2 3.6 3.3"/></svg>';
           previewButton.addEventListener("click", () => { void openCartPhotoPreview(item, previewButton); });
           titleRow.append(previewButton);
@@ -3352,7 +3306,7 @@
         remove.className = "cart-item-remove";
         remove.type = "button";
         remove.textContent = "Remove";
-        remove.setAttribute("aria-label", `Remove ${item.colour} Frame`);
+        remove.setAttribute("aria-label", `Remove ${FRAME_COLOUR} Frame`);
         remove.addEventListener("click", () => {
           cartNotice = "";
           hideShippingConfirmation();
@@ -3457,7 +3411,7 @@
         let cartItemId = createCartItemId();
         let productCode = "";
         if (withPictures) {
-          uploadSession = await finalizeIndividualUploads(uploadedImages, selections.colour);
+          uploadSession = await finalizeIndividualUploads(uploadedImages, FRAME_COLOUR);
           await saveCartPhotoPreviews(uploadSession.cartItemId, uploadedImages);
           cartItemId = uploadSession.cartItemId;
         }
@@ -3465,12 +3419,12 @@
           id:Date.now(),
           cartItemId,
           productCode,
-          colour:selections.colour,
+          colour:FRAME_COLOUR,
           order:selections.order,
           price:getConfiguredPrice(),
           quantity:1,
           productType:VARIABLE_PRODUCT_ID,
-          frameColour:selections.colour.toLowerCase(),
+          frameColour:FRAME_COLOUR,
           photoSetCount:configuredPhotoSetCount,
           photoCount:configuredPhotoCount,
           ...(uploadSession ? {

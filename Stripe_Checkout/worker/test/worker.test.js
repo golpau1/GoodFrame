@@ -66,7 +66,7 @@ function fakeJpeg(width = 1080, height = 1720) {
   ]);
 }
 
-async function seedPictureUpload(bucket, uploadReference, cartItemId, frameColour = 'Oak') {
+async function seedPictureUpload(bucket, uploadReference, cartItemId, frameColour = 'Natural Oak') {
   const photos = [];
   for (let index = 1; index <= 8; index += 1) {
     const photoId = `ph_${index.toString(16).padStart(32, '0')}`;
@@ -105,7 +105,7 @@ function pictureCheckoutRequest({
   cartItemId,
   uploadReference,
   shippingCountry = 'AU',
-  frameColour = 'Oak',
+  frameColour = 'Natural Oak',
   quantity = 1
 }) {
   return new Request('https://worker.example/create-checkout-session', {
@@ -384,7 +384,7 @@ test('Australian photo checkout charges $64.95 plus one $10 shipping option for 
         productType: 'tiny_frame_8_pictures',
         cartItemId,
         size: '80x80mm',
-        frameColour: 'Oak',
+        frameColour: 'Natural Oak',
         quantity: 1,
         uploadReference
       }] })
@@ -440,7 +440,7 @@ test('Frame Only checkout is rejected before contacting Stripe', async () => {
         productType: 'tiny-frame',
         cartItemId:'ci_00000000000000000000000000000003',
         size: '80x80mm',
-        frameColor: 'Walnut',
+        frameColor: 'Legacy finish',
         orderType: 'Frame Only',
         quantity: 1,
         artworkObjectKeys: []
@@ -484,7 +484,7 @@ test('quantity creates one unique five-digit code per physical frame and retries
         productType:'tiny_frame_8_pictures',
         cartItemId,
         size:'80x80mm',
-        frameColour:'Oak',
+        frameColour:'Natural Oak',
         quantity:3,
         uploadReference
       }]
@@ -513,7 +513,7 @@ test('quantity creates one unique five-digit code per physical frame and retries
     ), Number(stripeBody.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'))), 20485);
     const paymentProductMap = stripeBody.get('payment_intent_data[metadata][product_map]');
     firstResult.productCodes.forEach((code, index) => {
-      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Oak \\| Frame \\+ Eight Photos \\| AUD 64\\.95`));
+      assert.match(paymentProductMap, new RegExp(`${index + 1}:${code} \\| Natural Oak \\| Frame \\+ Eight Photos \\| AUD 64\\.95`));
     });
 
     const retry = await worker.fetch(makeRequest(), testEnv);
@@ -888,7 +888,7 @@ test('authorized order management can find the Stripe relationship by product co
     const bucket = new MemoryBucket();
     const uploadReference = 'tf_00000000000000000000000000000007';
     const cartItemId = 'ci_00000000000000000000000000000007';
-    await seedPictureUpload(bucket, uploadReference, cartItemId, 'Walnut');
+    await seedPictureUpload(bucket, uploadReference, cartItemId, 'Legacy finish');
     const testEnv = { ...env(bucket), ADMIN_API_KEY:'local-admin-key-at-least-24-characters' };
     const checkout = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method:'POST',
@@ -899,7 +899,7 @@ test('authorized order management can find the Stripe relationship by product co
           productType:'tiny_frame_8_pictures',
           cartItemId,
           size:'80x80mm',
-          frameColour:'Walnut',
+          frameColour:'Legacy finish',
           quantity:1,
           uploadReference
         }]
@@ -920,7 +920,7 @@ test('authorized order management can find the Stripe relationship by product co
     assert.equal(record.productCode, productCode);
     assert.equal(record.stripeCheckoutSessionId, 'cs_test_searchable1');
     assert.equal(record.productType, 'tiny_frame_8_pictures');
-    assert.equal(record.frameColour, 'Walnut');
+    assert.equal(record.frameColour, 'Natural Oak');
     assert.equal(record.unitAmount, 6495);
     assert.equal(record.currency, 'aud');
     const capacity = await worker.fetch(new Request(
@@ -964,7 +964,7 @@ test('live webhook retries preserve one product and attach the PaymentIntent', a
           productType:'tiny_frame_8_pictures',
           cartItemId,
           size:'80x80mm',
-          frameColour:'Oak',
+          frameColour:'Natural Oak',
           quantity:1,
           uploadReference
         }]
@@ -1029,11 +1029,11 @@ test('checkout adds one $10 shipping option for multiple Tiny Frames', async () 
     const firstCartItemId = 'ci_00000000000000000000000000000004';
     const secondCartItemId = 'ci_00000000000000000000000000000005';
     await seedPictureUpload(bucket, firstUploadReference, firstCartItemId);
-    await seedPictureUpload(bucket, secondUploadReference, secondCartItemId, 'Walnut');
+    await seedPictureUpload(bucket, secondUploadReference, secondCartItemId, 'Legacy finish');
     const testEnv = env(bucket);
     const items = [
-      { productType:'tiny_frame_8_pictures', cartItemId:firstCartItemId, size:'80x80mm', frameColour:'Oak', quantity:1, uploadReference:firstUploadReference },
-      { productType:'tiny_frame_8_pictures', cartItemId:secondCartItemId, size:'80x80mm', frameColour:'Walnut', quantity:1, uploadReference:secondUploadReference }
+      { productType:'tiny_frame_8_pictures', cartItemId:firstCartItemId, size:'80x80mm', frameColour:'Natural Oak', quantity:1, uploadReference:firstUploadReference },
+      { productType:'tiny_frame_8_pictures', cartItemId:secondCartItemId, size:'80x80mm', frameColour:'Legacy finish', quantity:1, uploadReference:secondUploadReference }
     ];
     const response = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method: 'POST',
