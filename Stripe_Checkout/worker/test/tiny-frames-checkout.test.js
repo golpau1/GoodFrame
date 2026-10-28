@@ -29,6 +29,12 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /\/tiny-frame-upload\/session/);
   assert.match(html, /\/tiny-frame-upload\/photo/);
   assert.match(html, /\/tiny-frame-upload\/finalize/);
+  assert.ok(html.includes('\\d{4}-\\d{2}-\\d{2} - (?:0[1-9]|1[0-2])\\.[0-5]\\d (?:AM|PM) - [1-9]\\d{4}'));
+  assert.match(html, /const storageFolder = session\?\.storageFolder \|\| session\?\.productCode \|\| session\?\.uploadSessionId/);
+  assert.doesNotMatch(html, /session\.productCode \|\| session\.storageFolder/);
+  assert.match(html, /async function recoverIndividualPhotoFromStatus\(session, entry, position\)/);
+  assert.match(html, /if \(await recoverIndividualPhotoFromStatus\(session, entry, position\)\) return;/);
+  assert.match(html, /\["finalized", "checkout_pending", "paid"\]\.includes\(status\?\.status\)/);
   assert.match(html, /uploadState:\"processing\"/);
   assert.match(html, /PHOTO_UPLOAD_REQUEST_TIMEOUT_MS/);
   assert.match(html, /fetchWithUploadTimeout/);
@@ -355,6 +361,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     })
   }), env);
   assert.equal(selectionResponse.status, 200);
+  const uploadRequests = [];
   for (let index = 0; index < 3; index += 1) {
     const { photoId, revision } = selection[index];
     const form = new FormData();
@@ -363,9 +370,14 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     form.append('revision', revision);
     form.append('position', String(index + 1));
     form.append('file', new File([fakeJpeg()], `${photoId}.jpg`, { type:'image/jpeg' }));
-    const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
+    uploadRequests.push(worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
       method:'POST', headers, body:form
-    }), env);
+    }), env));
+  }
+  const uploadResponses = await Promise.all(uploadRequests);
+  for (let index = 0; index < uploadResponses.length; index += 1) {
+    const response = uploadResponses[index];
+    const { revision } = selection[index];
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://goodframe.com.au');
     photos.push((await response.json()).photo);

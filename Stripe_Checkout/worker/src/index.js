@@ -752,6 +752,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
       result:details.result
     });
   };
+  let uploadStage = 'request-validation';
   if (!env.ARTWORK_BUCKET || !env.IMAGES) {
     return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
   }
@@ -775,6 +776,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
     return jsonResponse(request, env, { error:'Each cropped photo must be 20 MB or smaller' }, 413);
   }
   try {
+    uploadStage = 'session-authentication';
     const { sessionRecord, storageFolder } = await requireIndividualUploadSession(request, env, uploadSessionId);
     await enforceIndividualUploadRateLimit(env, `${request.headers.get('CF-Connecting-IP') || 'unknown'}:${uploadSessionId}`);
     if (sessionRecord) {
@@ -833,6 +835,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
       if (productCode && existing && !existing.httpEtag) {
         throw new Error('The existing product photo could not be safely replaced');
       }
+      uploadStage = 'image-validation';
       const bytes = await file.arrayBuffer();
       const info = await env.IMAGES.info(bytes);
       const width = Number(info?.width);
@@ -844,6 +847,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
         throw new TinyFrameInputError('The cropped photo does not match the 54 × 86 mm print ratio');
       }
       const createdAt = new Date().toISOString();
+      uploadStage = 'r2-write';
       const stored = await env.ARTWORK_BUCKET.put(objectKey, bytes, {
         httpMetadata:{ contentType:'image/jpeg' },
         customMetadata:{
@@ -876,6 +880,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
           }, 409);
         }
       }
+      uploadStage = 'r2-verification';
       const confirmed = await env.ARTWORK_BUCKET.head(objectKey);
       if (
         !confirmed || Number(confirmed.size || 0) !== file.size ||
@@ -891,6 +896,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
           photoId
         });
       }
+      uploadStage = 'd1-selection-confirmation';
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const current = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
         const currentSelection = photoUploadSelection(current);
@@ -997,7 +1003,7 @@ async function uploadIndividualTinyFramePhoto(request, env) {
     logUploadDiagnostic({
       uploadSessionId,
       photoId,
-      stage:'r2-upload',
+      stage:uploadStage,
       status,
       code:error instanceof TinyFrameInputError ? 'INVALID_PHOTO_UPLOAD' : 'PHOTO_UPLOAD_FAILED',
       result:'failed'
@@ -1047,6 +1053,7 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
     !uploadSessionId || !cartItemId || !frameColour || !photoSetCount ||
     !Number.isSafeInteger(expectedPhotoCount)
   ) return jsonResponse(request, env, { error:'Every selected photo set must contain three uploaded photos' }, 400);
+  let finalizeStage = 'session-authentication';
   try {
     const { manifestKey, manifest, sessionRecord, storageFolder } = await requireIndividualUploadSession(request, env, uploadSessionId);
     if (sessionRecord) {
@@ -1059,6 +1066,7 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
           snapshot.photos.length !== expectedPhotoCount
         ) throw new TinyFrameInputError('This photo selection has already been finalized');
       } else {
+        finalizeStage = 'selection-verification';
         if (sessionRecord.status !== 'draft') throw new TinyFrameInputError('This photo selection is no longer editable');
         const selection = photoUploadSelection(sessionRecord);
         if (
@@ -1070,6 +1078,7 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
             !isValidIndividualPhotoKey(photo.object_key, uploadSessionId, storageFolder)
           )
         ) throw new TinyFrameInputError('Every selected photo must finish uploading before checkout');
+        finalizeStage = 'r2-verification';
         const stored = await Promise.all(selection.map(photo => env.ARTWORK_BUCKET.head(photo.object_key)));
         if (stored.some((object, index) =>
           !object ||
@@ -1096,6 +1105,7 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
           })),
           finalized_at:new Date().toISOString()
         };
+        finalizeStage = 'd1-finalization';
         const updated = await env.PRODUCT_CODES_DB.prepare(
           `UPDATE photo_upload_sessions
               SET status = 'finalized',
@@ -1131,6 +1141,7 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
         status:'finalized',
         updated_at:snapshot.finalized_at
       };
+      finalizeStage = 'manifest-write';
       await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(finalizedManifest), {
         httpMetadata:{ contentType:'application/json' }
       });
@@ -1176,7 +1187,17 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
     await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify(finalized), { httpMetadata:{ contentType:'application/json' } });
     return jsonResponse(request, env, { success:true, uploadSessionId, cartItemId, photoCount:expectedPhotoCount });
   } catch (error) {
-    return jsonResponse(request, env, { error:error.message || 'Photo upload could not be finalized' }, error instanceof TinyFrameInputError ? 400 : 500);
+    const status = error instanceof TinyFrameInputError ? 400 : 500;
+    console.error('Photo upload finalization failed', {
+      sessionId:uploadSessionId || 'invalid',
+      stage:finalizeStage,
+      status,
+      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_FINALIZATION' : 'UPLOAD_FINALIZATION_FAILED'
+    });
+    return jsonResponse(request, env, {
+      error:error.message || 'Photo upload could not be finalized',
+      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_FINALIZATION' : 'UPLOAD_FINALIZATION_FAILED'
+    }, status);
   }
 }
 
@@ -1235,7 +1256,17 @@ async function getIndividualTinyFrameUploadStatus(request, env) {
         : (Array.isArray(manifest.photos) ? manifest.photos : []).map(({ photo_id, objectKey, position, revision }) => ({ photoId:photo_id, objectKey, position, revision }))
     });
   } catch (error) {
-    return jsonResponse(request, env, { error:error.message || 'Upload session could not be read' }, error instanceof TinyFrameInputError ? 400 : 500);
+    const status = error instanceof TinyFrameInputError ? 400 : 500;
+    console.error('Photo upload status check failed', {
+      sessionId:uploadSessionId || 'invalid',
+      stage:'status-read',
+      status,
+      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_STATUS' : 'UPLOAD_STATUS_FAILED'
+    });
+    return jsonResponse(request, env, {
+      error:error.message || 'Upload session could not be read',
+      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_STATUS' : 'UPLOAD_STATUS_FAILED'
+    }, status);
   }
 }
 

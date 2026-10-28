@@ -2897,7 +2897,7 @@
               ? result.productCode
               : "";
             session.storageFolder = typeof result.storageFolder === "string" &&
-              /^(?:[1-9]\d{4}|\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?|\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|tf_[a-f0-9]{32})$/.test(result.storageFolder)
+              /^(?:\d{4}-\d{2}-\d{2} - (?:0[1-9]|1[0-2])\.[0-5]\d (?:AM|PM) - [1-9]\d{4}|[1-9]\d{4}|\d{2}-\d{2}-\d{4}_(?:[1-9]|1[0-2])-\d{2}(?:AM|PM)(?:-[a-f0-9]{4})?|\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[a-f0-9]{4}|tf_[a-f0-9]{32})$/.test(result.storageFolder)
               ? result.storageFolder
               : session.uploadSessionId;
             individualUploadSession = session;
@@ -3076,6 +3076,59 @@
         failIndividualPhotoUpload(entry, error);
       }
     }
+    function escapeRegularExpression(value) {
+      return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+    function isExpectedIndividualPhotoObjectKey(objectKey, session) {
+      const storageFolder = session?.storageFolder || session?.productCode || session?.uploadSessionId || "";
+      const escapedFolder = escapeRegularExpression(storageFolder);
+      const escapedSessionId = escapeRegularExpression(session?.uploadSessionId || "");
+      return new RegExp(`^(?:uploads/${escapedFolder}/photo-\\d{2,}\\.jpg|temporary/${escapedFolder}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg|temporary/${escapedSessionId}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg)$`).test(String(objectKey || ""));
+    }
+    async function readIndividualUploadStatus(session) {
+      const parameters = new URLSearchParams({ upload_session_id:session.uploadSessionId });
+      const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/status?${parameters}`, {
+        headers:{ "X-Upload-Token":session.uploadToken }
+      });
+      const result = await readUploadJson(response);
+      if (!response.ok || !result.success) {
+        const error = new Error(result.error || "The stored photo status could not be confirmed.");
+        error.status = response.status;
+        error.code = String(result.code || "UPLOAD_STATUS_FAILED");
+        throw error;
+      }
+      if (Number.isSafeInteger(Number(result.selectionVersion))) {
+        session.selectionVersion = Number(result.selectionVersion);
+      }
+      return result;
+    }
+    async function recoverIndividualPhotoFromStatus(session, entry, position) {
+      try {
+        const result = await readIndividualUploadStatus(session);
+        const stored = Array.isArray(result.photos) && result.photos.find((photo) =>
+          photo?.photoId === entry.photoId &&
+          photo?.revision === entry.revision &&
+          Number(photo?.position) === position &&
+          isExpectedIndividualPhotoObjectKey(photo?.objectKey, session)
+        );
+        if (!stored) return false;
+        entry.objectKey = stored.objectKey;
+        entry.uploadState = "complete";
+        entry.uploadError = "";
+        entry.uploadController = null;
+        renderIndividualUploadEntry(entry);
+        logPhotoUploadDiagnostic(session, entry, "status-recovery", 1, 0, 200, "", "uploaded");
+        return true;
+      } catch (error) {
+        console.warn("Stored photo status could not be recovered", {
+          sessionId:session?.uploadSessionId || "unknown",
+          photoNumber:position,
+          status:Number(error?.status) || undefined,
+          code:String(error?.code || "UPLOAD_STATUS_FAILED")
+        });
+        return false;
+      }
+    }
     async function uploadIndividualPhoto(entry) {
       let session;
       try {
@@ -3121,12 +3174,11 @@
             entry.uploadState = "verifying";
             renderIndividualUploadEntry(entry);
           }
-          const storageFolder = session.productCode || session.storageFolder || session.uploadSessionId;
           if (
             response.ok && result.success &&
             result.photo?.photoId === entry.photoId &&
             result.photo?.revision === entry.revision &&
-            new RegExp(`^(?:uploads/${storageFolder}/photo-\\d{2,}\\.jpg|temporary/${storageFolder}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg)$`).test(objectKey)
+            isExpectedIndividualPhotoObjectKey(objectKey, session)
           ) {
             if (entry.cancelled || !uploadedImages.includes(entry)) {
               entry.objectKey = objectKey;
@@ -3166,6 +3218,7 @@
         }
         if (attempt < PHOTO_UPLOAD_MAX_ATTEMPTS - 1) await waitForUploadRetry(attempt);
       }
+      if (await recoverIndividualPhotoFromStatus(session, entry, position)) return;
       failIndividualPhotoUpload(entry, lastError);
     }
     function pumpIndividualUploadQueue() {
@@ -3188,21 +3241,48 @@
         throw new Error("Please wait for every photo to finish uploading.");
       }
       const session = await synchronizeActivePhotoSelection();
-      const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/finalize`, {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "X-Upload-Token":session.uploadToken
-        },
-        body:JSON.stringify({
-          uploadSessionId:session.uploadSessionId,
-          cartItemId:session.cartItemId,
-          frameColour,
-          photoSetCount:entries.length / 3
-        })
-      });
-      const result = await readUploadJson(response);
-      if (!response.ok || !result.success) throw new Error(result.error || "The uploaded photos could not be confirmed.");
+      let lastError;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/finalize`, {
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json",
+              "X-Upload-Token":session.uploadToken
+            },
+            body:JSON.stringify({
+              uploadSessionId:session.uploadSessionId,
+              cartItemId:session.cartItemId,
+              frameColour,
+              photoSetCount:entries.length / 3
+            })
+          });
+          const result = await readUploadJson(response);
+          if (response.ok && result.success) {
+            lastError = null;
+            break;
+          }
+          lastError = new Error(result.error || "The uploaded photos could not be confirmed.");
+          lastError.status = response.status;
+          lastError.code = String(result.code || "UPLOAD_FINALIZE_FAILED");
+        } catch (error) {
+          lastError = error;
+        }
+        const status = await readIndividualUploadStatus(session).catch(() => null);
+        const storedPhotos = Array.isArray(status?.photos) ? status.photos : [];
+        const allPhotosStored = entries.every((entry, index) => storedPhotos.some((photo) =>
+          photo?.photoId === entry.photoId &&
+          photo?.revision === entry.revision &&
+          Number(photo?.position) === index + 1 &&
+          isExpectedIndividualPhotoObjectKey(photo?.objectKey, session)
+        ));
+        if (allPhotosStored && ["finalized", "checkout_pending", "paid"].includes(status?.status)) {
+          lastError = null;
+          break;
+        }
+        if (!allPhotosStored || attempt === 1) break;
+      }
+      if (lastError) throw lastError;
       return { ...session, photos:entries.map((entry, index) => ({
         photoId:entry.photoId,
         objectKey:entry.objectKey,
