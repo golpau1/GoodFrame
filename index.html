@@ -201,7 +201,7 @@
     button, input, select, textarea { font-family:inherit; }
     .hero-intro-title, .hero-intro-title-mobile, .configurator-heading, .showcase-heading, .cart-dialog-title, .cart-item-title, .faq-title, .faq-list summary, .footer-kicker { font-family:var(--font-heading); font-synthesis:none; font-weight:400; }
     .option-label, .header-left-nav a, .navigation a, .cart-action { font-family:var(--font-display); }
-    .hero-upload-cta, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
+    .hero-scroll-arrow, .hero-intro-title-mobile, .hero-intro-copy-mobile { display:none; }
     .showcase-gallery { display:none; }
     .showcase-track { display:contents; }
     .showcase-mobile-viewport { display:none; }
@@ -567,8 +567,8 @@
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
       .hero-intro-title-mobile { display:block; max-width:min(100%,720px); margin:0 auto; font-size:clamp(32px,6vw,52px); letter-spacing:.01em; line-height:1.08; text-wrap:balance; }
       .hero-intro-copy-mobile, .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
-      .hero-upload-cta { display:inline-flex; min-height:46px; align-items:center; justify-content:center; margin-top:clamp(18px,3vw,28px); padding:11px 21px; border:1px solid currentColor; background:transparent; color:var(--light); font-family:var(--font-display); font-size:clamp(12px,1.8vw,14px); font-weight:600; letter-spacing:.095em; line-height:1.2; text-transform:uppercase; transition:background-color 180ms ease,color 180ms ease; }
-      .hero-upload-cta:hover { background:var(--light); color:var(--brown); }
+      .hero-scroll-arrow { display:flex; width:44px; height:44px; align-items:center; justify-content:center; margin:clamp(18px,3vw,28px) auto 0; border:0; background:transparent; color:var(--light); font-family:var(--font-body); font-size:30px; font-weight:400; line-height:1; transition:opacity 180ms ease,transform 180ms ease; }
+      .hero-scroll-arrow:hover { opacity:.72; transform:translateY(3px); }
       .palette-spread { grid-template-columns:1fr; height:auto; min-height:0; overflow-x:clip; overflow-y:visible; }
       .palette-panel { overflow:visible; }
       .configurator { width:95%; max-width:95%; transform:none; }
@@ -615,8 +615,8 @@
       .hero-intro-title-desktop, .hero-intro-copy-desktop, .hero-intro-link-desktop { display:none; }
       .hero-intro-title-mobile { display:block; max-width:min(100%,980px); margin:0 auto; font-size:clamp(46px,4.35vw,66px); letter-spacing:.01em; line-height:1.08; text-wrap:balance; }
       .hero-intro-copy-mobile { display:none; }
-      .hero-upload-cta { display:inline-flex; min-height:48px; align-items:center; justify-content:center; margin-top:28px; padding:12px 24px; border:1px solid currentColor; background:transparent; color:var(--light); font-family:var(--font-display); font-size:13px; font-weight:600; letter-spacing:.095em; line-height:1.2; text-transform:uppercase; transition:background-color 180ms ease,color 180ms ease; }
-      .hero-upload-cta:hover { background:var(--light); color:var(--brown); }
+      .hero-scroll-arrow { display:flex; width:48px; height:48px; align-items:center; justify-content:center; margin:24px auto 0; border:0; background:transparent; color:var(--light); font-family:var(--font-body); font-size:34px; font-weight:400; line-height:1; transition:opacity 180ms ease,transform 180ms ease; }
+      .hero-scroll-arrow:hover { opacity:.72; transform:translateY(3px); }
       .floating-graphic { display:none !important; }
       .graphic-02, .graphic-83 { display:none !important; }
       .graphic-71, .mobile-graphic-281 { display:block !important; position:absolute; z-index:0; pointer-events:none; }
@@ -846,11 +846,11 @@
     <img class="floating-graphic graphic-83" src="Assets/graphics/83.png" alt="" aria-hidden="true">
     <img class="floating-graphic mobile-graphic-281" src="Assets/graphics/281.png" alt="" aria-hidden="true">
     <div class="hero-intro">
-      <h2 class="hero-intro-title hero-intro-title-desktop">Some memories deserve a home.</h2>
+      <h2 class="hero-intro-title hero-intro-title-desktop">Tiny Frames. Big Memories.</h2>
       <p class="hero-intro-copy hero-intro-copy-desktop">An 80 × 80 mm solid timber frame designed to hold the photos you actually want around you.</p>
       <a class="hero-intro-link hero-intro-link-desktop" href="#frame-configurator">Create your frame <span class="hero-intro-arrow" aria-hidden="true">→</span></a>
-      <h2 class="hero-intro-title-mobile">Some memories deserve a home.</h2>
-      <a class="hero-upload-cta" href="#upload-section">Upload Photos</a>
+      <h2 class="hero-intro-title-mobile">Tiny Frames. Big Memories.</h2>
+      <a class="hero-scroll-arrow" href="#upload-section" aria-label="Scroll to the photo uploader"><span aria-hidden="true">↓</span></a>
       <p class="hero-intro-copy-mobile">An 80 × 80 mm solid timber frame for your favourite pictures.</p>
     </div>
   </main>
