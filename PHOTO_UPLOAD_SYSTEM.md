@@ -40,9 +40,11 @@ not use credentialed CORS. The Worker handles `GET`, `POST`, `DELETE`, and
 Browser uploads go through the Worker; there are no presigned URLs or direct
 browser-to-R2 requests, so an R2 bucket CORS policy is not required.
 
-The cropper commits each completed crop to the local photo grid and IndexedDB
-before starting selection synchronization and upload in the background. It
-does not wait for Cloudflare to close. The queue runs at most two uploads
+The cropper first renders a bounded preview, commits it to the local photo grid,
+and closes without waiting for a full-resolution JPEG encode. The print-quality
+crop is generated from the saved original after the close transition, persisted
+to IndexedDB, and then sent through selection synchronization and the background
+upload queue. It does not wait for Cloudflare to close. The queue runs at most two uploads
 concurrently, retries timeouts and transient network/server responses with
 jittered backoff, and leaves permanent failures available for manual retry.
 Pending local drafts include the original and print crop where browser storage

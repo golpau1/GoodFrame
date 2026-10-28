@@ -56,7 +56,10 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.doesNotMatch(html, /GoodFramePrintSheet/);
   assert.doesNotMatch(html, /\/tiny-frame-pdf\/upload/);
   assert.match(html, /entry\?\.previewBlob instanceof Blob \? entry\.previewBlob : entry\?\.printBlob/);
-  assert.match(html, /cropFrameIsPortrait \? croppedCanvas : rotateCanvasClockwise\(croppedCanvas\)/);
+  assert.match(html, /const previewScale = Math\.min\(1, 1200 \/ crop\.width, 1200 \/ crop\.height\);/);
+  assert.match(html, /function prepareIndividualPhotoForUpload\(entry, delay = 0\)/);
+  assert.match(html, /const prepared = await createPrintCropBlob\(entry\);/);
+  assert.match(html, /crop\.rotation === 90 \? rotateCanvasClockwise\(croppedCanvas\) : croppedCanvas/);
   assert.match(html, /id=\"cropper-progress-label\">Photo 1 of 1/);
   assert.match(html, /function startCropBatch\(files, slotIndices, returnFocus\)/);
   assert.match(html, /selectedFiles\.slice\(0, targetSlots\.length\)/);
@@ -89,10 +92,10 @@ test('storefront uploads cropped photos individually in the background', async (
     html.indexOf('backCropButton.addEventListener')
   );
   assert.match(cropNavigation, /void persistDraftUploads\(\);/);
-  assert.match(cropNavigation, /void synchronizeActivePhotoSelection\(\)/);
+  assert.match(cropNavigation, /void prepareIndividualPhotoForUpload\(entry, finishing \? 170 : 40\);/);
   assert.doesNotMatch(cropNavigation, /await persistDraftUploads\(\)/);
   assert.doesNotMatch(cropNavigation, /await synchronizeActivePhotoSelection\(\)/);
-  assert.match(cropNavigation, /cropBatch\.committed = true;\s*closeCropper\(\);/);
+  assert.match(cropNavigation, /cropBatch\.committed = true;\s*closeCropper\(\{ smooth:true \}\);/);
 });
 
 test('stale and malformed upload credentials return recoverable authentication codes', async () => {

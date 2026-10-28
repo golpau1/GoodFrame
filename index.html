@@ -304,7 +304,8 @@
     @keyframes slot-upload-spin { to { transform:rotate(360deg); } }
     @media (prefers-reduced-motion:reduce) { .slot-upload-spinner { animation:none; } }
     .upload-input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
-    #cropperOverlay { display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding:24px; background:rgba(60,42,33,.78); }
+    #cropperOverlay { display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding:24px; background:rgba(60,42,33,.78); opacity:1; transition:opacity 140ms ease-out; }
+    #cropperOverlay.is-closing { opacity:0; pointer-events:none; }
     #cropperDialog { display:flex; flex-direction:column; width:min(720px,100%); height:min(760px,calc(100vh - 48px)); gap:18px; padding:22px; border:1px solid rgba(255,247,226,.35); background:var(--cream); color:var(--brown); }
     .cropper-progress { display:grid; gap:9px; }
     .cropper-progress-label { margin:0; color:var(--brown); font-size:10px; font-weight:600; letter-spacing:.11em; line-height:1.2; text-align:center; text-transform:uppercase; }
@@ -319,6 +320,7 @@
     .cropper-actions button { padding:0; border:0; background:none; color:inherit; font:inherit; font-size:10px; font-weight:600; letter-spacing:.14em; cursor:pointer; text-transform:uppercase; }
     .cropper-actions button:hover { text-decoration:underline; text-underline-offset:5px; }
     .cropper-actions button:disabled { cursor:not-allowed; opacity:.35; text-decoration:none; }
+    .cropper-actions #saveCrop.is-processing { opacity:.72; }
     @media (max-width:1100px) { #cropperOverlay { padding:12px; } #cropperDialog { height:calc(100vh - 24px); padding:16px; } }
     @media (max-width:1100px) {
       #cropperOverlay { align-items:center; padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); overflow:hidden; }
@@ -331,7 +333,7 @@
       .cropper-actions button:hover { text-decoration:none; }
       .cropper-actions #saveCrop { border-color:var(--brown); background:var(--brown); color:var(--light); }
     }
-    @media (prefers-reduced-motion:reduce) { .photo-set.is-new { animation:none; } .slot-replace-button, .cropper-progress-bar { transition:none; } }
+    @media (prefers-reduced-motion:reduce) { .photo-set.is-new { animation:none; } #cropperOverlay, .slot-replace-button, .cropper-progress-bar { transition:none; } }
     @media (min-width:1101px) {
       :root { --announcement-height:40px; --header-height:48px; }
       .homepage { position:relative; display:block; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
@@ -1265,6 +1267,7 @@
     let cropperReturnFocus = null;
     let pendingUploadScrollPosition = null;
     let cropperScrollRestoreFrame = null;
+    let cropperCloseTimer = null;
     let individualUploadSession = null;
     let individualUploadSessionRegistered = false;
     let individualUploadSessionPromise = null;
@@ -1621,6 +1624,9 @@
       };
       cropperReturnFocus = returnFocus;
       cropperError.hidden = true;
+      window.clearTimeout(cropperCloseTimer);
+      cropperCloseTimer = null;
+      overlay.classList.remove("is-closing");
       overlay.style.display = "flex";
       overlay.setAttribute("aria-hidden", "false");
       lockCropperPageScroll();
@@ -1628,10 +1634,21 @@
       void loadCurrentCropPhoto();
     }
 
-    function closeCropper() {
+    function closeCropper(options = {}) {
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if (options?.smooth === true && !reducedMotion && overlay.style.display === "flex") {
+        overlay.classList.add("is-closing");
+        window.clearTimeout(cropperCloseTimer);
+        cropperCloseTimer = window.setTimeout(() => closeCropper(), 150);
+        return;
+      }
+      window.clearTimeout(cropperCloseTimer);
+      cropperCloseTimer = null;
       const closingBatch = cropBatch;
       overlay.style.display = "none";
+      overlay.classList.remove("is-closing");
       overlay.setAttribute("aria-hidden", "true");
+      overlay.removeAttribute("aria-busy");
       destroyCropper();
       const scrollPosition = unlockCropperPageScroll();
       closingBatch?.items.forEach((item) => {
@@ -1825,19 +1842,6 @@
       return rotatedCanvas;
     }
 
-    function createPreviewCanvas(sourceCanvas, maximumDimension = 1200) {
-      const scale = Math.min(1, maximumDimension / sourceCanvas.width, maximumDimension / sourceCanvas.height);
-      const previewCanvas = document.createElement("canvas");
-      previewCanvas.width = Math.max(1, Math.round(sourceCanvas.width * scale));
-      previewCanvas.height = Math.max(1, Math.round(sourceCanvas.height * scale));
-      const context = previewCanvas.getContext("2d", { alpha:false });
-      if (!context) throw new Error("The picture preview could not be created.");
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = "high";
-      context.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
-      return previewCanvas;
-    }
-
     function canvasToJpegBlob(canvas, quality) {
       return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
@@ -1862,28 +1866,34 @@
         sourceHeight:imageData.naturalHeight,
         rotation
       };
-      let croppedCanvas;
-      let printCanvas;
       let previewCanvas;
       try {
-        croppedCanvas = cropper.getCroppedCanvas({ imageSmoothingEnabled:true, imageSmoothingQuality:"high" });
-        if (!croppedCanvas?.width || !croppedCanvas?.height) {
-          throw new Error("The full-resolution crop could not be created.");
+        const previewScale = Math.min(1, 1200 / crop.width, 1200 / crop.height);
+        const croppedPreviewCanvas = cropper.getCroppedCanvas({
+          width:Math.max(1, Math.round(crop.width * previewScale)),
+          height:Math.max(1, Math.round(crop.height * previewScale)),
+          imageSmoothingEnabled:true,
+          imageSmoothingQuality:"high"
+        });
+        if (!croppedPreviewCanvas?.width || !croppedPreviewCanvas?.height) {
+          throw new Error("The picture preview could not be created.");
         }
-        printCanvas = cropFrameIsPortrait ? croppedCanvas : rotateCanvasClockwise(croppedCanvas);
-        previewCanvas = createPreviewCanvas(printCanvas);
-        const [printBlob, previewBlob] = await Promise.all([
-          canvasToJpegBlob(printCanvas, PRINT_JPEG_QUALITY),
-          canvasToJpegBlob(previewCanvas, .95)
-        ]);
+        previewCanvas = cropFrameIsPortrait ? croppedPreviewCanvas : rotateCanvasClockwise(croppedPreviewCanvas);
+        const previewBlob = await canvasToJpegBlob(previewCanvas, .95);
+        if (previewCanvas !== croppedPreviewCanvas) {
+          croppedPreviewCanvas.width = 1;
+          croppedPreviewCanvas.height = 1;
+        }
         revoke(item.draft?.entry?.url);
+        const printWidth = rotation === 90 ? crop.height : crop.width;
+        const printHeight = rotation === 90 ? crop.width : crop.height;
         const entry = {
           original:item.file,
           crop,
           photoId:`ph_${crypto.randomUUID().replaceAll("-", "")}`,
           revision:crypto.randomUUID(),
-          effectivePpi:Math.min(printCanvas.width / (54 / 25.4), printCanvas.height / (86 / 25.4)),
-          printBlob,
+          effectivePpi:Math.min(printWidth / (54 / 25.4), printHeight / (86 / 25.4)),
+          printBlob:null,
           previewBlob,
           url:URL.createObjectURL(previewBlob),
           uploadState:"processing",
@@ -1894,13 +1904,117 @@
         item.draft = { crop, entry };
         return entry;
       } catch (error) {
-        console.error("Full-resolution crop creation failed", { pictureNumber:item.slotIndex + 1, errorName:String(error?.name || "Error") });
+        console.error("Crop preview creation failed", { pictureNumber:item.slotIndex + 1, errorName:String(error?.name || "Error") });
         throw error;
       } finally {
-        [croppedCanvas, printCanvas, previewCanvas].forEach((canvas) => {
-          if (canvas) { canvas.width = 1; canvas.height = 1; }
-        });
+        if (previewCanvas) { previewCanvas.width = 1; previewCanvas.height = 1; }
       }
+    }
+
+    function getEntryOriginalBlob(entry) {
+      if (entry?.original instanceof Blob) return entry.original;
+      if (entry?.original?.blob instanceof Blob) return entry.original.blob;
+      return null;
+    }
+
+    function loadCanvasImage(blob) {
+      return new Promise((resolve, reject) => {
+        if (!(blob instanceof Blob)) {
+          reject(new Error("The original photo is unavailable. Please replace this photo."));
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const image = new Image();
+        image.onload = () => {
+          revoke(url);
+          resolve(image);
+        };
+        image.onerror = () => {
+          revoke(url);
+          reject(new Error("The original photo could not be reopened. Please replace this photo."));
+        };
+        image.src = url;
+      });
+    }
+
+    async function createPrintCropBlob(entry) {
+      const crop = entry?.crop;
+      if (!crop || !crop.sourceWidth || !crop.sourceHeight) {
+        throw new Error("The saved crop is unavailable. Please replace this photo.");
+      }
+      const image = await loadCanvasImage(getEntryOriginalBlob(entry));
+      const scaleX = image.naturalWidth / crop.sourceWidth;
+      const scaleY = image.naturalHeight / crop.sourceHeight;
+      const sourceX = Math.max(0, crop.x * scaleX);
+      const sourceY = Math.max(0, crop.y * scaleY);
+      const sourceWidth = Math.min(image.naturalWidth - sourceX, crop.width * scaleX);
+      const sourceHeight = Math.min(image.naturalHeight - sourceY, crop.height * scaleY);
+      if (!(sourceWidth > 0) || !(sourceHeight > 0)) {
+        throw new Error("The full-resolution crop is outside the original photo.");
+      }
+      const sourceScale = Math.min(1, CROP_SOURCE_MAX_DIMENSION / image.naturalWidth, CROP_SOURCE_MAX_DIMENSION / image.naturalHeight);
+      const croppedCanvas = document.createElement("canvas");
+      let printCanvas;
+      croppedCanvas.width = Math.max(1, Math.round(sourceWidth * sourceScale));
+      croppedCanvas.height = Math.max(1, Math.round(sourceHeight * sourceScale));
+      const context = croppedCanvas.getContext("2d", { alpha:false });
+      if (!context) throw new Error("The full-resolution crop could not be created.");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(
+        image,
+        sourceX, sourceY, sourceWidth, sourceHeight,
+        0, 0, croppedCanvas.width, croppedCanvas.height
+      );
+      try {
+        printCanvas = crop.rotation === 90 ? rotateCanvasClockwise(croppedCanvas) : croppedCanvas;
+        const blob = await canvasToJpegBlob(printCanvas, PRINT_JPEG_QUALITY);
+        return { blob, width:printCanvas.width, height:printCanvas.height };
+      } finally {
+        if (printCanvas && printCanvas !== croppedCanvas) {
+          printCanvas.width = 1;
+          printCanvas.height = 1;
+        }
+        croppedCanvas.width = 1;
+        croppedCanvas.height = 1;
+      }
+    }
+
+    function waitForBackgroundCropWork(delay = 0) {
+      return new Promise((resolve) => {
+        window.setTimeout(() => {
+          if (typeof window.requestIdleCallback === "function") {
+            window.requestIdleCallback(resolve, { timeout:350 });
+          } else {
+            requestAnimationFrame(() => window.setTimeout(resolve, 0));
+          }
+        }, delay);
+      });
+    }
+
+    function prepareIndividualPhotoForUpload(entry, delay = 0) {
+      if (!entry || entry.cancelled || !uploadedImages.includes(entry)) return Promise.resolve();
+      if (entry.preparationPromise) return entry.preparationPromise;
+      entry.uploadState = "processing";
+      entry.uploadError = "";
+      renderIndividualUploadEntry(entry);
+      entry.preparationPromise = (async () => {
+        await waitForBackgroundCropWork(delay);
+        if (entry.cancelled || !uploadedImages.includes(entry)) return;
+        const prepared = await createPrintCropBlob(entry);
+        if (entry.cancelled || !uploadedImages.includes(entry)) return;
+        entry.printBlob = prepared.blob;
+        entry.effectivePpi = Math.min(prepared.width / (54 / 25.4), prepared.height / (86 / 25.4));
+        entry.uploadState = "queued";
+        renderIndividualUploadEntry(entry);
+        await persistDraftUploads();
+        if (entry.cancelled || !uploadedImages.includes(entry)) return;
+        await synchronizeActivePhotoSelection();
+        enqueueIndividualPhotoUpload(entry);
+      })().catch((error) => failIndividualPhotoUpload(entry, error)).finally(() => {
+        entry.preparationPromise = null;
+      });
+      return entry.preparationPromise;
     }
 
     function setCropperProcessing(processing) {
@@ -1909,6 +2023,10 @@
       cancelCropButton.disabled = processing;
       backCropButton.disabled = processing || cropBatch?.currentIndex === 0;
       saveCropButton.disabled = processing;
+      if (!processing) {
+        saveCropButton.classList.remove("is-processing");
+        overlay.removeAttribute("aria-busy");
+      }
     }
 
     async function moveThroughCropBatch(direction) {
@@ -1919,6 +2037,8 @@
       const finishing = direction !== "back" && cropBatch.currentIndex === cropBatch.items.length - 1;
       if (finishing) {
         saveCropButton.textContent = "Finishing…";
+        saveCropButton.classList.add("is-processing");
+        overlay.setAttribute("aria-busy", "true");
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }
       try {
@@ -1931,12 +2051,9 @@
           revoke(previousEntry?.url);
         }
         item.committed = true;
-        entry.uploadState = "queued";
         renderSlot(imageSlots[item.slotIndex], entry);
         void persistDraftUploads();
-        void synchronizeActivePhotoSelection()
-          .then(() => enqueueIndividualPhotoUpload(entry))
-          .catch((error) => failIndividualPhotoUpload(entry, error));
+        void prepareIndividualPhotoForUpload(entry, finishing ? 170 : 40);
         window.dispatchEvent(new CustomEvent("image-cropped", {
           detail:{ previewBlob:entry.previewBlob, crop:entry.crop, slotIndex:item.slotIndex, aspectRatio:frameAspectRatio }
         }));
@@ -1953,12 +2070,12 @@
           return;
         }
         cropBatch.committed = true;
-        closeCropper();
+        closeCropper({ smooth:true });
       } catch (error) {
         console.error("Crop batch navigation failed", { pictureNumber, errorName:String(error?.name || "Error") });
         showCropperError(`Photo ${pictureNumber} could not be prepared at full print quality. Your original is unchanged; adjust the crop and try again.`);
       } finally {
-        if (cropBatch && !cropBatch.loading) {
+        if (cropBatch && !cropBatch.loading && !overlay.classList.contains("is-closing")) {
           setCropperProcessing(false);
           updateCropperNavigation();
         }
@@ -2514,23 +2631,29 @@
         if (!saved?.previewBlob || !saved.photoId || !saved.revision) return null;
         const stored = storedById.get(saved.photoId);
         const complete = stored?.revision === saved.revision;
+        const originalBlob = saved.originalBlob instanceof Blob ? saved.originalBlob : null;
+        const printBlob = saved.printBlob instanceof Blob ? saved.printBlob : null;
+        const canRebuildPrint = originalBlob && saved.crop?.sourceWidth && saved.crop?.sourceHeight;
         return {
-          original:{ name:saved.originalName || "Photo", blob:saved.originalBlob || null },
+          original:{ name:saved.originalName || "Photo", blob:originalBlob },
           crop:saved.crop,
           photoId:saved.photoId,
           revision:saved.revision,
           effectivePpi:saved.effectivePpi,
           previewBlob:saved.previewBlob,
-          printBlob:saved.printBlob instanceof Blob ? saved.printBlob : saved.previewBlob,
+          printBlob,
           url:URL.createObjectURL(saved.previewBlob),
-          uploadState:complete ? "complete" : (saved.printBlob instanceof Blob || saved.previewBlob instanceof Blob) ? "queued" : "failed",
-          uploadError:complete ? "" : "Upload needs to be retried",
+          uploadState:complete ? "complete" : printBlob ? "queued" : canRebuildPrint ? "processing" : "failed",
+          uploadError:complete || printBlob || canRebuildPrint ? "" : "The original photo is unavailable. Please replace this photo.",
           objectKey:complete ? stored.objectKey : "",
           uploadController:null
         };
       }));
       renderPhotoSets();
       updateUploadProgress();
+      uploadedImages
+        .filter((entry) => entry?.uploadState === "processing")
+        .forEach((entry) => { void prepareIndividualPhotoForUpload(entry, 80); });
       const queued = uploadedImages.filter((entry) => entry?.uploadState === "queued");
       if (queued.length) {
         try {
@@ -2942,6 +3065,10 @@
     async function retryIndividualPhotoUpload(entry) {
       if (!entry || entry.uploadState !== "failed") return;
       entry.cancelled = false;
+      if (!(entry.printBlob instanceof Blob)) {
+        await prepareIndividualPhotoForUpload(entry);
+        return;
+      }
       try {
         await synchronizeActivePhotoSelection();
         enqueueIndividualPhotoUpload(entry);
