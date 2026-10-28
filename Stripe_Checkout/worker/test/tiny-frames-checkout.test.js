@@ -79,7 +79,8 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /\.configurator \{ width:min\(60%,350px\); height:auto; max-height:none;/);
   assert.match(html, /hero-dscf1744-effect-landscape-2560\.webp/);
   assert.match(html, /hero-dscf1744-effect-portrait-960\.webp/);
-  assert.match(html, /Upload Photos/);
+  assert.doesNotMatch(html, /Upload Photos/);
+  assert.match(html, /class="hero-scroll-arrow" href="#upload-section"/);
   assert.match(html, /id="upload-progress" role="status" aria-live="polite"/);
   assert.match(html, /your selected \$\{failedCount === 1 \? "photo is" : "photos are"\} still saved/);
   assert.match(html, /replace\.addEventListener\("click", \(\) => triggerSlotPicker\(slot, replace\)\);/);
@@ -222,7 +223,8 @@ test('individual photo upload CORS allows configured storefront origins and read
     const session = await response.json();
     assert.equal(session.success, true);
     assert.match(session.productCode, /^[1-9]\d{4}$/);
-    assert.equal(session.storageFolder, session.productCode);
+    assert.match(session.storageFolder, /^\d{4}-\d{2}-\d{2} - (?:0[1-9]|1[0-2])\.\d{2} (?:AM|PM) - [1-9]\d{4}$/);
+    assert.equal(session.storageFolder.endsWith(` - ${session.productCode}`), true);
     storageFolders.push(session.storageFolder);
     const manifest = await bucket.get(`uploads/${session.storageFolder}/manifest.json`);
     assert.ok(manifest, [...bucket.objects.keys()].join(', '));
@@ -281,9 +283,9 @@ test('individual photo upload CORS allows configured storefront origins and read
   database.close();
 });
 
-test('photo upload folders support the longest suffixed time and remain unique in D1', () => {
+test('photo upload folders support the readable Brisbane format and remain unique in D1', () => {
   const database = createProductCodeDatabase();
-  const storageFolder = '26-10-2026_9-36PM-a7b4';
+  const storageFolder = '2026-10-28 - 09.36 PM - 58321';
   const insertSession = (uploadSessionId, cartItemId) => database.prepare(
     `INSERT OR IGNORE INTO photo_upload_sessions
       (upload_session_id, cart_item_id, upload_token_hash, status, storage_folder, created_at, updated_at)
@@ -297,7 +299,7 @@ test('photo upload folders support the longest suffixed time and remain unique i
     new Date().toISOString()
   ).run();
 
-  assert.equal(storageFolder.length, 22);
+  assert.equal(storageFolder.length, 29);
   assert.equal(insertSession(`tf_${'1'.repeat(32)}`, `ci_${'1'.repeat(32)}`).meta.changes, 1);
   assert.equal(insertSession(`tf_${'2'.repeat(32)}`, `ci_${'2'.repeat(32)}`).meta.changes, 0);
   database.close();
@@ -330,7 +332,8 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   const storageFolder = session.storageFolder;
   const productCode = session.productCode;
   assert.match(productCode, /^[1-9]\d{4}$/);
-  assert.equal(storageFolder, productCode);
+  assert.match(storageFolder, /^\d{4}-\d{2}-\d{2} - (?:0[1-9]|1[0-2])\.\d{2} (?:AM|PM) - [1-9]\d{4}$/);
+  assert.equal(storageFolder.endsWith(` - ${productCode}`), true);
 
   const photos = [];
   const selection = [];
@@ -367,7 +370,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://goodframe.com.au');
     photos.push((await response.json()).photo);
     photos[index].revision = revision;
-    assert.equal(photos[index].objectKey, `uploads/${productCode}/photo-${String(index + 1).padStart(2, '0')}.jpg`);
+    assert.equal(photos[index].objectKey, `uploads/${storageFolder}/photo-${String(index + 1).padStart(2, '0')}.jpg`);
   }
   const retryForm = new FormData();
   retryForm.append('upload_session_id', uploadSessionId);
@@ -382,7 +385,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   const retriedPhoto = await retryUpload.json();
   assert.equal(retriedPhoto.recovered, true);
   assert.equal(retriedPhoto.photo.objectKey, photos[0].objectKey);
-  assert.equal((await bucket.list({ prefix:`uploads/${productCode}/photo-` })).objects.length, 3);
+  assert.equal((await bucket.list({ prefix:`uploads/${storageFolder}/photo-` })).objects.length, 3);
   assert.equal((await bucket.list({ prefix:'temporary/' })).objects.length, 0);
 
   const statusResponse = await worker.fetch(new Request(`https://worker.example/tiny-frame-upload/status?upload_session_id=${uploadSessionId}`, { headers }), env);
@@ -430,7 +433,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   }), env);
   assert.equal(finalizeResponse.status, 200);
 
-  const manifestKey = `uploads/${productCode}/manifest.json`;
+  const manifestKey = `uploads/${storageFolder}/manifest.json`;
   const manifest = await (await bucket.get(manifestKey)).json();
   assert.equal(manifest.storage_folder, storageFolder);
   const originalFetch = globalThis.fetch;
@@ -477,7 +480,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     id:checkoutResult.id,
     metadata:{ upload_session_ids:uploadSessionId }
   }, env);
-  const finalManifestKey = `uploads/${productCode}/manifest.json`;
+  const finalManifestKey = `uploads/${storageFolder}/manifest.json`;
   assert.ok(bucket.objects.has(finalManifestKey));
   const finalManifest = await (await bucket.get(finalManifestKey)).json();
   assert.equal(finalManifest.photo_count, 3);
@@ -1122,7 +1125,7 @@ test('seven-day cleanup removes abandoned drafts but retains active checkouts an
     assert.equal(response.status, 200);
     const upload = await response.json();
     storageFolders.push(upload.storageFolder);
-    await bucket.put(`uploads/${upload.productCode}/photo-01.jpg`, 'photo', {
+    await bucket.put(`uploads/${upload.storageFolder}/photo-01.jpg`, 'photo', {
       customMetadata:{ upload_session_id:session.id, product_code:upload.productCode }
     });
     database.prepare(

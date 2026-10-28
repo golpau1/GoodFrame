@@ -21,6 +21,37 @@ export function getBrisbaneDateParts(uploadedAt = new Date()) {
   return { year: value.year, month: value.month, day: value.day };
 }
 
+export function getBrisbaneDateTimeParts(uploadedAt = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-AU', {
+    timeZone: ARTWORK_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).formatToParts(uploadedAt);
+  const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return {
+    year:value.year,
+    month:value.month,
+    day:value.day,
+    hour:String(value.hour || '').padStart(2, '0'),
+    minute:value.minute,
+    dayPeriod:String(value.dayPeriod || '').toUpperCase()
+  };
+}
+
+export function createProductPhotoFolder(productCode, uploadedAt = new Date()) {
+  const code = String(productCode || '').trim();
+  if (!/^[1-9]\d{4}$/.test(code)) throw new Error('Product code is invalid');
+  const { year, month, day, hour, minute, dayPeriod } = getBrisbaneDateTimeParts(uploadedAt);
+  if (!/^(?:0[1-9]|1[0-2])$/.test(hour) || !/^\d{2}$/.test(minute) || !/^(?:AM|PM)$/.test(dayPeriod)) {
+    throw new Error('Upload time is invalid');
+  }
+  return `${year}-${month}-${day} - ${hour}.${minute} ${dayPeriod} - ${code}`;
+}
+
 export function getOriginalExtension(file) {
   const contentType = String(file?.type || '').toLowerCase();
   const extensionByType = {

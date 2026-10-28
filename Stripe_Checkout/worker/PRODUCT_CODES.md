@@ -81,8 +81,9 @@ never reused.
 - Stripe idempotency and `checkout_requests` preserve codes across retries.
 - Live webhook retries update existing D1 rows and cannot create new products.
 - New picture products reserve a code when the upload session starts and keep
-  their individual 54 × 86 crops under `uploads/<five-digit-code>/`. The same
-  code is attached to the Stripe line item at checkout.
+  their individual 54 × 86 crops under
+  `uploads/YYYY-MM-DD - HH.MM AM/PM - <five-digit-code>/` using Brisbane time.
+  The same code is attached to the Stripe line item at checkout.
 - Historical picture products keep their existing code-named A4 PDF paths;
   those files are not migrated, renamed, or deleted.
 - R2 manifests and D1 rows preserve the upload-session, Stripe-session, and

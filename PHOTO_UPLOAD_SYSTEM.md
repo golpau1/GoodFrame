@@ -73,18 +73,21 @@ endpoints. Existing Stripe and Resend secrets remain unchanged.
 ## Product photo storage
 
 Each cart product reserves its unique five-digit product code before photo
-uploads begin. Cropped photos are written directly into that product's folder,
-and the same code is attached to its Stripe line item:
+uploads begin. Cropped photos are written directly into one readable product
+folder using the Brisbane upload date and 12-hour time, and the same code is
+attached to its Stripe line item:
 
 ```text
-uploads/12345/photo-01.jpg
-uploads/12345/photo-02.jpg
+uploads/2026-10-28 - 02.35 PM - 12345/photo-01.jpg
+uploads/2026-10-28 - 02.35 PM - 12345/photo-02.jpg
 ```
 
 Upload session IDs and tokens remain private application credentials in D1;
 they are not used as R2 folder names. Product codes are globally unique and
 never recycled, so one product cannot overwrite another product's photos.
-Existing temporary and timestamped folders remain readable for older sessions.
+The folder timestamp is fixed when the upload session is created. Existing
+product-code, temporary, timestamped, and paid-order folders remain readable
+for older sessions and are never renamed.
 
 The upload token is stored only as a SHA-256 hash. D1 stores the active ordered
 photo selection per cart item, including photo identity, revision, position,
@@ -104,9 +107,9 @@ Only a verified, paid Stripe webhook finalizes a new order. The Worker keeps
 the verified photos and manifest in the same product folder:
 
 ```text
-uploads/12345/manifest.json
-uploads/12345/photo-01.jpg
-uploads/12345/photo-02.jpg
+uploads/2026-10-28 - 02.35 PM - 12345/manifest.json
+uploads/2026-10-28 - 02.35 PM - 12345/photo-01.jpg
+uploads/2026-10-28 - 02.35 PM - 12345/photo-02.jpg
 ```
 
 The manifest records the Stripe order ID, product code, frame colour, and
