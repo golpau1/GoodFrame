@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import worker, {
+  verifyUploadManifests,
   buildLineItems,
   claimWebhookEvent,
   cleanupPendingUploads,
@@ -488,6 +489,12 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     stripeBody.get('line_items[0][price_data][product_data][metadata][product_code]'),
     productCode
   );
+  assert.equal(stripeBody.get('payment_intent_data[metadata][order_code]'), productCode);
+  assert.equal(stripeBody.get('payment_intent_data[metadata][photo_count]'), '3');
+  assert.equal(stripeBody.get('payment_intent_data[metadata][upload_status]'), 'Complete');
+  photos.forEach((photo, index) => assert.equal(
+    stripeBody.get(`payment_intent_data[metadata][photo_${String(index + 1).padStart(2, '0')}]`), photo.objectKey
+  ));
   await markUploadSessionsPaid({
     id:checkoutResult.id,
     metadata:{ upload_session_ids:uploadSessionId }
@@ -1166,4 +1173,107 @@ test('seven-day cleanup removes abandoned drafts but retains active checkouts an
   assert.equal(bucket.objects.has(`uploads/${storageFolders[1]}/manifest.json`), true);
   assert.equal(bucket.objects.has(`uploads/${storageFolders[2]}/manifest.json`), true);
   database.close();
+});
+
+async function verifiedOrderFixture(count, code = '80282') {
+  const uploadReference = `tf_${code.padStart(32, '0')}`;
+  const photos = Array.from({ length:count }, (_, index) => ({
+    photo_id:`ph_${String(index + 1).padStart(32, '0')}`,
+    revision:'11111111-2222-4333-8444-555555555555',
+    position:index + 1,
+    objectKey:`uploads/${code}/photo-${String(index + 1).padStart(2, '0')}.jpg`
+  }));
+  const snapshot = {
+    upload_session_id:uploadReference, cart_item_id:`ci_${code.padStart(32, '0')}`,
+    frame_colour:'Natural Oak', photo_set_count:count / 3, photo_count:count, photos
+  };
+  const record = {
+    ...snapshot, product_code:code, storage_folder:code, status:'finalized',
+    snapshot_json:JSON.stringify(snapshot), product_codes_json:JSON.stringify([code])
+  };
+  const bucket = new MemoryR2Bucket();
+  await bucket.put(`uploads/${code}/manifest.json`, JSON.stringify({ storage_version:3 }));
+  for (const photo of photos) await bucket.put(photo.objectKey, fakeJpeg(), {
+    customMetadata:{ upload_session_id:uploadReference, product_code:code, photo_id:photo.photo_id, revision:photo.revision }
+  });
+  const item = {
+    name:'Frame + Photos', productType:'tiny_frame_photo_sets', productCode:code,
+    uploadReference, cartItemId:snapshot.cart_item_id, frameColour:'Natural Oak',
+    photoSetCount:count / 3, photoCount:count, unitAmount:5000 + (count / 3 - 1) * 500,
+    quantity:1, unitIndex:0, artworkObjectKeys:[]
+  };
+  const env = { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:{ prepare:() => ({ bind:() => ({ first:async () => record, run:async () => ({ meta:{ changes:1 } }) }) }) } };
+  return { item, env, bucket, photos, record, snapshot };
+}
+
+for (const count of [6, 9, 12, 15]) test(`verified final selection supplies exactly ${count} ordered payment photo fields`, async () => {
+  const { item, env, bucket, photos } = await verifiedOrderFixture(count);
+  // An obsolete upload remains in R2, but cannot enter the printing metadata.
+  await bucket.put('uploads/80282/obsolete.jpg', fakeJpeg());
+  await verifyUploadManifests([item], env);
+  const payload = createStripePayload([item], 'https://goodframe.com.au');
+  assert.equal(payload.get('payment_intent_data[metadata][photo_count]'), String(count));
+  photos.forEach((photo, index) => assert.equal(payload.get(
+    `payment_intent_data[metadata][photo_${String(index + 1).padStart(2, '0')}]`
+  ), photo.objectKey));
+  assert.equal([...payload.values()].some(value => value.includes('obsolete.jpg')), false);
+  item.photoCount += 3;
+  item.photoSetCount += 1;
+  await assert.rejects(verifyUploadManifests([item], env), /snapshot/);
+});
+
+test('checkout rejects a replaced revision, missing R2 photo, and invalid photo ordering', async () => {
+  const { item, env, bucket, photos, record, snapshot } = await verifiedOrderFixture(6);
+  const object = bucket.objects.get(photos[0].objectKey);
+  const revision = object.customMetadata.revision;
+  object.customMetadata.revision = 'superseded';
+  await assert.rejects(verifyUploadManifests([item], env), /verified in product storage/);
+  object.customMetadata.revision = revision;
+  snapshot.photos[0].position = 2;
+  record.snapshot_json = JSON.stringify(snapshot);
+  await assert.rejects(verifyUploadManifests([item], env), /order is invalid/);
+  snapshot.photos[0].position = 1;
+  record.snapshot_json = JSON.stringify(snapshot);
+  await bucket.delete(photos[0].objectKey);
+  await assert.rejects(verifyUploadManifests([item], env), /verified in product storage/);
+});
+
+test('multiple frames retain their own codes, quantities, colours and selected R2 references', async () => {
+  const first = await verifiedOrderFixture(6, '80282');
+  const second = await verifiedOrderFixture(9, '80283');
+  await verifyUploadManifests([first.item], first.env);
+  await verifyUploadManifests([second.item], second.env);
+  const payload = createStripePayload([first.item, second.item], 'https://goodframe.com.au');
+  for (const [index, fixture] of [first, second].entries()) {
+    const prefix = `payment_intent_data[metadata][frame_0${index + 1}_`;
+    assert.equal(payload.get(`${prefix}order_code]`), fixture.item.productCode);
+    assert.equal(payload.get(`${prefix}photo_count]`), String(fixture.item.photoCount));
+    assert.equal(payload.get(`${prefix}frame_colour]`), fixture.item.frameColour);
+    assert.equal(payload.get(`${prefix}photo_01]`), fixture.photos[0].objectKey);
+  }
+  const large = await verifiedOrderFixture(48);
+  await verifyUploadManifests([large.item], large.env);
+  assert.throws(() => createStripePayload([large.item], 'https://goodframe.com.au'), /50 metadata fields/);
+});
+
+test('a completed replacement is the only image associated with its ordered payment slot', async () => {
+  const { item, env, bucket, record, snapshot } = await verifiedOrderFixture(6);
+  const previous = { ...snapshot.photos[1] };
+  const replacement = {
+    ...previous, photo_id:`ph_${'f'.repeat(32)}`,
+    revision:'ffffffff-ffff-4fff-8fff-ffffffffffff',
+    objectKey:'uploads/80282/photo-02.jpg'
+  };
+  snapshot.photos[1] = replacement;
+  record.snapshot_json = JSON.stringify(snapshot);
+  await bucket.put(replacement.objectKey, fakeJpeg(), {
+    customMetadata:{ upload_session_id:item.uploadReference, product_code:item.productCode,
+      photo_id:replacement.photo_id, revision:replacement.revision }
+  });
+  await verifyUploadManifests([item], env);
+  assert.equal(item.verifiedPhotos[1].photo_id, replacement.photo_id);
+  assert.notEqual(item.verifiedPhotos[1].revision, previous.revision);
+  const payload = createStripePayload([item], 'https://goodframe.com.au');
+  assert.equal(payload.get('payment_intent_data[metadata][photo_02]'), replacement.objectKey);
+  assert.equal((await bucket.head(replacement.objectKey)).customMetadata.revision, replacement.revision);
 });

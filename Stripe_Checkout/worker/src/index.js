@@ -1619,6 +1619,48 @@ function createStripeProductMapping(lineItems) {
   return chunkStripeMetadataEntries(entries);
 }
 
+// Only populated from the finalized selection after every selected R2 object is verified.
+function addFinalPhotoMetadata(payload, lineItems) {
+  if (!lineItems.some(item => item.verifiedPhotos)) return;
+  // Keep operational/webhook metadata on the Session. Use the PaymentIntent for printing.
+  for (const key of [...payload.keys()]) {
+    if (key.startsWith('payment_intent_data[metadata]') &&
+        !key.startsWith('payment_intent_data[metadata][product_map') &&
+        !['stripe_mode', 'shipping_country', 'checkout_request_id'].some(name =>
+          key === `payment_intent_data[metadata][${name}]`)) payload.delete(key);
+  }
+  const set = (key, value) => payload.set(`payment_intent_data[metadata][${key}]`, String(value));
+  lineItems.forEach((item, index) => {
+    const prefix = lineItems.length === 1 ? '' : `frame_${String(index + 1).padStart(2, '0')}_`;
+    set(`${prefix}order_code`, item.productCode);
+    set(`${prefix}product`, item.productType?.startsWith('tiny_frame') ? 'Tiny Frame' : item.name);
+    set(`${prefix}frame_colour`, item.frameColour);
+    set(`${prefix}photo_count`, item.photoCount || 0);
+    set(`${prefix}upload_status`, item.photoCount > 0 ? 'Complete' : 'Not required');
+    if (item.photoCount > 0 && item.verifiedPhotos?.length !== item.photoCount) {
+      throw new Error('The final selected photo count does not match the quantity purchased');
+    }
+    (item.verifiedPhotos || []).forEach((photo, photoIndex) => {
+      set(`${prefix}photo_${String(photoIndex + 1).padStart(2, '0')}`, photo.objectKey);
+    });
+  });
+}
+
+function validateStripeMetadata(payload) {
+  const groups = new Map();
+  for (const [key, value] of payload) {
+    const match = /^(metadata|.*\[metadata\])\[([^\]]+)\]$/.exec(key);
+    if (!match) continue;
+    groups.set(match[1], (groups.get(match[1]) || 0) + 1);
+    if (match[2].length > 40 || value.length > 500) {
+      throw new Error('Order photo references exceed Stripe metadata limits');
+    }
+  }
+  if ([...groups.values()].some(count => count > 50)) {
+    throw new Error('This order exceeds Stripe’s 50 metadata fields. Please split the frames or photos into separate orders.');
+  }
+}
+
 function createStripePayload(
   lineItems,
   siteBaseUrl,
@@ -1731,6 +1773,8 @@ function createStripePayload(
     payload.set(`${prefix}[quantity]`, String(item.quantity));
   });
 
+  addFinalPhotoMetadata(payload, lineItems);
+  validateStripeMetadata(payload);
   return payload;
 }
 
@@ -1798,6 +1842,11 @@ async function verifyUploadManifests(lineItems, env) {
           photo.customMetadata?.photo_id !== photos[index]?.photo_id ||
           photo.customMetadata?.revision !== photos[index]?.revision
         )) throw new Error('One or more selected photos could not be verified in product storage');
+        if (photos.some((photo, index) => photo.position !== index + 1) ||
+            new Set(photos.map(photo => photo.objectKey)).size !== photos.length) {
+          throw new Error('The final selected photo order is invalid');
+        }
+        item.verifiedPhotos = photos.map(photo => ({ ...photo }));
         const assignedCodes = parsePhotoUploadJson(record.product_codes_json, []);
         if (Array.isArray(assignedCodes) && assignedCodes.some(code => normalizeProductCode(code) !== item.productCode)) {
           throw new Error('The upload session is already associated with another product code');
@@ -1820,9 +1869,14 @@ async function verifyUploadManifests(lineItems, env) {
           Number(manifest.photo_count) !== item.photoCount || photos.length !== item.photoCount
         ) throw new Error('One or more individual-photo manifests could not be verified');
         const storedPhotos = await Promise.all(photos.map(photo => env.ARTWORK_BUCKET.head(String(photo?.objectKey || ''))));
-        if (storedPhotos.some((photo, index) => !photo || !isValidIndividualPhotoKey(photos[index]?.objectKey, item.uploadReference))) {
+        if (storedPhotos.some((photo, index) => !photo || !isValidIndividualPhotoKey(photos[index]?.objectKey, item.uploadReference) || photo.customMetadata?.upload_session_id !== uploadSessionId || photo.customMetadata?.photo_id !== photos[index]?.photo_id || photo.customMetadata?.revision !== photos[index]?.revision)) {
           throw new Error('One or more cropped photos could not be verified');
         }
+        if (photos.some((photo, index) => photo.position !== index + 1) ||
+            new Set(photos.map(photo => photo.objectKey)).size !== photos.length) {
+          throw new Error('The final selected photo order is invalid');
+        }
+        item.verifiedPhotos = photos.map(photo => ({ ...photo }));
         const productCodes = [...new Set([...(Array.isArray(manifest.product_codes) ? manifest.product_codes : []), item.productCode].map(normalizeProductCode).filter(Boolean))];
         await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({ ...manifest, product_codes:productCodes, updated_at:new Date().toISOString() }), {
           httpMetadata:{ contentType:'application/json' }
@@ -2030,6 +2084,7 @@ async function createCheckoutSession(request, env) {
 
   let lineItems;
   let capacity;
+  let stripePayload;
   try {
     lineItems = buildLineItems(checkoutItems);
     const reconciliation = await reconcileCheckoutAttachment(
@@ -2043,6 +2098,7 @@ async function createCheckoutSession(request, env) {
     lineItems = reconciliation.lineItems;
     checkoutRequestId = reconciliation.checkoutRequestId;
     if (reconciliation.reused) {
+      await verifyUploadManifests(lineItems, env);
       return jsonResponse(request, env, reconciliation.reused);
     }
     const physicalItems = lineItems.filter(item => item.cartItemId);
@@ -2062,6 +2118,10 @@ async function createCheckoutSession(request, env) {
       allocation.units.map(item => item.productCode)
     );
     await verifyUploadManifests(lineItems, env);
+    stripePayload = createStripePayload(
+      lineItems, getSiteBaseUrl(env), stripeConfiguration.mode,
+      checkoutRequestId, shippingCountry, internationalShippingRateId
+    );
     if (checkoutRequest.stripe_checkout_session_id && checkoutRequest.stripe_checkout_url) {
       const existingStripeSession = await retrieveStripeSession(
         stripeConfiguration,
@@ -2095,14 +2155,7 @@ async function createCheckoutSession(request, env) {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Idempotency-Key':checkoutRequestId
     },
-    body:createStripePayload(
-      lineItems,
-      siteBaseUrl,
-      stripeConfiguration.mode,
-      checkoutRequestId,
-      shippingCountry,
-      internationalShippingRateId
-    )
+    body:stripePayload
   });
   const stripeResult = await stripeResponse.json();
 
@@ -3300,6 +3353,7 @@ async function getShippingQuote(request, env) {
 }
 
 export {
+  verifyUploadManifests,
   buildLineItems,
   claimWebhookEvent,
   cleanupPendingUploads,

@@ -148,3 +148,31 @@ Authorization: Bearer <ADMIN_API_KEY>
 The listing returns ordered photo references and secure download URLs. The
 photo and legacy PDF endpoints proxy private R2 objects without exposing bucket
 credentials or public object URLs.
+
+### Payment printing metadata
+
+Checkout now derives printing metadata only from the finalized ordered selection,
+not upload history or client-supplied file lists. Each selected R2 object is checked
+for the session, product (current storage), photo identity and revision before
+creating checkout, including when reusing an open checkout. Missing files, duplicate
+keys, invalid positions and quantity mismatches stop checkout.
+
+For a single frame the PaymentIntent contains `order_code`, `product`,
+`frame_colour`, `photo_count`, `upload_status` and individual `photo_01`, `photo_02`,
+etc. R2 object keys. Multiple frames use `frame_01_order_code`,
+`frame_01_photo_01`, `frame_02_order_code`, etc. Existing Session metadata remains
+available for webhook processing. Current product-folder image keys stay the same
+when payment completes.
+
+Stripe permits 50 metadata fields per object, 40 characters per key and 500 per
+value: https://docs.stripe.com/metadata. All metadata groups are validated before
+calling Stripe. Orders too large to retain every separate photo field receive a
+checkout error asking the customer to split the order; references are never
+silently truncated. The limit includes operational fields and the product map,
+so maximum capacity varies with the number of frames. Pricing and the storefront
+quantity selector are unchanged.
+
+Local regression coverage includes 6/9/12/15 photos, completed replacements,
+late superseded uploads, quantity mismatches, missing R2 objects, invalid ordering,
+multiple frame codes and metadata overflow. Tests use in-memory R2/D1 and mocked
+Stripe calls; production services are not contacted.
