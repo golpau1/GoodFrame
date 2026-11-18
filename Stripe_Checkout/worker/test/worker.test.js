@@ -447,7 +447,7 @@ test('Frame Only checkout is rejected before contacting Stripe', async () => {
       }] })
     }), testEnv);
     assert.equal(response.status, 400);
-    assert.match((await response.json()).error, /invalid product type/);
+    assert.match((await response.json()).error, /at least six photos/);
     assert.equal(stripeWasCalled, false);
     assert.equal(testEnv.ARTWORK_BUCKET.objects.size, 0);
   } finally {

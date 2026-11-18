@@ -34,8 +34,9 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
   tiny_frame_photo_sets: Object.freeze({
     orderType: 'photo-sets',
     name: 'Frame',
-    baseUnitAmount: 5000,
-    additionalPhotoSetUnitAmount: 500,
+    baseUnitAmount: 6000,
+    includedPhotoSetCount: 2,
+    additionalPhotoSetUnitAmount: 600,
     requiresPictures: false
   }),
   tiny_frame_8_pictures: Object.freeze({
@@ -82,7 +83,8 @@ function getTinyFrameUnitAmount(productType, photoSetCount = 0) {
   if (productType === 'tiny_frame_8_pictures') return TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.unitAmount;
   if (productType !== 'tiny_frame_photo_sets' || normalizePhotoSetCount(photoSetCount) === null) return undefined;
   const product = TINY_FRAME_PRODUCTS.tiny_frame_photo_sets;
-  const additionalPhotoSetCount = Math.max(0, photoSetCount - 1);
+  if (photoSetCount < product.includedPhotoSetCount) return undefined;
+  const additionalPhotoSetCount = Math.max(0, photoSetCount - product.includedPhotoSetCount);
   const amount = product.baseUnitAmount + (additionalPhotoSetCount * product.additionalPhotoSetUnitAmount);
   return Number.isSafeInteger(amount) ? amount : undefined;
 }
@@ -1497,6 +1499,13 @@ function buildLineItems(items) {
       : 0;
     const unitAmount = getUnitAmount(item, size, productType);
 
+    if (
+      productType === 'tiny_frame_photo_sets' &&
+      (photoSetCount === null || photoSetCount < tinyFrameProduct.includedPhotoSetCount)
+    ) {
+      throw new Error('A Tiny Frame requires at least six photos');
+    }
+
     if (!unitAmount || (productType === 'tiny_frame_photo_sets' && photoSetCount === null)) {
       throw new Error(size === '80x80mm'
         ? 'One or more Tiny Frames has an invalid product type'
@@ -1626,7 +1635,8 @@ function addFinalPhotoMetadata(payload, lineItems) {
   for (const key of [...payload.keys()]) {
     if (key.startsWith('payment_intent_data[metadata]') &&
         !key.startsWith('payment_intent_data[metadata][product_map') &&
-        !['stripe_mode', 'shipping_country', 'checkout_request_id'].some(name =>
+        !key.startsWith('payment_intent_data[metadata][photo_selection_map') &&
+        !['stripe_mode', 'shipping_country', 'checkout_request_id', 'total_photo_count'].some(name =>
           key === `payment_intent_data[metadata][${name}]`)) payload.delete(key);
   }
   const set = (key, value) => payload.set(`payment_intent_data[metadata][${key}]`, String(value));
@@ -1661,6 +1671,15 @@ function validateStripeMetadata(payload) {
   }
 }
 
+function createStripePhotoSelectionMapping(lineItems) {
+  const entries = lineItems
+    .filter(item => item.photoCount > 0 && item.uploadReference)
+    .map((item, index) => (
+      `${index + 1}:${item.productCode || item.cartItemId} | ${item.photoCount} photos | Upload ${item.uploadReference}`
+    ));
+  return chunkStripeMetadataEntries(entries);
+}
+
 function createStripePayload(
   lineItems,
   siteBaseUrl,
@@ -1673,6 +1692,7 @@ function createStripePayload(
   const productTypes = lineItems.map(item => item.productType).filter(Boolean);
   const frameColours = lineItems.map(item => item.frameColour).filter(Boolean);
   const uploadReferences = [...new Set(lineItems.map(item => item.uploadReference).filter(Boolean))];
+  const totalPhotoCount = lineItems.reduce((total, item) => total + (Number(item.photoCount) || 0), 0);
   const payload = new URLSearchParams({
     mode: 'payment',
     success_url: `${siteBaseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
@@ -1696,6 +1716,8 @@ function createStripePayload(
   payload.set('payment_intent_data[metadata][shipping_country]', shippingCountry);
   payload.set('metadata[checkout_request_id]', checkoutRequestId);
   payload.set('payment_intent_data[metadata][checkout_request_id]', checkoutRequestId);
+  payload.set('metadata[total_photo_count]', String(totalPhotoCount));
+  payload.set('payment_intent_data[metadata][total_photo_count]', String(totalPhotoCount));
   const productCodeChunks = [];
   for (let index = 0; index < productCodes.length; index += 80) {
     productCodeChunks.push(productCodes.slice(index, index + 80).join(','));
@@ -1709,6 +1731,11 @@ function createStripePayload(
     const suffix = index === 0 ? '' : `_${index + 1}`;
     payload.set(`metadata[product_map${suffix}]`, value);
     payload.set(`payment_intent_data[metadata][product_map${suffix}]`, value);
+  });
+  createStripePhotoSelectionMapping(lineItems).forEach((value, index) => {
+    const suffix = index === 0 ? '' : `_${index + 1}`;
+    payload.set(`metadata[photo_selection_map${suffix}]`, value);
+    payload.set(`payment_intent_data[metadata][photo_selection_map${suffix}]`, value);
   });
   if (stripeMode === 'test') {
     payload.set(

@@ -23,7 +23,8 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /const PRINT_JPEG_QUALITY = \.98;/);
   assert.doesNotMatch(html, /PRINT_EXPORT_SHORT_EDGE/);
   assert.match(html, /canvasToJpegBlob\(printCanvas, PRINT_JPEG_QUALITY\)/);
-  assert.match(html, /const uploadedImages = Array\(3\)\.fill\(null\);/);
+  assert.match(html, /const INCLUDED_PHOTO_SET_COUNT = 2;/);
+  assert.match(html, /const uploadedImages = Array\(INCLUDED_PHOTO_SET_COUNT \* 3\)\.fill\(null\);/);
   assert.match(html, /for \(let offset = 0; offset < 3; offset \+= 1\)/);
   assert.match(html, /input\.multiple = true;/);
   assert.match(html, /MAX_CONCURRENT_PHOTO_UPLOADS = 2/);
@@ -76,12 +77,14 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /const FRAME_COLOUR = \"Natural Oak\";/);
   assert.match(html, /frameColour:FRAME_COLOUR,/);
   assert.doesNotMatch(html, /swatch-button|data-colour/);
-  assert.match(html, /"price": "50\.00"/);
-  assert.match(html, /const BASE_FRAME_PRICE = 50;/);
-  assert.match(html, /const PHOTO_SET_PRICE = 5;/);
-  assert.match(html, /function photoSetPriceFor\(photoSetCount\) \{\s*return BASE_FRAME_PRICE \+ \(Math\.max\(0, photoSetCount - 1\) \* PHOTO_SET_PRICE\);/);
-  assert.match(html, /id=\"config-price\">50\.00</);
-  assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$5</);
+  assert.match(html, /"price": "60\.00"/);
+  assert.match(html, /const BASE_FRAME_PRICE = 60;/);
+  assert.match(html, /const PHOTO_SET_PRICE = 6;/);
+  assert.match(html, /function photoSetPriceFor\(photoSetCount\) \{\s*return BASE_FRAME_PRICE \+ \(Math\.max\(0, photoSetCount - INCLUDED_PHOTO_SET_COUNT\) \* PHOTO_SET_PRICE\);/);
+  assert.match(html, /id=\"config-price\">60\.00</);
+  assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$6</);
+  assert.match(html, /id=\"upload-progress\"[^>]*>0 \/ 6 uploaded</);
+  assert.match(html, /setIndex < INCLUDED_PHOTO_SET_COUNT/);
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
   assert.match(html, /\.configurator \{ width:min\(60%,350px\); height:auto; max-height:none;/);
   assert.match(html, /hero-dscf1744-effect-landscape-2560\.webp/);
@@ -344,7 +347,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
 
   const photos = [];
   const selection = [];
-  for (let index = 0; index < 3; index += 1) {
+  for (let index = 0; index < 6; index += 1) {
     const photoId = `ph_${String(index + 1).repeat(32)}`;
     const revision = `${String(index + 4).repeat(8)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(4)}-${String(index + 4).repeat(12)}`;
     selection.push({ photoId, revision });
@@ -356,14 +359,14 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       uploadSessionId,
       cartItemId,
       selectionVersion:0,
-      photoSetCount:1,
+      photoSetCount:2,
       frameColour:'Natural Oak',
       selection
     })
   }), env);
   assert.equal(selectionResponse.status, 200);
   const uploadRequests = [];
-  for (let index = 0; index < 3; index += 1) {
+  for (let index = 0; index < 6; index += 1) {
     const { photoId, revision } = selection[index];
     const form = new FormData();
     form.append('upload_session_id', uploadSessionId);
@@ -398,13 +401,13 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   const retriedPhoto = await retryUpload.json();
   assert.equal(retriedPhoto.recovered, true);
   assert.equal(retriedPhoto.photo.objectKey, photos[0].objectKey);
-  assert.equal((await bucket.list({ prefix:`uploads/${storageFolder}/photo-` })).objects.length, 3);
+  assert.equal((await bucket.list({ prefix:`uploads/${storageFolder}/photo-` })).objects.length, 6);
   assert.equal((await bucket.list({ prefix:'temporary/' })).objects.length, 0);
 
   const statusResponse = await worker.fetch(new Request(`https://worker.example/tiny-frame-upload/status?upload_session_id=${uploadSessionId}`, { headers }), env);
   const status = await statusResponse.json();
-  assert.equal(status.photos.length, 3);
-  assert.deepEqual(status.photos.map(photo => photo.position), [1, 2, 3]);
+  assert.equal(status.photos.length, 6);
+  assert.deepEqual(status.photos.map(photo => photo.position), [1, 2, 3, 4, 5, 6]);
 
   const reorderedSelection = selection.slice().reverse();
   const reorderResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
@@ -414,7 +417,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       uploadSessionId,
       cartItemId,
       selectionVersion:1,
-      photoSetCount:1,
+      photoSetCount:2,
       frameColour:'Natural Oak',
       selection:reorderedSelection
     })
@@ -427,7 +430,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       uploadSessionId,
       cartItemId,
       selectionVersion:2,
-      photoSetCount:1,
+      photoSetCount:2,
       frameColour:'Natural Oak',
       selection
     })
@@ -441,7 +444,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
       uploadSessionId,
       cartItemId,
       frameColour:'Natural Oak',
-      photoSetCount:1
+      photoSetCount:2
     })
   }), env);
   assert.equal(finalizeResponse.status, 200);
@@ -472,8 +475,8 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
           cartItemId,
           size:'80x80mm',
           frameColour:'Natural Oak',
-          photoSetCount:1,
-          photoCount:3,
+          photoSetCount:2,
+          photoCount:6,
           quantity:1,
           uploadReference:uploadSessionId
         }]
@@ -490,11 +493,16 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
     productCode
   );
   assert.equal(stripeBody.get('payment_intent_data[metadata][order_code]'), productCode);
-  assert.equal(stripeBody.get('payment_intent_data[metadata][photo_count]'), '3');
+  assert.equal(stripeBody.get('payment_intent_data[metadata][photo_count]'), '6');
   assert.equal(stripeBody.get('payment_intent_data[metadata][upload_status]'), 'Complete');
   photos.forEach((photo, index) => assert.equal(
     stripeBody.get(`payment_intent_data[metadata][photo_${String(index + 1).padStart(2, '0')}]`), photo.objectKey
   ));
+  assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '6000');
+  assert.equal(stripeBody.get('metadata[total_photo_count]'), '6');
+  assert.equal(stripeBody.get('payment_intent_data[metadata][total_photo_count]'), '6');
+  assert.match(stripeBody.get('metadata[photo_selection_map]'), /6 photos \| Upload tf_[a-f0-9]{32}/);
+  assert.match(stripeBody.get('payment_intent_data[metadata][photo_selection_map]'), /6 photos \| Upload tf_[a-f0-9]{32}/);
   await markUploadSessionsPaid({
     id:checkoutResult.id,
     metadata:{ upload_session_ids:uploadSessionId }
@@ -502,8 +510,8 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   const finalManifestKey = `uploads/${storageFolder}/manifest.json`;
   assert.ok(bucket.objects.has(finalManifestKey));
   const finalManifest = await (await bucket.get(finalManifestKey)).json();
-  assert.equal(finalManifest.photo_count, 3);
-  assert.equal(finalManifest.photos.length, 3);
+  assert.equal(finalManifest.photo_count, 6);
+  assert.equal(finalManifest.photos.length, 6);
   assert.equal(finalManifest.order_code, productCode);
   assert.equal(finalManifest.status, 'paid');
   const paidPhotoKey = finalManifest.photos[0].objectKey;
@@ -524,7 +532,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   const adminHeaders = { Authorization:'Bearer admin-key-that-is-at-least-24-characters' };
   const assetResponse = await worker.fetch(new Request(`https://worker.example/admin/product-assets/${productCode}`, { headers:adminHeaders }), env);
   const assets = await assetResponse.json();
-  assert.equal(assets.photoCount, 3);
+  assert.equal(assets.photoCount, 6);
   assert.equal(assets.photos[0].downloadUrl, `/admin/product-assets/${productCode}/photo/1`);
   const downloadResponse = await worker.fetch(new Request(`https://worker.example/admin/product-assets/${productCode}/photo/1`, { headers:adminHeaders }), env);
   assert.equal(downloadResponse.status, 200);
@@ -624,7 +632,7 @@ test('individual photo sets are not capped at 100 sets or 300 photos', async () 
   const lineItem = buildLineItems([frameWithPhotoSets(101)])[0];
   assert.equal(lineItem.photoSetCount, 101);
   assert.equal(lineItem.photoCount, 303);
-  assert.equal(lineItem.unitAmount, 55000);
+  assert.equal(lineItem.unitAmount, 65400);
 
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
@@ -957,33 +965,35 @@ test('legacy eight-photo carts keep their $64.95 price and client-supplied shipp
   assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
 });
 
-test('variable photo-set pricing is calculated on the server from $50 including three photos plus $5 per additional set', () => {
-  const lineItems = [0, 1, 2, 3, 4, 5].map(photoSetCount => (
+test('variable photo-set pricing is calculated on the server from $60 including six photos plus $6 per additional set', () => {
+  const lineItems = [2, 3, 4, 5, 6].map(photoSetCount => (
     buildLineItems([frameWithPhotoSets(photoSetCount)])[0]
   ));
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [5000, 5000, 5500, 6000, 6500, 7000]);
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [6000, 6600, 7200, 7800, 8400]);
   assert.deepEqual(lineItems.map(item => item.name), [
-    'Frame Only',
-    'Frame + 3 Photos',
     'Frame + 6 Photos',
     'Frame + 9 Photos',
     'Frame + 12 Photos',
-    'Frame + 15 Photos'
+    'Frame + 15 Photos',
+    'Frame + 18 Photos'
   ]);
   assert.throws(() => buildLineItems([frameWithPhotoSets(2, { photoCount:3 })]), /photo count does not match/);
-  assert.throws(() => buildLineItems([frameWithPhotoSets(1, { uploadReference:'' })]), /completed photo upload reference/);
-  assert.throws(() => buildLineItems([frameWithPhotoSets(0, { uploadReference })]), /frame-only product cannot include/);
+  assert.throws(() => buildLineItems([frameWithPhotoSets(1)]), /at least six photos/);
+  assert.throws(() => buildLineItems([frameWithPhotoSets(2, { uploadReference:'' })]), /completed photo upload reference/);
 });
 
 test('Stripe receives the server-calculated variable total and photo counts', () => {
-  const expectedAmounts = [5000, 5500, 6000, 6500];
-  for (const [index, photoSetCount] of [1, 2, 3, 4].entries()) {
+  const expectedAmounts = [6000, 6600, 7200, 7800, 8400];
+  for (const [index, photoSetCount] of [2, 3, 4, 5, 6].entries()) {
     const lineItems = buildLineItems([frameWithPhotoSets(photoSetCount)]).map(item => ({ ...item, productCode:'73194' }));
     const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', `co_${String(index + 1).repeat(32)}`);
     assert.equal(payload.get('line_items[0][price_data][unit_amount]'), String(expectedAmounts[index]));
     assert.equal(payload.get('line_items[0][price_data][product_data][name]'), `Frame + ${photoSetCount * 3} Photos`);
     assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_set_count]'), String(photoSetCount));
     assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_count]'), String(photoSetCount * 3));
+    assert.equal(payload.get('metadata[total_photo_count]'), String(photoSetCount * 3));
+    assert.equal(payload.get('payment_intent_data[metadata][total_photo_count]'), String(photoSetCount * 3));
+    assert.match(payload.get('metadata[photo_selection_map]'), new RegExp(`${photoSetCount * 3} photos \\| Upload ${uploadReference}`));
   }
 });
 
@@ -1199,14 +1209,15 @@ async function verifiedOrderFixture(count, code = '80282') {
   const item = {
     name:'Frame + Photos', productType:'tiny_frame_photo_sets', productCode:code,
     uploadReference, cartItemId:snapshot.cart_item_id, frameColour:'Natural Oak',
-    photoSetCount:count / 3, photoCount:count, unitAmount:5000 + (count / 3 - 1) * 500,
+    photoSetCount:count / 3, photoCount:count,
+    unitAmount:6000 + Math.max(0, count / 3 - 2) * 600,
     quantity:1, unitIndex:0, artworkObjectKeys:[]
   };
   const env = { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:{ prepare:() => ({ bind:() => ({ first:async () => record, run:async () => ({ meta:{ changes:1 } }) }) }) } };
   return { item, env, bucket, photos, record, snapshot };
 }
 
-for (const count of [6, 9, 12, 15]) test(`verified final selection supplies exactly ${count} ordered payment photo fields`, async () => {
+for (const count of [6, 9, 12, 15, 18]) test(`verified final selection supplies exactly ${count} ordered payment photo fields`, async () => {
   const { item, env, bucket, photos } = await verifiedOrderFixture(count);
   // An obsolete upload remains in R2, but cannot enter the printing metadata.
   await bucket.put('uploads/80282/obsolete.jpg', fakeJpeg());
