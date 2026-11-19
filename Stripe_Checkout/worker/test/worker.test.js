@@ -269,6 +269,8 @@ test('checkout return status securely distinguishes confirmed, processing, and f
           id:`cs_test_status${index}`,
           status:checkoutCase.sessionStatus,
           payment_status:checkoutCase.paymentStatus,
+          amount_total:7000,
+          currency:'aud',
           payment_intent:{ status:checkoutCase.paymentIntentStatus },
           metadata:{ checkout_request_id:checkoutRequestId }
         });
@@ -286,6 +288,8 @@ test('checkout return status securely distinguishes confirmed, processing, and f
       assert.equal(result.outcome, checkoutCase.outcome);
       assert.equal(result.checkoutRequestId, checkoutRequestId);
       assert.equal(result.paymentIntentStatus, checkoutCase.paymentIntentStatus);
+      assert.equal(result.amountTotal, checkoutCase.outcome === 'confirmed' ? 7000 : null);
+      assert.equal(result.currency, checkoutCase.outcome === 'confirmed' ? 'aud' : null);
     }
   } finally {
     globalThis.fetch = originalFetch;

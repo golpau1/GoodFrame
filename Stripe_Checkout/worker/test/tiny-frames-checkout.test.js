@@ -24,6 +24,7 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.doesNotMatch(html, /PRINT_EXPORT_SHORT_EDGE/);
   assert.match(html, /canvasToJpegBlob\(printCanvas, PRINT_JPEG_QUALITY\)/);
   assert.match(html, /const INCLUDED_PHOTO_SET_COUNT = 2;/);
+  assert.match(html, /const MAX_PHOTO_SET_COUNT = 5;/);
   assert.match(html, /const uploadedImages = Array\(INCLUDED_PHOTO_SET_COUNT \* 3\)\.fill\(null\);/);
   assert.match(html, /for \(let offset = 0; offset < 3; offset \+= 1\)/);
   assert.match(html, /input\.multiple = true;/);
@@ -83,17 +84,41 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /function photoSetPriceFor\(photoSetCount\) \{\s*return BASE_FRAME_PRICE \+ \(Math\.max\(0, photoSetCount - INCLUDED_PHOTO_SET_COUNT\) \* PHOTO_SET_PRICE\);/);
   assert.match(html, /id=\"config-price\">60\.00</);
   assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$6</);
-  assert.match(html, /id=\"upload-progress\"[^>]*>0 \/ 6 uploaded</);
+  assert.match(html, /id=\"upload-progress\"[^>]*>Let's choose your first photo</);
+  assert.match(html, /id=\"upload-intro\"/);
+  assert.match(html, /Start with your favourite photo/);
+  assert.match(html, /Choose one to see how it looks\./);
+  assert.match(html, /id=\"choose-first-photo\"[^>]*>Choose a photo</);
+  assert.match(html, /photoSetsContainer\.hidden = !started/);
+  assert.match(html, /id=\"frame-preview\"[^>]*hidden/);
+  assert.match(html, /This is how your memory could look\./);
+  assert.match(html, /framePreviewPhoto\.src = firstEntry\.url/);
+  assert.match(html, /id=\"mobile-upload-cta\"/);
+  assert.match(html, /photoSetCount >= MAX_PHOTO_SET_COUNT/);
   assert.match(html, /setIndex < INCLUDED_PHOTO_SET_COUNT/);
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
   assert.match(html, /\.configurator \{ width:min\(60%,350px\); height:auto; max-height:none;/);
   assert.match(html, /hero-dscf1744-effect-landscape-2560\.webp/);
   assert.match(html, /hero-dscf1744-effect-portrait-960\.webp/);
-  assert.doesNotMatch(html, /Upload Photos/);
-  assert.match(html, /class="hero-scroll-arrow" href="#upload-section"/);
+  assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
+  assert.match(html, /6 printed photos \+ handmade oak frame · \$60 AUD/);
+  assert.match(html, /openOrContinuePhotoWorkflow\(heroUploadButton\)/);
+  assert.match(html, /Assets\/vendor\/cropperjs-1\.6\.1\/cropper\.min\.js/);
+  assert.doesNotMatch(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/cropperjs/);
+  assert.match(html, /typeof globalThis\.Cropper !== "function"/);
   assert.match(html, /id="upload-progress" role="status" aria-live="polite"/);
   assert.match(html, /your selected \$\{failedCount === 1 \? "photo is" : "photos are"\} still saved/);
   assert.match(html, /replace\.addEventListener\("click", \(\) => triggerSlotPicker\(slot, replace\)\);/);
+  assert.match(html, /replace\.textContent = "Change photo"/);
+  assert.match(html, /label\.textContent = "Add a memory"/);
+  assert.match(html, /Your first 3 memories/);
+  assert.match(html, /Your next 3 memories/);
+  assert.match(html, /trackGa4EventOnce\("upload_started"/);
+  assert.match(html, /trackGa4Event\("photo_uploaded"/);
+  assert.match(html, /trackGa4Event\("upload_failed"/);
+  assert.match(html, /trackGa4EventOnce\("six_photos_completed"/);
+  assert.match(html, /trackGa4EventOnce\("add_to_cart"/);
+  assert.match(html, /trackGa4EventOnce\("purchase"/);
   assert.match(html, /uploadedImages\[item\.slotIndex\] = entry;/);
   assert.doesNotMatch(html, /image-remove-button/);
   assert.doesNotMatch(html, /slot-move-button/);
@@ -628,11 +653,12 @@ test('a replaced photo cannot become active when its in-flight upload finishes l
   database.close();
 });
 
-test('individual photo sets are not capped at 100 sets or 300 photos', async () => {
-  const lineItem = buildLineItems([frameWithPhotoSets(101)])[0];
-  assert.equal(lineItem.photoSetCount, 101);
-  assert.equal(lineItem.photoCount, 303);
-  assert.equal(lineItem.unitAmount, 65400);
+test('individual photo sets are capped at 15 photos in the cart and upload selection', async () => {
+  const lineItem = buildLineItems([frameWithPhotoSets(5)])[0];
+  assert.equal(lineItem.photoSetCount, 5);
+  assert.equal(lineItem.photoCount, 15);
+  assert.equal(lineItem.unitAmount, 7800);
+  assert.throws(() => buildLineItems([frameWithPhotoSets(6)]), /between six and 15 photos/);
 
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
@@ -646,10 +672,7 @@ test('individual photo sets are not capped at 100 sets or 300 photos', async () 
   }), { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:database, ALLOWED_ORIGINS:'https://goodframe.com.au' });
   assert.equal(create.status, 200);
 
-  const photoId = `ph_${'9'.repeat(32)}`;
-  const revision = '99999999-9999-4999-8999-999999999999';
-  const selection = Array(303).fill(null);
-  selection[300] = { photoId, revision };
+  const selection = Array(18).fill(null);
   const selectionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
     method:'POST',
     headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Token':uploadToken },
@@ -657,32 +680,13 @@ test('individual photo sets are not capped at 100 sets or 300 photos', async () 
       uploadSessionId,
       cartItemId,
       selectionVersion:0,
-      photoSetCount:101,
+      photoSetCount:6,
       frameColour:'Natural Oak',
       selection
     })
   }), { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:database, ALLOWED_ORIGINS:'https://goodframe.com.au' });
-  assert.equal(selectionResponse.status, 200);
-  const form = new FormData();
-  form.append('upload_session_id', uploadSessionId);
-  form.append('photo_id', photoId);
-  form.append('revision', revision);
-  form.append('position', '301');
-  form.append('file', new File([fakeJpeg()], `${photoId}.jpg`, { type:'image/jpeg' }));
-  const upload = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/photo', {
-    method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'X-Upload-Token':uploadToken },
-    body:form
-  }), {
-    ARTWORK_BUCKET:bucket,
-    PRODUCT_CODES_DB:database,
-    ALLOWED_ORIGINS:'https://goodframe.com.au',
-    IMAGES:{ info:async () => ({ width:1080, height:1720 }) }
-  });
-  assert.equal(upload.status, 200);
-  const uploaded = await upload.json();
-  assert.equal((await bucket.head(uploaded.photo.objectKey)).customMetadata.photo_id, photoId);
-  assert.equal(uploaded.photo.position, 301);
+  assert.equal(selectionResponse.status, 400);
+  assert.match((await selectionResponse.json()).error, /invalid/i);
   database.close();
 });
 
@@ -966,25 +970,25 @@ test('legacy eight-photo carts keep their $64.95 price and client-supplied shipp
 });
 
 test('variable photo-set pricing is calculated on the server from $60 including six photos plus $6 per additional set', () => {
-  const lineItems = [2, 3, 4, 5, 6].map(photoSetCount => (
+  const lineItems = [2, 3, 4, 5].map(photoSetCount => (
     buildLineItems([frameWithPhotoSets(photoSetCount)])[0]
   ));
-  assert.deepEqual(lineItems.map(item => item.unitAmount), [6000, 6600, 7200, 7800, 8400]);
+  assert.deepEqual(lineItems.map(item => item.unitAmount), [6000, 6600, 7200, 7800]);
   assert.deepEqual(lineItems.map(item => item.name), [
     'Frame + 6 Photos',
     'Frame + 9 Photos',
     'Frame + 12 Photos',
-    'Frame + 15 Photos',
-    'Frame + 18 Photos'
+    'Frame + 15 Photos'
   ]);
   assert.throws(() => buildLineItems([frameWithPhotoSets(2, { photoCount:3 })]), /photo count does not match/);
   assert.throws(() => buildLineItems([frameWithPhotoSets(1)]), /at least six photos/);
+  assert.throws(() => buildLineItems([frameWithPhotoSets(6)]), /between six and 15 photos/);
   assert.throws(() => buildLineItems([frameWithPhotoSets(2, { uploadReference:'' })]), /completed photo upload reference/);
 });
 
 test('Stripe receives the server-calculated variable total and photo counts', () => {
-  const expectedAmounts = [6000, 6600, 7200, 7800, 8400];
-  for (const [index, photoSetCount] of [2, 3, 4, 5, 6].entries()) {
+  const expectedAmounts = [6000, 6600, 7200, 7800];
+  for (const [index, photoSetCount] of [2, 3, 4, 5].entries()) {
     const lineItems = buildLineItems([frameWithPhotoSets(photoSetCount)]).map(item => ({ ...item, productCode:'73194' }));
     const payload = createStripePayload(lineItems, 'https://goodframe.com.au', 'live', `co_${String(index + 1).repeat(32)}`);
     assert.equal(payload.get('line_items[0][price_data][unit_amount]'), String(expectedAmounts[index]));
@@ -1217,7 +1221,7 @@ async function verifiedOrderFixture(count, code = '80282') {
   return { item, env, bucket, photos, record, snapshot };
 }
 
-for (const count of [6, 9, 12, 15, 18]) test(`verified final selection supplies exactly ${count} ordered payment photo fields`, async () => {
+for (const count of [6, 9, 12, 15]) test(`verified final selection supplies exactly ${count} ordered payment photo fields`, async () => {
   const { item, env, bucket, photos } = await verifiedOrderFixture(count);
   // An obsolete upload remains in R2, but cannot enter the printing metadata.
   await bucket.put('uploads/80282/obsolete.jpg', fakeJpeg());

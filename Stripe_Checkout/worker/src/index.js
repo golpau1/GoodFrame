@@ -54,6 +54,7 @@ const TINY_FRAME_UPLOAD_PREFIX = 'temporary/';
 const LEGACY_TINY_FRAME_UPLOAD_PREFIX = 'tinyframes/';
 const TINY_FRAME_UPLOAD_IMAGE_COUNT = 8;
 const TINY_FRAME_PHOTOS_PER_SET = 3;
+const MAX_TINY_FRAME_PHOTO_SET_COUNT = 5;
 const TINY_FRAME_PHOTOS_PER_PAGE = 9;
 const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
 const LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION = 2;
@@ -70,7 +71,8 @@ const DEFAULT_PENDING_UPLOAD_TTL_DAYS = 7;
 class TinyFrameInputError extends Error {}
 function normalizePhotoSetCount(value) {
   const count = Number(value);
-  return Number.isSafeInteger(count) && count >= 0 && Number.isSafeInteger(count * TINY_FRAME_PHOTOS_PER_SET) ? count : null;
+  return Number.isSafeInteger(count) && count >= 0 && count <= MAX_TINY_FRAME_PHOTO_SET_COUNT &&
+    Number.isSafeInteger(count * TINY_FRAME_PHOTOS_PER_SET) ? count : null;
 }
 
 function getTinyFramePhotoCount(productType, photoSetCount) {
@@ -1499,10 +1501,14 @@ function buildLineItems(items) {
       : 0;
     const unitAmount = getUnitAmount(item, size, productType);
 
-    if (
-      productType === 'tiny_frame_photo_sets' &&
-      (photoSetCount === null || photoSetCount < tinyFrameProduct.includedPhotoSetCount)
-    ) {
+    if (productType === 'tiny_frame_photo_sets' && photoSetCount === null) {
+      if (Number(item?.photoSetCount) > MAX_TINY_FRAME_PHOTO_SET_COUNT) {
+        throw new Error('A Tiny Frame supports between six and 15 photos in sets of three');
+      }
+      throw new Error('A Tiny Frame requires at least six photos');
+    }
+
+    if (productType === 'tiny_frame_photo_sets' && photoSetCount < tinyFrameProduct.includedPhotoSetCount) {
       throw new Error('A Tiny Frame requires at least six photos');
     }
 
@@ -2267,6 +2273,8 @@ async function getCheckoutSessionStatus(request, env) {
     paymentIntentStatus,
     outcome,
     checkoutRequestId,
+    amountTotal:outcome === 'confirmed' && Number.isInteger(stripeResult.amount_total) ? stripeResult.amount_total : null,
+    currency:outcome === 'confirmed' && /^[a-z]{3}$/.test(String(stripeResult.currency || '')) ? stripeResult.currency : null,
     orderReference: stripeResult.client_reference_id
       ? `#GF-${stripeResult.client_reference_id}`
       : `#GF-${sessionId.slice(-8).toUpperCase()}`

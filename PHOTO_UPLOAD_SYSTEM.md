@@ -119,9 +119,9 @@ never included in temporary cleanup. Existing legacy product-folder PDFs,
 historical orders, and older photo manifests remain readable through the
 authenticated admin endpoints, but no new PDF is created.
 
-Variable photo sets have no fixed set limit. The A$60 starting price includes
-the first six photos; each additional three-photo set adds A$6. Prices are
-calculated server-side using the same rule.
+Variable photo sets are capped at five sets (15 photos). The A$60 starting
+price includes the first six photos; each additional three-photo set adds A$6.
+The Worker enforces the same limit and calculates prices server-side.
 
 ## Local verification
 
@@ -172,7 +172,7 @@ silently truncated. The limit includes operational fields and the product map,
 so maximum capacity varies with the number of frames. Storefront and backend
 pricing use A$60 for six photos plus A$6 for each additional three-photo set.
 
-Local regression coverage includes 6/9/12/15/18 photos, completed replacements,
+Local regression coverage includes 6/9/12/15 photos, completed replacements,
 late superseded uploads, quantity mismatches, missing R2 objects, invalid ordering,
 multiple frame codes and metadata overflow. Tests use in-memory R2/D1 and mocked
 Stripe calls; production services are not contacted.
