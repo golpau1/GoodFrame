@@ -281,14 +281,8 @@
     .reset-images-button { padding:0; border:0; background:none; color:var(--muted); font:inherit; font-size:9px; letter-spacing:.1em; cursor:pointer; text-transform:uppercase; }
     .reset-images-button[hidden] { display:none; }
     .reset-images-button:hover { color:var(--brown); text-decoration:underline; text-underline-offset:4px; }
-    .upload-intro { display:grid; justify-items:center; gap:10px; padding:28px 18px 30px; border:1px solid var(--divider); background:rgba(182,109,77,.06); text-align:center; }
-    .upload-intro[hidden] { display:none; }
-    .upload-intro-title { margin:0; font-family:var(--font-heading); font-size:clamp(22px,2.4vw,28px); font-weight:400; letter-spacing:.025em; line-height:1.15; }
-    .upload-intro-copy { margin:0; color:var(--muted); font-size:14px; line-height:1.55; }
-    .upload-intro-button { min-width:180px; min-height:50px; margin-top:8px; padding:12px 22px; border:1px solid var(--brown); background:var(--brown); color:var(--cream); font:inherit; font-size:14px; font-weight:600; letter-spacing:.065em; cursor:pointer; transition:background-color 160ms ease,color 160ms ease,transform 160ms ease; }
-    .upload-intro-button:hover { background:var(--cream); color:var(--brown); transform:translateY(-1px); }
     .photo-sets { display:grid; height:auto; gap:22px; overflow:visible; }
-    .photo-sets[hidden], .add-photo-set-button[hidden] { display:none; }
+    .add-photo-set-button[hidden] { display:none; }
     .photo-set { display:grid; height:auto; gap:10px; overflow:visible; }
     .photo-set.is-new { animation:photo-set-reveal 260ms ease-out both; }
     @keyframes photo-set-reveal { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
@@ -300,28 +294,17 @@
     .add-photo-set-button { width:100%; min-height:44px; margin-block:0; padding:11px 14px; border:1px solid var(--divider); background:transparent; color:var(--brown); font:inherit; font-size:10px; font-weight:600; letter-spacing:.1em; line-height:1.2; cursor:pointer; text-transform:uppercase; }
     .add-photo-set-button:hover { background:rgba(182,109,77,.10); }
     .image-slot { position:relative; aspect-ratio:54 / 86; overflow:visible; border:1px solid var(--divider); background:rgba(182,109,77,.10); box-shadow:0 2px 10px rgba(60,42,33,.06); }
-    .slot-picker { position:absolute; inset:0; display:grid; place-content:center; justify-items:center; gap:7px; min-height:44px; padding:8px; border:0; background:transparent; color:var(--muted); font-family:var(--font-body); font-size:12px; font-weight:600; letter-spacing:.045em; line-height:1.2; cursor:pointer; transition:background-color 160ms ease,transform 120ms ease; }
-    .slot-picker-plus { font-family:"Chunky Upload Plus", "Goudy Bookletter 1911"; font-size:34px; font-weight:600; letter-spacing:0; line-height:.8; }
-    .slot-picker-label { max-width:8ch; text-align:center; }
+    .slot-picker { position:absolute; inset:0; display:grid; place-items:center; padding:8px; border:0; background:transparent; color:var(--muted); font-family:"Chunky Upload Plus", "Goudy Bookletter 1911"; font-size:22px; font-weight:600; line-height:1; cursor:pointer; }
     .slot-picker[hidden] { display:none; }
     .slot-picker:hover { background:rgba(182,109,77,.18); }
-    .slot-picker:active { transform:scale(.98); }
     .slot-preview { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
-    .slot-replace-button { position:absolute; right:5px; bottom:5px; left:5px; z-index:4; min-height:36px; padding:7px 6px; border:1px solid rgba(255,247,226,.7); background:rgba(60,42,33,.76); color:var(--light); font:inherit; font-size:9px; font-weight:600; letter-spacing:.08em; line-height:1; cursor:pointer; opacity:0; text-transform:uppercase; transition:opacity 180ms ease,background-color 160ms ease; }
+    .slot-replace-button { position:absolute; right:5px; bottom:5px; left:5px; z-index:4; min-height:25px; padding:4px 6px; border:1px solid rgba(255,247,226,.7); background:rgba(60,42,33,.68); color:var(--light); font:inherit; font-size:8px; font-weight:600; letter-spacing:.1em; line-height:1; cursor:pointer; opacity:0; text-transform:uppercase; transition:opacity 180ms ease; }
     .image-slot:hover .slot-replace-button, .slot-replace-button:focus-visible { opacity:1; }
     .slot-upload-status { position:absolute; inset:auto 5px 36px; z-index:4; display:flex; align-items:center; justify-content:center; gap:6px; min-height:25px; padding:5px 7px; border:1px solid rgba(255,247,226,.7); background:rgba(60,42,33,.78); color:var(--light); font-size:8px; font-weight:600; letter-spacing:.08em; line-height:1.2; text-align:center; text-transform:uppercase; }
     .slot-upload-status[hidden] { display:none; }
     .slot-upload-spinner { width:10px; height:10px; flex:0 0 auto; border:1px solid rgba(255,247,226,.45); border-top-color:var(--light); border-radius:50%; animation:slot-upload-spin 700ms linear infinite; }
     .slot-upload-retry { padding:0; border:0; background:none; color:inherit; font:inherit; font-weight:600; letter-spacing:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-transform:inherit; }
     .slot-upload-status.is-complete { right:auto; min-height:20px; padding:3px 6px; background:rgba(60,42,33,.62); }
-    .frame-preview { display:grid; gap:12px; margin-top:6px; }
-    .frame-preview[hidden] { display:none; }
-    .frame-preview-title { margin:0; font-family:var(--font-heading); font-size:clamp(20px,2.2vw,26px); font-weight:400; letter-spacing:.025em; line-height:1.2; text-align:center; }
-    .frame-preview-stage { position:relative; width:100%; overflow:hidden; background:#e8dfd3; }
-    .frame-preview-scene { display:block; width:100%; height:auto; }
-    .frame-preview-photo { position:absolute; top:30.7%; left:54.6%; width:20.2%; aspect-ratio:54 / 86; object-fit:cover; clip-path:polygon(7% 0,96% 2%,100% 99%,0 96%); transform:rotate(.7deg); transform-origin:center; box-shadow:0 1px 3px rgba(60,42,33,.28); }
-    .frame-preview-note { margin:0; color:var(--muted); font-size:12px; line-height:1.5; text-align:center; }
-    .mobile-upload-cta { display:none; }
     @keyframes slot-upload-spin { to { transform:rotate(360deg); } }
     @media (prefers-reduced-motion:reduce) { .slot-upload-spinner { animation:none; } }
     .upload-input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
@@ -653,17 +636,8 @@
     }
     @media (max-width:767px) {
       .hero-image { object-position:50% 50%; }
-      body.has-mobile-upload-cta { padding-bottom:calc(92px + env(safe-area-inset-bottom)); }
       .hero-upload-button { min-width:min(260px,100%); min-height:52px; margin-top:20px; padding:13px 22px; font-size:14px; }
       .hero-upload-detail { margin-top:10px; font-size:12px; }
-      .mobile-upload-cta { position:fixed; right:0; bottom:0; left:0; z-index:60; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:14px; padding:12px max(16px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); border-top:1px solid var(--divider); background:rgba(255,247,226,.97); color:var(--brown); box-shadow:0 -8px 26px rgba(60,42,33,.12); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); transform:translateY(0); transition:transform 180ms ease,visibility 180ms ease; }
-      .mobile-upload-cta[hidden], .mobile-upload-cta.is-hidden { display:grid; visibility:hidden; transform:translateY(110%); pointer-events:none; }
-      .mobile-upload-copy { display:grid; gap:3px; min-width:0; }
-      .mobile-upload-title { margin:0; font-family:var(--font-heading); font-size:18px; font-weight:400; letter-spacing:.025em; line-height:1.1; }
-      .mobile-upload-detail { margin:0; color:var(--muted); font-size:11px; line-height:1.3; }
-      .mobile-upload-button { min-height:48px; padding:10px 16px; border:1px solid var(--brown); background:var(--brown); color:var(--cream); font:inherit; font-size:12px; font-weight:600; letter-spacing:.045em; line-height:1.15; cursor:pointer; white-space:nowrap; }
-      .upload-intro { margin:0 10px; padding:26px 16px 28px; }
-      .frame-preview { margin-right:10px; margin-left:10px; }
     }
     @media (min-width:768px) and (max-width:1100px) {
       .hero-image { object-position:44% 52%; }
@@ -707,7 +681,6 @@
       .photo-set-header, .add-photo-set-button { margin-right:10px; margin-left:10px; width:calc(100% - 20px); }
       .upload-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:0 10px; }
       .slot-replace-button { opacity:.88; }
-      .slot-picker { min-height:48px; font-size:12px; }
     }
     /* One native horizontal canvas; prints retain their complete intrinsic proportions. */
     .showcase-gallery { position:relative; isolation:isolate; display:block; width:100%; margin:0; padding:0; overflow:hidden; background:#FFF7E1; color:#171412; }
@@ -894,36 +867,15 @@
       <div class="configurator" id="configurator" aria-hidden="false">
         <p class="product-name" id="product-name">Natural Oak Frame &amp; Photos</p>
         <div class="upload-section" id="upload-section" aria-hidden="false">
-          <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Start over</button><span class="upload-progress" id="upload-progress" role="status" aria-live="polite">Let's choose your first photo</span></p>
+          <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button><span class="upload-progress" id="upload-progress" role="status" aria-live="polite">0 / 6 uploaded</span></p>
           <p class="image-quality-warning" id="image-quality-warning" role="status" hidden></p>
-          <div class="upload-intro" id="upload-intro">
-            <h2 class="upload-intro-title">Start with your favourite photo</h2>
-            <p class="upload-intro-copy">Choose one to see how it looks.</p>
-            <button class="upload-intro-button" id="choose-first-photo" type="button">Choose a photo</button>
-          </div>
-          <div class="photo-sets" id="photo-sets" aria-label="Photo upload sets" hidden></div>
-          <section class="frame-preview" id="frame-preview" aria-live="polite" hidden>
-            <h2 class="frame-preview-title">This is how your memory could look.</h2>
-            <div class="frame-preview-stage">
-              <img class="frame-preview-scene" src="Assets/coffee/gallery-frame-desk.webp" width="1080" height="1350" alt="Tasmanian Oak Good Frame displayed on a sunlit desk">
-              <img class="frame-preview-photo" id="frame-preview-photo" alt="Your cropped photo shown inside the frame">
-            </div>
-            <p class="frame-preview-note">Illustrative preview. Colour and placement may vary slightly in print.</p>
-          </section>
-          <button class="add-photo-set-button" id="add-photo-set" type="button" hidden>+ Add Another 3 Photos — $6</button>
+          <div class="photo-sets" id="photo-sets" aria-label="Photo upload sets"></div>
+          <button class="add-photo-set-button" id="add-photo-set" type="button">+ Add Another 3 Photos — $6</button>
         </div>
         <div class="purchase-row"><button class="purchase-button" type="button" disabled aria-disabled="true"><span class="purchase-action-group"><span class="purchase-price">$<span id="config-price">60.00</span></span><span id="purchase-label">Add to cart</span></span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
       </div>
     </div>
   </section>
-
-  <aside class="mobile-upload-cta is-hidden" id="mobile-upload-cta" aria-label="Create your frame">
-    <div class="mobile-upload-copy">
-      <p class="mobile-upload-title" id="mobile-upload-title">Create your frame</p>
-      <p class="mobile-upload-detail" id="mobile-upload-detail">6 photos included · $60 AUD</p>
-    </div>
-    <button class="mobile-upload-button" id="mobile-upload-button" type="button">Upload photos</button>
-  </aside>
 
   <section class="brand-statement-strip" aria-label="Good Frame materials and making">
     <p class="brand-statement">Handmade in our Burleigh Heads studio</p>
@@ -1301,15 +1253,7 @@
     let photoSetCount = INCLUDED_PHOTO_SET_COUNT;
     const photoSetsContainer = document.getElementById("photo-sets");
     const addPhotoSetButton = document.getElementById("add-photo-set");
-    const uploadIntro = document.getElementById("upload-intro");
-    const chooseFirstPhotoButton = document.getElementById("choose-first-photo");
     const heroUploadButton = document.getElementById("hero-upload-button");
-    const framePreview = document.getElementById("frame-preview");
-    const framePreviewPhoto = document.getElementById("frame-preview-photo");
-    const mobileUploadCta = document.getElementById("mobile-upload-cta");
-    const mobileUploadTitle = document.getElementById("mobile-upload-title");
-    const mobileUploadDetail = document.getElementById("mobile-upload-detail");
-    const mobileUploadButton = document.getElementById("mobile-upload-button");
     const configPrice = document.getElementById("config-price");
     const progress = document.getElementById("upload-progress");
     const imageQualityWarning = document.getElementById("image-quality-warning");
@@ -1475,50 +1419,15 @@
       purchaseButton.disabled = !enabled;
       purchaseButton.setAttribute("aria-disabled", String(!enabled));
     }
-    let heroUploadActionVisible = true;
-    let uploaderVisible = false;
-    function updateMobileUploadCta() {
-      const count = getSelectedPhotoCount();
-      const configuredCount = getConfiguredPhotoCount();
-      const uploadedCount = uploadedImages.filter((entry) => entry?.uploadState === "complete").length;
-      const interactionOpen = overlay.style.display === "flex" ||
-        Boolean(document.getElementById("cart-dialog")?.open) ||
-        Boolean(document.getElementById("upload-progress-dialog")?.open);
-      const useful = window.matchMedia("(max-width: 767px)").matches &&
-        !heroUploadActionVisible && !uploaderVisible && !interactionOpen;
-      mobileUploadCta.classList.toggle("is-hidden", !useful);
-      document.body.classList.toggle("has-mobile-upload-cta", useful);
-      if (count === 0) {
-        mobileUploadTitle.textContent = "Create your frame";
-        mobileUploadDetail.textContent = "6 photos included · $60 AUD";
-        mobileUploadButton.textContent = "Upload photos";
-      } else {
-        mobileUploadTitle.textContent = "Your frame is in progress";
-        mobileUploadDetail.textContent = `${uploadedCount} of ${configuredCount} photos uploaded`;
-        mobileUploadButton.textContent = `Continue your frame · ${Math.min(count, configuredCount)}/${configuredCount}`;
-      }
-    }
-    function updateUploaderExperience() {
-      const firstEntry = uploadedImages[0];
-      const started = getSelectedPhotoCount() > 0;
-      uploadIntro.hidden = started;
-      photoSetsContainer.hidden = !started;
-      framePreview.hidden = !firstEntry;
-      if (firstEntry?.url && framePreviewPhoto.src !== firstEntry.url) framePreviewPhoto.src = firstEntry.url;
-      if (!firstEntry) framePreviewPhoto.removeAttribute("src");
-      addPhotoSetButton.hidden = !started || photoSetCount >= MAX_PHOTO_SET_COUNT;
-      addPhotoSetButton.disabled = photoSetCount >= MAX_PHOTO_SET_COUNT;
-      updateMobileUploadCta();
-    }
     function updateUploadProgress() {
       const count = getSelectedPhotoCount();
       const configuredCount = getConfiguredPhotoCount();
       const uploadedCount = uploadedImages.filter((entry) => entry?.uploadState === "complete").length;
       const failedCount = uploadedImages.filter((entry) => entry?.uploadState === "failed").length;
       const lowResolutionEntries = uploadedImages.filter((entry) => entry?.effectivePpi < 200);
-      progress.textContent = count === 0
-        ? "Let's choose your first photo"
-        : `${uploadedCount} / ${configuredCount} uploaded`;
+      progress.textContent = configuredCount
+        ? `${uploadedCount} / ${configuredCount} uploaded${count > uploadedCount ? ` · ${count} selected` : ""}`
+        : "0 photos selected";
       resetImagesButton.hidden = count === 0;
       imageQualityWarning.textContent = failedCount
         ? `${failedCount === 1 ? "One photo upload failed" : `${failedCount} photo uploads failed`}. Retry ${failedCount === 1 ? "it" : "them"} below; your selected ${failedCount === 1 ? "photo is" : "photos are"} still saved.`
@@ -1530,20 +1439,21 @@
       imageQualityWarning.hidden = lowResolutionEntries.length === 0 && failedCount === 0 && !draftPhotoStorageWarning;
       updateProductSummary();
       updateAddToCartState();
-      updateUploaderExperience();
+      addPhotoSetButton.hidden = photoSetCount >= MAX_PHOTO_SET_COUNT;
+      addPhotoSetButton.disabled = photoSetCount >= MAX_PHOTO_SET_COUNT;
       if (uploadedCount >= INCLUDED_PHOTO_SET_COUNT * 3) {
         trackGa4EventOnce("six_photos_completed", "required-six", { photo_count:INCLUDED_PHOTO_SET_COUNT * 3 });
       }
     }
 
     resetImagesButton.addEventListener("click", () => {
-      uploadedImages.forEach((entry) => {
+      uploadedImages.forEach((entry, index) => {
         cancelIndividualPhotoUpload(entry);
         revoke(entry?.url);
+        uploadedImages[index] = null;
+        imageSlots[index].querySelector(".upload-input").value = "";
+        renderSlot(imageSlots[index], null);
       });
-      uploadedImages.splice(0, uploadedImages.length, ...Array(INCLUDED_PHOTO_SET_COUNT * 3).fill(null));
-      photoSetCount = INCLUDED_PHOTO_SET_COUNT;
-      renderPhotoSets();
       updateUploadProgress();
       schedulePersistDraftUploads();
       if (individualUploadSession) {
@@ -1569,8 +1479,8 @@
       const replace = document.createElement("button");
       replace.className = "slot-replace-button";
       replace.type = "button";
-      replace.textContent = "Change photo";
-      replace.setAttribute("aria-label", `Change photo ${Number(slot.dataset.slot) + 1}`);
+      replace.textContent = "Replace";
+      replace.setAttribute("aria-label", `Replace photo ${Number(slot.dataset.slot) + 1}`);
       replace.addEventListener("click", () => triggerSlotPicker(slot, replace));
 
       const status = document.createElement("div");
@@ -1775,7 +1685,6 @@
       overlay.classList.remove("is-closing");
       overlay.style.display = "flex";
       overlay.setAttribute("aria-hidden", "false");
-      updateMobileUploadCta();
       lockCropperPageScroll();
       void persistDraftUploads();
       void loadCurrentCropPhoto();
@@ -1811,7 +1720,6 @@
       }
       cropperReturnFocus = null;
       restorePageScrollAfterLayout(scrollPosition, Promise.resolve());
-      updateMobileUploadCta();
     }
 
     function triggerSlotPicker(slot, returnFocus = slot.querySelector(".slot-picker")) {
@@ -1855,15 +1763,8 @@
       const picker = document.createElement("button");
       picker.className = "slot-picker";
       picker.type = "button";
-      const plus = document.createElement("span");
-      plus.className = "slot-picker-plus";
-      plus.textContent = "+";
-      plus.setAttribute("aria-hidden", "true");
-      const label = document.createElement("span");
-      label.className = "slot-picker-label";
-      label.textContent = "Add a memory";
-      picker.append(plus, label);
-      picker.setAttribute("aria-label", `Add a memory at photo ${String(index + 1).padStart(2, "0")}`);
+      picker.textContent = "+";
+      picker.setAttribute("aria-label", `Add images starting at photo ${String(index + 1).padStart(2, "0")}`);
       const input = document.createElement("input");
       input.className = "upload-input";
       input.type = "file";
@@ -1874,12 +1775,6 @@
       bindUploadSlot(slot);
       renderSlot(slot, uploadedImages[index]);
       return slot;
-    }
-
-    function photoSetLabelFor(setIndex) {
-      if (setIndex === 0) return "Your first 3 memories";
-      if (setIndex === 1) return "Your next 3 memories";
-      return `3 more memories · set ${setIndex + 1}`;
     }
 
     function renderPhotoSets(newSetIndex = -1) {
@@ -1894,7 +1789,7 @@
         header.className = "photo-set-header";
         const label = document.createElement("p");
         label.className = "photo-set-label";
-        label.textContent = photoSetLabelFor(setIndex);
+        label.textContent = `Photo set ${setIndex + 1} · 3 photos`;
         const removeSet = document.createElement("button");
         removeSet.className = "remove-photo-set";
         removeSet.type = "button";
@@ -1924,7 +1819,7 @@
       header.className = "photo-set-header";
       const label = document.createElement("p");
       label.className = "photo-set-label";
-      label.textContent = photoSetLabelFor(setIndex);
+      label.textContent = `Photo set ${setIndex + 1} · 3 photos`;
       const removeSet = document.createElement("button");
       removeSet.className = "remove-photo-set";
       removeSet.type = "button";
@@ -2278,23 +2173,6 @@
       uploadSectionElement.scrollIntoView({ behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start" });
     }
     heroUploadButton.addEventListener("click", () => openOrContinuePhotoWorkflow(heroUploadButton));
-    chooseFirstPhotoButton.addEventListener("click", () => openOrContinuePhotoWorkflow(chooseFirstPhotoButton));
-    mobileUploadButton.addEventListener("click", () => openOrContinuePhotoWorkflow(mobileUploadButton));
-    if ("IntersectionObserver" in window) {
-      const mobileCtaObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.target === heroUploadButton) heroUploadActionVisible = entry.isIntersecting;
-          if (entry.target === uploadSectionElement) uploaderVisible = entry.isIntersecting;
-        });
-        updateMobileUploadCta();
-      }, { threshold:.12 });
-      mobileCtaObserver.observe(heroUploadButton);
-      mobileCtaObserver.observe(uploadSectionElement);
-    } else {
-      heroUploadActionVisible = false;
-      window.addEventListener("scroll", updateMobileUploadCta, { passive:true });
-    }
-    window.addEventListener("resize", updateMobileUploadCta, { passive:true });
     configurator.closest(".palette-panel").classList.add("has-pictures");
 
     const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
@@ -3783,7 +3661,6 @@
       lockPageForCart();
       try {
         uploadProgressDialog.showModal();
-        updateMobileUploadCta();
       } catch (error) {
         unlockPageForCart();
         throw error;
@@ -3946,7 +3823,6 @@
       lockPageForCart();
       try {
         cart.showModal();
-        updateMobileUploadCta();
       } catch (error) {
         unlockPageForCart();
         throw error;
@@ -3958,7 +3834,6 @@
       lockPageForCart();
       try {
         dialog.showModal();
-        updateMobileUploadCta();
       } catch (error) {
         unlockPageForCart();
         throw error;
@@ -4062,7 +3937,6 @@
       closeShippingCountryPopover();
       hideShippingConfirmation();
       unlockPageForCart();
-      updateMobileUploadCta();
     });
     shippingConfirmationDialog.addEventListener("close", () => {
       closeShippingCountryPopover();
@@ -4079,12 +3953,12 @@
     photoPreviewDialog.addEventListener("click", (event) => {
       if (event.target === photoPreviewDialog) photoPreviewDialog.close();
     });
-    uploadProgressDialog.addEventListener("close", () => { unlockPageForCart(); updateMobileUploadCta(); });
+    uploadProgressDialog.addEventListener("close", unlockPageForCart);
     uploadProgressDialog.addEventListener("cancel", (event) => {
       if (uploadOverlayBusy) event.preventDefault();
     });
-    checkoutConfirmedDialog.addEventListener("close", () => { unlockPageForCart(); updateMobileUploadCta(); });
-    checkoutUnsuccessfulDialog.addEventListener("close", () => { unlockPageForCart(); updateMobileUploadCta(); });
+    checkoutConfirmedDialog.addEventListener("close", unlockPageForCart);
+    checkoutUnsuccessfulDialog.addEventListener("close", unlockPageForCart);
     cart.addEventListener("click", (event) => { if (event.target === cart) cart.close(); });
     uploadProgressRetry.addEventListener("click", addSelectedProductToCart);
     uploadProgressClose.addEventListener("click", () => uploadProgressDialog.close());
