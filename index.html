@@ -682,38 +682,42 @@
       .upload-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:0 10px; }
       .slot-replace-button { opacity:.88; }
     }
-    /* One native horizontal canvas; prints retain their complete intrinsic proportions. */
+    /* Uniform horizontal gallery: every image uses the same 3:4 portrait card. */
     .showcase-gallery { position:relative; isolation:isolate; display:block; width:100%; margin:0; padding:0; overflow:hidden; background:#FFF7E1; color:#171412; }
     .showcase-gallery::before, .showcase-gallery::after { display:none; }
     .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
     .showcase-sticky { position:relative; display:block; width:100%; margin:0; padding:0; }
-    .showcase-collage { --gallery-height:clamp(700px,82svh,960px); position:relative; display:block; width:100%; height:var(--gallery-height); margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:#FFF7E1; cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-snap-type:none; }
+    .showcase-collage { --gallery-card-width:clamp(260px,27vw,360px); --gallery-gap:clamp(18px,2.4vw,32px); position:relative; display:block; width:100%; margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:#FFF7E1; cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-behavior:smooth; scroll-padding-inline:clamp(56px,7vw,96px); scroll-snap-type:x mandatory; }
     .showcase-collage::-webkit-scrollbar { display:none; }
     .showcase-collage.is-dragging { cursor:grabbing; }
-    .showcase-track { position:relative; display:block; width:max-content; min-width:100%; height:100%; margin:0; padding:0; pointer-events:none; }
-    .showcase-photo { position:absolute; display:block; margin:0; padding:0; overflow:visible; border:0; border-radius:0; background:transparent; opacity:1; pointer-events:none; transform-origin:center; transition:none; }
-    .showcase-photo img { display:block; width:100%; height:100%; object-fit:contain; border:0; border-radius:0; box-shadow:none; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+    .showcase-track { position:relative; display:flex; width:max-content; min-width:100%; align-items:center; gap:var(--gallery-gap); margin:0; padding:clamp(44px,6vw,72px) clamp(56px,7vw,96px); pointer-events:none; }
+    .showcase-photo { position:relative; display:block; flex:0 0 var(--gallery-card-width); width:var(--gallery-card-width); aspect-ratio:3 / 4; margin:0; padding:0; overflow:hidden; border:0; border-radius:12px; background:#eadfc7; box-shadow:0 8px 24px rgba(60,42,33,.08); opacity:1; pointer-events:none; scroll-snap-align:center; scroll-snap-stop:always; }
+    .showcase-photo img { display:block; width:100%; height:100%; border:0; border-radius:inherit; box-shadow:none; object-fit:cover; object-position:center; pointer-events:none; transform:scale(1.22); transform-origin:center; user-select:none; -webkit-user-drag:none; }
+    .showcase-photo[data-showcase-image*="gallery-desk-photo-books"] img,
+    .showcase-photo[data-showcase-image*="gallery-couple-books"] img,
+    .showcase-photo[data-showcase-image*="gallery-family-laptop"] img { transform:scale(1.7); }
     .showcase-item-label, .showcase-note, .showcase-mobile-viewport { display:none; }
     .showcase-control { position:absolute; top:50%; z-index:40; display:grid; place-items:center; width:36px; height:36px; margin:0; padding:0; border:1px solid rgba(20,18,16,.16); border-radius:50%; background:rgba(255,255,255,.82); color:#1d1a17; cursor:pointer; transform:translateY(-50%); transition:background-color 160ms ease,border-color 160ms ease,transform 160ms ease; -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
     .showcase-control--prev { left:clamp(10px,2vw,28px); }
     .showcase-control--next { right:clamp(10px,2vw,28px); }
     .showcase-control svg { display:block; width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.45; stroke-linecap:round; stroke-linejoin:round; }
     .showcase-control:hover { border-color:rgba(20,18,16,.28); background:#fff; color:#111; transform:translateY(-50%) scale(1.03); }
+    .showcase-control:disabled { opacity:0; pointer-events:none; }
     @media (min-width:601px) and (max-width:1100px) {
-      .showcase-collage { --gallery-height:clamp(600px,78svh,800px); }
+      .showcase-collage { --gallery-card-width:clamp(250px,38vw,330px); --gallery-gap:clamp(18px,2.8vw,26px); scroll-padding-inline:6vw; }
+      .showcase-track { padding:clamp(36px,5vw,54px) 6vw; }
     }
     @media (max-width:600px) {
-      .showcase-collage { --gallery-height:min(64svh,118vw); }
-      .showcase-control { width:36px; height:36px; }
+      .showcase-collage { --gallery-card-width:78vw; --gallery-gap:16px; scroll-padding-inline:8vw; }
+      .showcase-track { padding:28px 8vw; }
+      .showcase-control { width:38px; height:38px; }
       .showcase-control--prev { left:8px; }
       .showcase-control--next { right:8px; }
       .showcase-control svg { width:16px; height:16px; }
     }
-    @media (max-width:600px) and (orientation:landscape) {
-      .showcase-collage { --gallery-height:max(400px,min(112svh,90vw)); }
-    }
-    @media (min-width:601px) and (max-width:1100px) and (orientation:landscape) {
-      .showcase-collage { --gallery-height:clamp(600px,92svh,800px); }
+    @media (prefers-reduced-motion:reduce) {
+      .showcase-collage { scroll-behavior:auto; }
+      .showcase-control { transition:none; }
     }
     .header { position:sticky; top:0; z-index:20; width:100%; border-bottom:1px solid rgba(60,42,33,.25); background:var(--color-background); }
     .showcase-gallery { background:#FFF7E1; }
@@ -1051,7 +1055,6 @@
       const previous = gallery.querySelector(".showcase-control--prev");
       const next = gallery.querySelector(".showcase-control--next");
       const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-      // Each print retains its intrinsic proportions. Only size, placement and angle vary.
       previous.parentElement.parentElement.append(previous, next);
       previous.setAttribute("aria-label", "Scroll photographs left");
       next.setAttribute("aria-label", "Scroll photographs right");
@@ -1064,111 +1067,24 @@
         photo.setAttribute("aria-label", `Photograph ${index + 1} of ${photos.length}`);
         photo.querySelector("img").draggable = false;
       });
+      let photoStops = [];
       const updateControls = () => {
         previous.disabled = viewport.scrollLeft <= 1;
         next.disabled = viewport.scrollLeft >= viewport.scrollWidth - viewport.clientWidth - 1;
       };
-      let printStops = [];
       const measure = () => {
-        const width = viewport.clientWidth;
-        const height = viewport.clientHeight;
-        if (width <= 1100) {
-          const mobile = width <= 600;
-          const order = photos.map((_, index) => index);
-          const mobileComposition = [
-            { width:.68, height:.72, offset:-.035, gap:-18, rotation:-2 },
-            { width:.94, height:.66, offset:.04, gap:-28, rotation:1.5 },
-            { width:.64, height:.72, offset:.06, gap:-16, rotation:-1.2 },
-            { width:.90, height:.66, offset:-.05, gap:-25, rotation:2 },
-            { width:.66, height:.72, offset:.01, gap:0, rotation:-1.6 }
-          ];
-          const tabletComposition = [
-            { width:.58, height:.74, offset:-.045, gap:-34, rotation:-2.2 },
-            { width:.88, height:.80, offset:.05, gap:-42, rotation:1.7 },
-            { width:.56, height:.72, offset:.06, gap:-32, rotation:-1.4 },
-            { width:.90, height:.78, offset:-.055, gap:-38, rotation:2 },
-            { width:.60, height:.74, offset:.015, gap:0, rotation:-1.8 }
-          ];
-          const mobileLandscapeComposition = mobileComposition.map((config, index) => index % 2
-            ? { ...config, height:.86, offset:index === 1 ? .025 : -.025 }
-            : config);
-          const tabletLandscapeComposition = tabletComposition.map((config, index) => index % 2
-            ? { ...config, height:index === 1 ? .87 : .85, offset:index === 1 ? .025 : -.025 }
-            : config);
-          const responsiveComposition = mobile
-            ? height < width ? mobileLandscapeComposition : mobileComposition
-            : height < width ? tabletLandscapeComposition : tabletComposition;
-          const edge = mobile ? 20 : 34;
-          printStops = [];
-          let cursor = edge;
-          order.forEach((photoIndex, index) => {
-            const photo = photos[photoIndex];
-            const image = photo.querySelector("img");
-            const config = responsiveComposition[index % responsiveComposition.length];
-            const ratio = (image.naturalWidth || Number(image.width)) / (image.naturalHeight || Number(image.height));
-            const printWidth = Math.min(width * config.width, height * config.height * ratio);
-            const printHeight = printWidth / ratio;
-            const angle = Math.abs(config.rotation) * Math.PI / 180;
-            const cos = Math.cos(angle), sin = Math.sin(angle);
-            const boundsWidth = printWidth * cos + printHeight * sin;
-            const boundsHeight = printHeight * cos + printWidth * sin;
-            printStops.push(Math.max(0, cursor - edge));
-            photo.style.width = `${printWidth}px`;
-            photo.style.height = `${printHeight}px`;
-            photo.style.left = `${cursor + (boundsWidth - printWidth) / 2}px`;
-            photo.style.top = `${(height - boundsHeight) / 2 + config.offset * height + (boundsHeight - printHeight) / 2}px`;
-            photo.style.transform = `rotate(${config.rotation}deg)`;
-            photo.style.zIndex = String(index + 1);
-            cursor += boundsWidth + config.gap;
-          });
-          const last = responsiveComposition[(order.length - 1) % responsiveComposition.length];
-          track.style.width = `${Math.max(width, cursor - last.gap + edge)}px`;
-          updateControls();
-          return;
-        }
-        // Desktop keeps the mobile/tablet scrapbook order and overlapping rhythm,
-        // scaled for a wider canvas without changing either smaller breakpoint.
-        const desktopOrder = photos.map((_, index) => index);
-        const desktopComposition = [
-          { width:.44, height:.78, offset:-.045, gap:-42, rotation:-2.2 },
-          { width:.76, height:.82, offset:.045, gap:-54, rotation:1.7 },
-          { width:.42, height:.76, offset:.06, gap:-40, rotation:-1.4 },
-          { width:.78, height:.82, offset:-.05, gap:-50, rotation:2 },
-          { width:.46, height:.78, offset:.015, gap:0, rotation:-1.8 }
-        ];
-        const edge = Math.max(40, Math.min(64, width * .04));
-        printStops = [];
-        let cursor = edge;
-        desktopOrder.forEach((photoIndex, index) => {
-          const photo = photos[photoIndex];
-          const image = photo.querySelector("img");
-          const config = desktopComposition[index % desktopComposition.length];
-          const ratio = (image.naturalWidth || Number(image.width)) / (image.naturalHeight || Number(image.height));
-          const printWidth = Math.min(width * config.width, height * config.height * ratio);
-          const printHeight = printWidth / ratio;
-          const angle = Math.abs(config.rotation) * Math.PI / 180;
-          const cos = Math.cos(angle), sin = Math.sin(angle);
-          const boundsWidth = printWidth * cos + printHeight * sin;
-          const boundsHeight = printHeight * cos + printWidth * sin;
-          printStops.push(Math.max(0, cursor - edge));
-          photo.style.width = `${printWidth}px`;
-          photo.style.height = `${printHeight}px`;
-          photo.style.left = `${cursor + (boundsWidth - printWidth) / 2}px`;
-          photo.style.top = `${(height - boundsHeight) / 2 + config.offset * height + (boundsHeight - printHeight) / 2}px`;
-          photo.style.transform = `rotate(${config.rotation}deg)`;
-          photo.style.zIndex = String(index + 1);
-          cursor += boundsWidth + config.gap;
-        });
-        const last = desktopComposition[(desktopOrder.length - 1) % desktopComposition.length];
-        track.style.width = `${Math.max(width, cursor - last.gap + edge)}px`;
+        const maximum = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        photoStops = photos.map((photo) => Math.min(maximum, Math.max(0,
+          photo.offsetLeft + photo.offsetWidth / 2 - viewport.clientWidth / 2
+        )));
         updateControls();
       };
-      // Arrows reveal the neighboring print; free scrolling never snaps to these positions.
+      // Arrows centre the neighboring card; touch and trackpad use native snap scrolling.
       const scroll = (direction) => {
         const current = viewport.scrollLeft;
         const target = direction > 0
-          ? printStops.find((left) => left > current + 2) ?? viewport.scrollWidth
-          : [...printStops].reverse().find((left) => left < current - 2) ?? 0;
+          ? photoStops.find((left) => left > current + 4) ?? viewport.scrollWidth
+          : [...photoStops].reverse().find((left) => left < current - 4) ?? 0;
         viewport.scrollTo({ left:target, behavior:reducedMotion.matches ? "instant" : "smooth" });
       };
       previous.addEventListener("click", () => scroll(-1));
@@ -1202,8 +1118,6 @@
       viewport.addEventListener("pointercancel", release);
       viewport.addEventListener("lostpointercapture", release);
       new ResizeObserver(measure).observe(viewport);
-      window.addEventListener("resize", measure, { passive:true });
-      photos.forEach((photo) => photo.querySelector("img").addEventListener("load", measure));
       measure();
     });
     const frameAspectRatio = 54 / 86;

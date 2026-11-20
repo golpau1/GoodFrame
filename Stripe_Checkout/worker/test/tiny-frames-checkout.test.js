@@ -106,6 +106,11 @@ test('storefront uploads cropped photos individually in the background', async (
     'Assets/coffee/gallery-couple-books.webp',
     'Assets/coffee/gallery-family-laptop.webp'
   ]);
+  assert.match(html, /\.showcase-track \{[^}]*display:flex;[^}]*align-items:center;[^}]*gap:var\(--gallery-gap\);/);
+  assert.match(html, /\.showcase-photo \{[^}]*aspect-ratio:3 \/ 4;[^}]*border-radius:12px;/);
+  assert.match(html, /\.showcase-photo img \{[^}]*object-fit:cover; object-position:center;/);
+  assert.match(html, /@media \(max-width:600px\) \{\s*\.showcase-collage \{ --gallery-card-width:78vw;/);
+  assert.doesNotMatch(html, /mobileComposition|tabletComposition|desktopComposition|config\.rotation/);
   assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
   assert.match(html, /6 printed photos \+ handmade oak frame · \$60 AUD/);
   assert.match(html, /\.hero-upload-button \{[^}]*border-radius:8px;/);
