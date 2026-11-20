@@ -95,6 +95,14 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /hero-dscf3029-portrait-960\.webp/);
   assert.match(html, /hero-dscf3029-portrait-1600\.webp/);
   assert.doesNotMatch(html, /hero-dscf1744-effect-portrait-(?:960|1600)\.webp/);
+  const galleryImages = [...html.matchAll(/data-showcase-image="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(galleryImages, [
+    'Assets/coffee/gallery-workshop-bench.webp',
+    'Assets/coffee/gallery-photo-printing.webp',
+    'Assets/coffee/gallery-workshop-press.webp',
+    'Assets/coffee/gallery-frame-photo-box.webp',
+    'Assets/coffee/gallery-photo-layout.webp'
+  ]);
   assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
   assert.match(html, /6 printed photos \+ handmade oak frame · \$60 AUD/);
   assert.match(html, /\.hero-upload-button \{[^}]*border-radius:8px;/);
