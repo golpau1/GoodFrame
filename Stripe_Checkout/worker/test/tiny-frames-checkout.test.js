@@ -97,18 +97,21 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.doesNotMatch(html, /hero-dscf1744-effect-portrait-(?:960|1600)\.webp/);
   const galleryImages = [...html.matchAll(/data-showcase-image="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(galleryImages, [
-    'Assets/coffee/gallery-workshop-bench.webp',
-    'Assets/coffee/gallery-photo-printing.webp',
-    'Assets/coffee/gallery-workshop-press.webp',
-    'Assets/coffee/gallery-frame-photo-box.webp',
-    'Assets/coffee/gallery-photo-layout.webp',
-    'Assets/coffee/gallery-desk-photo-books.webp',
-    'Assets/coffee/gallery-couple-books.webp',
-    'Assets/coffee/gallery-family-laptop.webp'
+    'Assets/coffee/gallery-new-01-worktable.webp',
+    'Assets/coffee/gallery-new-02-photo-box-books.webp',
+    'Assets/coffee/gallery-new-03-photo-box-layout.webp',
+    'Assets/coffee/gallery-new-04-workshop-craftsperson.webp',
+    'Assets/coffee/gallery-new-05-family-frame-laptop.webp',
+    'Assets/coffee/gallery-new-06-couple-frame-books.webp'
   ]);
+  const galleryAssetBuffers = await Promise.all(galleryImages.flatMap((source) => [
+    readFile(new URL(`../../../${source}`, import.meta.url)),
+    readFile(new URL(`../../../${source.replace('.webp', '-480.webp')}`, import.meta.url))
+  ]));
+  assert.ok(galleryAssetBuffers.every((asset) => asset.length > 0));
   assert.match(html, /\.showcase-track \{[^}]*display:flex;[^}]*align-items:center;[^}]*gap:var\(--gallery-gap\);/);
   assert.match(html, /\.showcase-photo \{[^}]*aspect-ratio:3 \/ 4;[^}]*border-radius:12px;/);
-  assert.match(html, /\.showcase-photo img \{[^}]*object-fit:cover; object-position:center;/);
+  assert.match(html, /\.showcase-photo img \{[^}]*object-fit:contain; object-position:center;/);
   assert.match(html, /@media \(max-width:600px\) \{\s*\.showcase-collage \{ --gallery-card-width:78vw;/);
   assert.doesNotMatch(html, /mobileComposition|tabletComposition|desktopComposition|config\.rotation/);
   assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
