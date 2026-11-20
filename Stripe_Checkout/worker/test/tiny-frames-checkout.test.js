@@ -97,7 +97,10 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.doesNotMatch(html, /hero-dscf1744-effect-portrait-(?:960|1600)\.webp/);
   assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
   assert.match(html, /6 printed photos \+ handmade oak frame · \$60 AUD/);
-  assert.match(html, /openOrContinuePhotoWorkflow\(heroUploadButton\)/);
+  assert.match(html, /\.hero-upload-button \{[^}]*border-radius:8px;/);
+  assert.match(html, /function scrollToPhotoUploader\(\) \{\s*uploadSectionElement\.scrollIntoView\(\{ behavior:window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches \? "auto" : "smooth", block:"start" \}\);\s*\}/);
+  assert.match(html, /heroUploadButton\.addEventListener\("click", scrollToPhotoUploader\);/);
+  assert.doesNotMatch(html, /function openOrContinuePhotoWorkflow/);
   assert.match(html, /Assets\/vendor\/cropperjs-1\.6\.1\/cropper\.min\.js/);
   assert.doesNotMatch(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/cropperjs/);
   assert.match(html, /typeof globalThis\.Cropper !== "function"/);

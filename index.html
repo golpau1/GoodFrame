@@ -236,7 +236,7 @@
     .hero-intro-link .hero-intro-arrow { display:inline-block; transition:transform 200ms ease; }
     .hero-intro-link:hover { opacity:.7; }
     .hero-intro-link:hover .hero-intro-arrow { transform:translateX(4px); }
-    .hero-upload-button { display:inline-flex; min-height:50px; align-items:center; justify-content:center; margin-top:24px; padding:13px 28px; border:1px solid var(--cream); background:var(--cream); color:var(--brown); font:inherit; font-size:14px; font-weight:600; letter-spacing:.065em; line-height:1.2; cursor:pointer; transition:background-color 160ms ease,color 160ms ease,transform 160ms ease; }
+    .hero-upload-button { display:inline-flex; min-height:50px; align-items:center; justify-content:center; margin-top:24px; padding:13px 28px; border:1px solid var(--cream); border-radius:8px; background:var(--cream); color:var(--brown); font:inherit; font-size:14px; font-weight:600; letter-spacing:.065em; line-height:1.2; cursor:pointer; transition:background-color 160ms ease,color 160ms ease,transform 160ms ease; }
     .hero-upload-button:hover { background:var(--brown); color:var(--cream); transform:translateY(-1px); }
     .hero-upload-detail { margin:12px 0 0; color:inherit; font-size:12px; letter-spacing:.035em; line-height:1.45; }
     .palette-spread { display:flex; flex-direction:column; min-height:0; border:1px solid var(--line); }
@@ -2165,14 +2165,10 @@
     renderPhotoSets();
     updateUploadProgress();
     const uploadSectionElement = document.getElementById("upload-section");
-    function openOrContinuePhotoWorkflow(returnFocus) {
-      if (getSelectedPhotoCount() === 0 && imageSlots[0]) {
-        triggerSlotPicker(imageSlots[0], returnFocus);
-        return;
-      }
+    function scrollToPhotoUploader() {
       uploadSectionElement.scrollIntoView({ behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start" });
     }
-    heroUploadButton.addEventListener("click", () => openOrContinuePhotoWorkflow(heroUploadButton));
+    heroUploadButton.addEventListener("click", scrollToPhotoUploader);
     configurator.closest(".palette-panel").classList.add("has-pictures");
 
     const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
