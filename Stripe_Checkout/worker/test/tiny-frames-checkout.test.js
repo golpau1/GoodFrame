@@ -101,7 +101,10 @@ test('storefront uploads cropped photos individually in the background', async (
     'Assets/coffee/gallery-photo-printing.webp',
     'Assets/coffee/gallery-workshop-press.webp',
     'Assets/coffee/gallery-frame-photo-box.webp',
-    'Assets/coffee/gallery-photo-layout.webp'
+    'Assets/coffee/gallery-photo-layout.webp',
+    'Assets/coffee/gallery-desk-photo-books.webp',
+    'Assets/coffee/gallery-couple-books.webp',
+    'Assets/coffee/gallery-family-laptop.webp'
   ]);
   assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
   assert.match(html, /6 printed photos \+ handmade oak frame · \$60 AUD/);
