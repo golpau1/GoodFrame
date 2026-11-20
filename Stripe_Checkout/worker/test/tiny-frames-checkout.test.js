@@ -111,7 +111,7 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.ok(galleryAssetBuffers.every((asset) => asset.length > 0));
   assert.match(html, /\.showcase-track \{[^}]*display:flex;[^}]*align-items:center;[^}]*gap:var\(--gallery-gap\);/);
   assert.match(html, /\.showcase-photo \{[^}]*aspect-ratio:3 \/ 4;[^}]*border-radius:12px;/);
-  assert.match(html, /\.showcase-photo img \{[^}]*object-fit:contain; object-position:center;/);
+  assert.match(html, /\.showcase-photo img \{[^}]*object-fit:cover; object-position:center;[^}]*transform:scale\(1\.06\); transform-origin:center;/);
   assert.match(html, /@media \(max-width:600px\) \{\s*\.showcase-collage \{ --gallery-card-width:78vw;/);
   assert.doesNotMatch(html, /mobileComposition|tabletComposition|desktopComposition|config\.rotation/);
   assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
