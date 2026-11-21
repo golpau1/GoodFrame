@@ -3,13 +3,13 @@
   "short_name": "Good Frame",
   "icons": [
     {
-      "src": "/favicon-192x192.png?v=tree-ring-round-20261009",
+      "src": "/favicon-192x192.png?v=20261121",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon-512x512.png?v=tree-ring-round-20261009",
+      "src": "/favicon-512x512.png?v=20261121",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
