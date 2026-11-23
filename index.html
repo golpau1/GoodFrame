@@ -112,9 +112,7 @@
     .showcase-item-label { display:none; }
     .brand-statement-strip { display:none; }
     .brand-statement-marquee { display:none; }
-    .header-left-nav { display:none; }
-    .mobile-menu-shell { grid-column:1; align-self:center; justify-self:start; }
-    .mobile-menu-toggle { display:none; }
+    .header-left-nav { grid-column:1; align-self:center; justify-self:start; display:flex; align-items:center; }
     .header-faq-link { font-size:clamp(11.2px,.91vw,14px); letter-spacing:.08em; text-transform:uppercase; }
     .header-left-nav .header-faq-link { font-family:var(--font-body); font-weight:500; }
     a { color:inherit; text-decoration:none; }
@@ -520,7 +518,6 @@
       .header { position:sticky; top:0; right:auto; left:auto; z-index:20; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); width:100%; height:var(--header-height); padding:0 6%; border:0; background:var(--header-background); box-shadow:none; font-size:14px; }
       .header-brand { position:static; transform:none; }
       .header-left-nav { position:static; grid-column:1; align-self:center; justify-self:start; display:flex; align-items:center; gap:22px; }
-      .header-left-nav > a:not(.header-faq-link) { display:none; }
       .header-faq-link { display:block; font-size:clamp(12.6px,.91vw,14px); }
       .header > #cart-link { position:relative; right:auto; }
       .hero-image { position:absolute; top:0; right:0; bottom:0; left:0; z-index:1; display:block; width:100%; height:100%; object-fit:cover; object-position:50% 58%; }
@@ -554,7 +551,6 @@
     @media (max-width:1100px) {
       html, body { width:100%; max-width:100vw; overflow-x:clip; }
       .header-left-nav { position:static; grid-column:1; align-self:center; justify-self:start; display:flex; align-items:center; }
-      .header-left-nav > a:not(.header-faq-link) { display:none; }
       .header-faq-link { display:block; font-size:clamp(11.2px,1.4vw,12.6px); }
       .header > #cart-link { position:relative; right:auto; display:inline-flex; }
       .brand-statement-strip { display:block; width:100%; height:80px; min-height:80px; padding:0; overflow:hidden; background:#241C18; color:#FAF6F0; }
@@ -824,32 +820,15 @@
       .upload-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:0; }
       .image-slot:not(.has-image) { aspect-ratio:3 / 4; }
     }
-    @media (max-width:1100px) {
-      .mobile-menu-toggle { display:flex; width:40px; height:40px; align-items:center; justify-content:flex-start; padding:0; border:0; background:transparent; color:var(--header-foreground); cursor:pointer; }
-      .mobile-menu-toggle svg { width:22px; height:22px; overflow:visible; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; }
-      .mobile-menu-toggle .menu-line { transform-box:fill-box; transform-origin:center; transition:transform 180ms ease; }
-      .mobile-menu-shell.is-open .menu-line--top { transform:translateY(5px) rotate(45deg); }
-      .mobile-menu-shell.is-open .menu-line--bottom { transform:translateY(-5px) rotate(-45deg); }
-      html.mobile-menu-open, html.mobile-menu-open body { overflow:hidden; }
-      .mobile-menu-shell .header-left-nav { position:absolute; top:100%; right:0; left:0; z-index:30; display:grid; width:100%; max-width:100vw; max-height:calc(100dvh - var(--header-height)); grid-template-columns:1fr; gap:0; padding:8px var(--page-gutter); overflow-x:hidden; overflow-y:auto; border:0; border-bottom:1px solid rgba(102,86,75,.22); background:#F7F3ED; box-shadow:none; opacity:0; pointer-events:none; transform:translateY(-5px); transition:opacity 180ms ease,transform 180ms ease,visibility 0s linear 180ms; visibility:hidden; }
-      .mobile-menu-shell.is-open .header-left-nav { opacity:1; pointer-events:auto; transform:translateY(0); transition:opacity 180ms ease,transform 180ms ease; visibility:visible; }
-      .mobile-menu-shell.is-open .header-left-nav > a { display:block; min-height:0; padding:9px 4px; color:#29211D; font-family:var(--font-body); font-size:17px; font-weight:400; letter-spacing:0; line-height:1.25; text-align:left; text-transform:none; }
-      .mobile-menu-shell.is-open .header-left-nav > a + a { border-top:1px solid rgba(102,86,75,.18); }
-    }
-    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a, .mobile-menu-shell .header-left-nav, .mobile-menu-toggle .menu-line, .add-photo-set-button { transition:none; } .brand-statement-marquee { overflow-x:auto; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } #photo-preview-dialog[open] { animation:none; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a, .add-photo-set-button { transition:none; } .brand-statement-marquee { overflow-x:auto; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } #photo-preview-dialog[open] { animation:none; } }
   </style>
 </head>
 <body>
   <div class="announcement-bar">Handmade in Australia</div>
   <header class="header">
-    <div class="mobile-menu-shell">
-      <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open menu" aria-controls="header-navigation" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="menu-line menu-line--top" d="M3 7h18"/><path class="menu-line menu-line--bottom" d="M3 17h18"/></svg></button>
-      <nav class="header-left-nav" id="header-navigation" aria-label="Primary navigation">
-        <a class="header-faq-link" href="#faq-dialog" aria-label="Open FAQ" aria-haspopup="dialog">FAQ</a>
-        <a href="#showcase-gallery">Gallery</a>
-        <a href="#frame-configurator">Begin Framing</a>
-      </nav>
-    </div>
+    <nav class="header-left-nav" aria-label="Primary navigation">
+      <a class="header-faq-link" href="#faq-dialog" aria-label="Open FAQ" aria-haspopup="dialog">FAQ</a>
+    </nav>
     <a class="header-brand" href="/" aria-label="Good Frame home">Good Frame</a>
     <a href="/cart" id="cart-link" aria-label="Open cart, 0 items" aria-haspopup="dialog">
       <svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
@@ -1055,31 +1034,6 @@
   <script>
     const configurator = document.getElementById("configurator");
     const faqDialog = document.getElementById("faq-dialog");
-    const mobileMenuShell = document.querySelector(".mobile-menu-shell");
-    const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
-    const closeMobileMenu = () => {
-      mobileMenuShell.classList.remove("is-open");
-      document.documentElement.classList.remove("mobile-menu-open");
-      mobileMenuToggle.setAttribute("aria-expanded", "false");
-      mobileMenuToggle.setAttribute("aria-label", "Open menu");
-    };
-    mobileMenuToggle.addEventListener("click", () => {
-      const willOpen = !mobileMenuShell.classList.contains("is-open");
-      mobileMenuShell.classList.toggle("is-open", willOpen);
-      document.documentElement.classList.toggle("mobile-menu-open", willOpen);
-      mobileMenuToggle.setAttribute("aria-expanded", String(willOpen));
-      mobileMenuToggle.setAttribute("aria-label", willOpen ? "Close menu" : "Open menu");
-    });
-    mobileMenuShell.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMobileMenu));
-    document.addEventListener("click", (event) => {
-      if (!mobileMenuShell.contains(event.target)) closeMobileMenu();
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && mobileMenuShell.classList.contains("is-open")) {
-        closeMobileMenu();
-        mobileMenuToggle.focus();
-      }
-    });
     document.querySelectorAll(".header-faq-link").forEach((faqLink) => faqLink.addEventListener("click", (event) => {
       event.preventDefault();
       faqDialog.showModal();
