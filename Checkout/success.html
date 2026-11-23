@@ -63,23 +63,13 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png?v=20261121">
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png?v=20261121">
     <link rel="manifest" href="/site.webmanifest?v=20261121">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cutive+Mono&family=Lexend:wght@300;500&family=Montserrat:wght@400;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/Checkout/desktop.css?v=20260713-fouc-fix" media="screen and (min-width: 1101px)">
     <link rel="stylesheet" href="/Checkout/mobile.css?v=20260713-fouc-fix" media="screen and (max-width: 1100px)">
     <link rel="stylesheet" href="/Shared/logo.css?v=20260819-global-header">
     <link rel="stylesheet" href="/Shared/mobile-header.css?v=20260819-rebuilt-announcement">
     <link rel="stylesheet" href="/Shared/site-shell.css?v=20260824-pure-black-footer">
+    <link rel="stylesheet" href="/Shared/typography.css">
     <style>
-        @font-face {
-            font-family: 'Good Frame Handmade Smooth';
-            src: url('/Assets/GoodFrame-Handmade-Smooth.ttf') format('truetype');
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-        }
-
         :root {
             --success-badge-bg: #EDF2F7;
         }
@@ -155,7 +145,7 @@
         }
 
         .success-title {
-            font-family: 'Gloock', 'Times New Roman', serif !important;
+            font-family: var(--font-body) !important;
             font-weight: 400 !important;
             letter-spacing: 0 !important;
             font-size: clamp(1.9rem, 4vw, 2.5rem) !important;
@@ -168,7 +158,7 @@
         .success-message {
             max-width: 420px !important;
             margin: 0 auto !important;
-            font-family: 'Gloock', 'Times New Roman', serif !important;
+            font-family: var(--font-body) !important;
             font-size: 1.05rem !important;
             line-height: 1.55 !important;
             color: var(--text-secondary) !important;
@@ -187,12 +177,15 @@
             width: 100% !important;
         }
 
-        .success-button,
-        .primary-button {
-            font-family: 'Item Text Wide Light', Arial, sans-serif !important;
+        .success-button:not(.primary-button) {
+            font-family: var(--font-body) !important;
             text-transform: none !important;
             font-variant-caps: normal !important;
             letter-spacing: 0 !important;
+        }
+
+        .success-button.primary-button {
+            font-family: var(--font-body) !important;
         }
 
         .success-button {
@@ -256,7 +249,7 @@
         .footer .footer-col > h3 {
             margin: 0 !important;
             padding: 0 !important;
-            font-family: 'Good Frame Handmade Smooth', Arial, sans-serif !important;
+            font-family: var(--font-body) !important;
             font-size: 1rem !important;
             font-weight: 400 !important;
             line-height: 1.1 !important;
@@ -279,7 +272,7 @@
         .footer a {
             margin: 0 !important;
             padding: 0 !important;
-            font-family: 'Item Text Wide Light', Arial, sans-serif !important;
+            font-family: var(--font-body) !important;
             font-size: 0.88rem !important;
             font-weight: 300 !important;
             line-height: 1.35 !important;

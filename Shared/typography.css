@@ -1,0 +1,155 @@
+@font-face {
+  font-family: "Bugrino";
+  src: url("../Assets/Bugrino-Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bugrino Semibold";
+  src: url("../Assets/Bugrino-Semibold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Goudy Bookletter 1911";
+  src: url("../Assets/GoudyBookletter1911-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ITC Garamond Light Condensed";
+  src: url("../Assets/ITCGaramondStd-LightCondensed.otf") format("opentype");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+:root {
+  --font-logo: "Bugrino Semibold", sans-serif;
+  --font-body: "Goudy Bookletter 1911", serif;
+  --font-hero: "ITC Garamond Light Condensed", serif;
+}
+
+body,
+body *,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-body) !important;
+  font-synthesis: none;
+}
+
+button,
+button *,
+input,
+select,
+textarea,
+label,
+nav,
+nav *,
+.announcement-bar,
+.announcement-bar *,
+.top-banner,
+.top-banner *,
+.cart-count,
+.cart-dialog,
+.cart-dialog *,
+.cart-page-container,
+.cart-page-container *,
+.shipping-confirmation-shell,
+.shipping-confirmation-shell *,
+.uploader-support,
+.upload-section,
+.upload-section *,
+.purchase-price,
+.purchase-error,
+.photo-preview-controls,
+.photo-preview-controls *,
+.checkout-result-meta,
+.checkout-result-meta *,
+.upload-progress-detail,
+.image-quality-warning {
+  font-family: var(--font-body) !important;
+  font-synthesis: none;
+  font-weight: 400 !important;
+  letter-spacing: .02em !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.hero-intro-title,
+.hero-intro-title-mobile,
+.hero-intro-eyebrow-mobile,
+.hero-reference-eyebrow,
+.hero-reference-title,
+.configurator-heading,
+.showcase-heading,
+.product-name,
+.product-title,
+.faq-title,
+.brand-statement,
+.footer-title,
+.footer-kicker,
+.cart-dialog-title,
+.cart-item-title,
+.shipping-confirmation-title,
+.checkout-result-title,
+.photo-preview-title,
+.upload-progress-title,
+.purchase-button,
+.purchase-button #purchase-label,
+#addToCartButton,
+.cart-action--primary,
+.checkout-button,
+.primary-button {
+  font-family: var(--font-body) !important;
+  font-synthesis: none;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+.hero-intro-title,
+.hero-intro-title-mobile,
+.hero-reference-title {
+  color: #FFFFFF !important;
+  font-family: var(--font-hero) !important;
+  font-synthesis: none;
+  font-weight: 300 !important;
+}
+
+.header-brand,
+.header-brand *,
+.footer-brand,
+.footer-brand *,
+.header-title--logo,
+.header-title--logo * {
+  font-family: var(--font-logo) !important;
+  font-synthesis: none;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.header-brand:hover,
+.header-brand:focus,
+.footer-brand:hover,
+.footer-brand:focus,
+.header-title--logo:hover,
+.header-title--logo:focus {
+  color: inherit !important;
+  opacity: 1 !important;
+  text-decoration: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
