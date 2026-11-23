@@ -119,6 +119,16 @@ h6,
   letter-spacing: 0 !important;
 }
 
+.product-name {
+  font-family: var(--font-logo) !important;
+  font-feature-settings: "kern" 1;
+  font-kerning: normal;
+  font-synthesis: none;
+  font-weight: 600 !important;
+  letter-spacing: .01em !important;
+  text-rendering: optimizeLegibility;
+}
+
 .hero-intro-title,
 .hero-intro-title-mobile,
 .hero-reference-title {
