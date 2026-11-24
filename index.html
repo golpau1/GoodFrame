@@ -743,6 +743,12 @@
     .palette-spread { margin:0; border-right:0; border-left:0; }
     .palette-panel { width:100%; padding-right:var(--page-gutter); padding-left:var(--page-gutter); }
     .configurator { width:min(100%,var(--content-max)); max-width:var(--content-max); margin-right:auto; margin-left:auto; }
+    .product-selector { display:grid; width:min(100%,560px); grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 auto 20px; padding:0; border:0; font-family:var(--font-body); }
+    .product-option { position:relative; display:flex; align-items:center; justify-content:center; min-height:42px; padding:8px 10px; border:1px solid var(--divider); border-radius:4px; color:var(--brown); cursor:pointer; font-size:15px; font-weight:400; line-height:1.2; text-align:center; }
+    .product-option:has(input:checked) { border-color:var(--brown); }
+    .product-option:has(input:focus-visible) { outline:2px solid var(--accent); outline-offset:2px; }
+    .product-option input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+    .uploader-intro[hidden] { display:none; }
     .product-name { text-align:center; scroll-margin-top:calc(var(--header-height) + 24px); }
     .upload-section { --uploader-flow-gap:8px; position:relative; width:100%; margin:0 auto; padding:10px 0 18px; }
     .upload-heading { margin:0; }
@@ -768,12 +774,13 @@
     .slot-preview { cursor:pointer; }
     .slot-preview:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
     .add-photo-set-button { width:fit-content; max-width:100%; margin-right:auto; margin-left:auto; }
-    .purchase-row { display:grid; width:min(100%,560px); grid-template-columns:auto minmax(150px,220px); align-items:center; gap:14px; margin:0 auto; padding:12px 0 18px; border-top:1px solid var(--divider); }
-    .purchase-price { grid-column:1; justify-self:start; color:var(--brown); font-size:16px; line-height:1.2; }
-    .purchase-button { grid-column:2; justify-self:end; width:100%; min-height:44px; padding:11px 18px; border:1px solid var(--brown); background:var(--brown); color:var(--color-background); }
+    .purchase-row { display:grid; width:min(100%,560px); grid-template-columns:minmax(0,1fr); justify-items:center; gap:12px; margin:0 auto; padding:10px 0 10px; border-top:0; }
+    .purchase-price { grid-column:1; justify-self:center; color:var(--brown); font-family:var(--font-body); font-size:21px; font-weight:400; line-height:1.2; }
+    .purchase-button { grid-column:1; justify-self:center; width:min(100%,360px); min-height:48px; padding:11px 18px; border:1px solid var(--brown); border-radius:12px; background:var(--brown); color:var(--color-background); transition:background-color 180ms ease,opacity 180ms ease; }
     .purchase-button #purchase-label { padding:0; color:inherit; }
     .purchase-button #purchase-label::after { display:none; }
-    .purchase-button:not(:disabled), .purchase-button:not(:disabled):hover { background:var(--brown); color:var(--color-background); box-shadow:none; }
+    .purchase-button:not(:disabled) { background:var(--brown); color:var(--color-background); box-shadow:none; }
+    .purchase-button:not(:disabled):hover { background:var(--brown); color:var(--color-background); opacity:.9; }
     .purchase-button:disabled { border-color:rgba(36,28,24,.2); background:rgba(169,154,140,.2); color:rgba(36,28,24,.62); }
     .purchase-button:disabled #purchase-label { color:inherit; }
     .purchase-error { grid-column:1 / -1; margin:0; }
@@ -817,17 +824,20 @@
       .brand-statement-track b { margin:0 34px; }
       .palette-panel, .palette-panel.has-pictures { padding:36px var(--page-gutter) 32px; }
       .configurator { width:100%; max-width:100%; }
+      .product-selector { gap:6px; margin-bottom:18px; }
+      .product-option { min-height:40px; padding:7px 8px; font-size:14px; }
       .product-name { font-size:clamp(26px,7.5vw,29px); line-height:1.1; }
       .uploader-support { max-width:40ch; margin-top:6px; font-size:14px; line-height:1.45; }
       .upload-section { padding-top:10px; padding-bottom:16px; }
       .reset-images-button { min-height:36px; }
-      .photo-sets, .uploader-progress-track, .add-photo-set-button { width:100%; }
+      .photo-sets, .uploader-progress-track { width:100%; }
+      .add-photo-set-button { width:fit-content; }
       .photo-sets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
       .photo-set, .upload-grid { display:contents; }
       .photo-set-header { grid-column:1 / -1; }
       .upload-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:0; }
     }
-    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a, .add-photo-set-button { transition:none; } .brand-statement-marquee { overflow-x:auto; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } #photo-preview-dialog[open] { animation:none; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .header a, .add-photo-set-button, .purchase-button { transition:none; } .brand-statement-marquee { overflow-x:auto; } .brand-statement-track { animation:none; } .showcase-photo { transition:none; } #photo-preview-dialog[open] { animation:none; } }
   </style>
 </head>
 <body>
@@ -869,8 +879,14 @@
   <section class="palette-spread" id="frame-configurator" aria-label="Frame configurator">
     <div class="palette-panel">
       <div class="configurator" id="configurator" aria-hidden="false">
-        <p class="product-name" id="product-name">Choose your memories</p>
-        <p class="uploader-support">Upload 6 of your favourite photos.</p>
+        <fieldset class="product-selector" aria-label="Choose a frame option">
+          <label class="product-option"><input type="radio" name="frame-option" value="frame-with-photos" checked><span>Frame + Photos</span></label>
+          <label class="product-option"><input type="radio" name="frame-option" value="frame-only"><span>Frame Only</span></label>
+        </fieldset>
+        <div class="uploader-intro" id="uploader-intro">
+          <p class="product-name" id="product-name">Choose your memories</p>
+          <p class="uploader-support">Upload 6 of your favourite photos.</p>
+        </div>
         <div class="upload-section" id="upload-section" aria-hidden="false">
           <p class="upload-heading"><button class="reset-images-button" id="reset-images" type="button" hidden>Reset Images</button></p>
           <div class="uploader-progress-track" id="uploader-progress-track" role="progressbar" aria-label="Photo upload progress" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"><div class="uploader-progress-bar" id="uploader-progress-bar"></div></div>
@@ -879,7 +895,7 @@
           <div class="photo-sets" id="photo-sets" aria-label="Photo upload sets"></div>
           <button class="add-photo-set-button" id="add-photo-set" type="button">+ 3 Photos · $6</button>
         </div>
-        <div class="purchase-row"><span class="purchase-price">$<span id="config-price">60.00</span></span><button class="purchase-button" type="button" disabled aria-disabled="true"><span id="purchase-label">Add to cart</span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
+        <div class="purchase-row"><button class="purchase-button" type="button" disabled aria-disabled="true"><span id="purchase-label">Add to cart</span></button><span class="purchase-price">$<span id="config-price">60.00</span></span><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
       </div>
     </div>
   </section>
@@ -1126,6 +1142,7 @@
     const CROP_SOURCE_MAX_DIMENSION = 4096;
     const PRINT_JPEG_QUALITY = .98;
     const BASE_FRAME_PRICE = 60;
+    const FRAME_ONLY_PRICE = 55;
     const PHOTO_SET_PRICE = 6;
     const INCLUDED_PHOTO_SET_COUNT = 2;
     const MAX_PHOTO_SET_COUNT = 5;
@@ -1146,6 +1163,7 @@
       return match && Number(match[1]) % 3 === 0 ? Number(match[1]) / 3 : 0;
     }
     function photoSetPriceFor(photoSetCount) {
+      if (photoSetCount === 0) return FRAME_ONLY_PRICE;
       return BASE_FRAME_PRICE + (Math.max(0, photoSetCount - INCLUDED_PHOTO_SET_COUNT) * PHOTO_SET_PRICE);
     }
     function productPriceFor(item) {
@@ -1161,12 +1179,16 @@
     }
     const FRAME_COLOUR = "Natural Oak";
     const selections = { order: "Frame + 6 Photos" };
+    let selectedProductVariant = "frame-with-photos";
     const overlay = document.getElementById("cropperOverlay");
     const cropImage = document.getElementById("cropperImage");
     const uploadedImages = Array(INCLUDED_PHOTO_SET_COUNT * 3).fill(null);
     let imageSlots = [];
     let photoSetCount = INCLUDED_PHOTO_SET_COUNT;
     const photoSetsContainer = document.getElementById("photo-sets");
+    const uploadSection = document.getElementById("upload-section");
+    const uploaderIntro = document.getElementById("uploader-intro");
+    const productOptionInputs = [...document.querySelectorAll('input[name="frame-option"]')];
     const addPhotoSetButton = document.getElementById("add-photo-set");
     const configPrice = document.getElementById("config-price");
     const progress = document.getElementById("upload-progress");
@@ -1314,10 +1336,10 @@
       return uploadedImages.filter(Boolean).length;
     }
     function getConfiguredPhotoCount() {
-      return photoSetCount * 3;
+      return selectedProductVariant === "frame-only" ? 0 : photoSetCount * 3;
     }
     function getConfiguredPrice() {
-      return photoSetPriceFor(photoSetCount);
+      return selectedProductVariant === "frame-only" ? FRAME_ONLY_PRICE : photoSetPriceFor(photoSetCount);
     }
     function getConfiguredOrderName() {
       const photoCount = getConfiguredPhotoCount();
@@ -1328,6 +1350,7 @@
       configPrice.textContent = getConfiguredPrice().toFixed(2);
     }
     function canAddToCart() {
+      if (selectedProductVariant === "frame-only") return true;
       return uploadedImages.length === getConfiguredPhotoCount() &&
         uploadedImages.every((entry) => entry?.uploadState === "complete");
     }
@@ -1363,6 +1386,22 @@
         trackGa4EventOnce("six_photos_completed", "required-six", { photo_count:INCLUDED_PHOTO_SET_COUNT * 3 });
       }
     }
+
+    function selectProductVariant(value) {
+      selectedProductVariant = value === "frame-only" ? "frame-only" : "frame-with-photos";
+      const frameOnly = selectedProductVariant === "frame-only";
+      uploaderIntro.hidden = frameOnly;
+      uploadSection.hidden = frameOnly;
+      uploadSection.setAttribute("aria-hidden", String(frameOnly));
+      updateProductSummary();
+      updateAddToCartState();
+    }
+
+    productOptionInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        if (input.checked) selectProductVariant(input.value);
+      });
+    });
 
     resetImagesButton.addEventListener("click", () => {
       uploadedImages.forEach((entry, index) => {
@@ -3639,7 +3678,7 @@
       showPurchaseError();
       purchaseButton.disabled = true;
       const configuredPhotoCount = getConfiguredPhotoCount();
-      const configuredPhotoSetCount = photoSetCount;
+      const configuredPhotoSetCount = configuredPhotoCount ? photoSetCount : 0;
       const withPictures = configuredPhotoCount > 0;
       document.getElementById("purchase-label").textContent = "ADDING…";
       try {
@@ -3681,7 +3720,7 @@
           value:cartItem.price,
           items:[{
             item_id:VARIABLE_PRODUCT_ID,
-            item_name:"Natural Oak Frame & Photos",
+            item_name:withPictures ? "Natural Oak Frame & Photos" : "Natural Oak Frame Only",
             price:cartItem.price,
             quantity:1
           }]

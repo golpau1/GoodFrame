@@ -74,52 +74,27 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /selectedFiles\.slice\(0, targetSlots\.length\)/);
   assert.match(html, /function appendPhotoSet\(setIndex\)/);
   assert.match(html, /function preserveScrollDuringLayoutChange/);
-  assert.match(html, /id=\"product-name\">Natural Oak Frame &amp; Photos</);
+  assert.match(html, /id=\"product-name\">Choose your memories</);
+  assert.match(html, /name=\"frame-option\" value=\"frame-with-photos\" checked/);
+  assert.match(html, /name=\"frame-option\" value=\"frame-only\"/);
   assert.match(html, /const FRAME_COLOUR = \"Natural Oak\";/);
   assert.match(html, /frameColour:FRAME_COLOUR,/);
   assert.doesNotMatch(html, /swatch-button|data-colour/);
   assert.match(html, /"price": "60\.00"/);
   assert.match(html, /const BASE_FRAME_PRICE = 60;/);
+  assert.match(html, /const FRAME_ONLY_PRICE = 55;/);
   assert.match(html, /const PHOTO_SET_PRICE = 6;/);
-  assert.match(html, /function photoSetPriceFor\(photoSetCount\) \{\s*return BASE_FRAME_PRICE \+ \(Math\.max\(0, photoSetCount - INCLUDED_PHOTO_SET_COUNT\) \* PHOTO_SET_PRICE\);/);
+  assert.match(html, /if \(photoSetCount === 0\) return FRAME_ONLY_PRICE;/);
   assert.match(html, /id=\"config-price\">60\.00</);
-  assert.match(html, /id=\"add-photo-set\"[^>]*>\+ Add Another 3 Photos — \$6</);
-  assert.match(html, /id=\"upload-progress\"[^>]*>0 \/ 6 uploaded</);
+  assert.match(html, /id=\"add-photo-set\"[^>]*>\+ 3 Photos · \$6</);
+  assert.match(html, /id=\"upload-progress\"[^>]*>0 of 6 uploaded</);
   assert.match(html, /<div class=\"photo-sets\" id=\"photo-sets\" aria-label=\"Photo upload sets\"><\/div>/);
-  assert.doesNotMatch(html, /id=\"upload-intro\"|id=\"choose-first-photo\"|id=\"frame-preview\"|id=\"mobile-upload-cta\"/);
+  assert.match(html, /uploadSection\.hidden = frameOnly;/);
+  assert.match(html, /const configuredPhotoSetCount = configuredPhotoCount \? photoSetCount : 0;/);
   assert.match(html, /photoSetCount >= MAX_PHOTO_SET_COUNT/);
   assert.match(html, /setIndex < INCLUDED_PHOTO_SET_COUNT/);
   assert.match(html, /\.photo-sets \{ display:grid; height:auto; gap:22px; overflow:visible; \}/);
   assert.match(html, /\.configurator \{ width:min\(60%,350px\); height:auto; max-height:none;/);
-  assert.match(html, /hero-dscf1744-effect-landscape-2560\.webp/);
-  assert.match(html, /hero-dscf3029-portrait-960\.webp/);
-  assert.match(html, /hero-dscf3029-portrait-1600\.webp/);
-  assert.doesNotMatch(html, /hero-dscf1744-effect-portrait-(?:960|1600)\.webp/);
-  const galleryImages = [...html.matchAll(/data-showcase-image="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(galleryImages, [
-    'Assets/coffee/gallery-new-01-worktable.webp',
-    'Assets/coffee/gallery-new-02-photo-box-books.webp',
-    'Assets/coffee/gallery-new-03-photo-box-layout.webp',
-    'Assets/coffee/gallery-new-04-workshop-craftsperson.webp',
-    'Assets/coffee/gallery-new-05-family-frame-laptop.webp',
-    'Assets/coffee/gallery-new-06-couple-frame-books.webp'
-  ]);
-  const galleryAssetBuffers = await Promise.all(galleryImages.flatMap((source) => [
-    readFile(new URL(`../../../${source}`, import.meta.url)),
-    readFile(new URL(`../../../${source.replace('.webp', '-480.webp')}`, import.meta.url))
-  ]));
-  assert.ok(galleryAssetBuffers.every((asset) => asset.length > 0));
-  assert.match(html, /\.showcase-track \{[^}]*display:flex;[^}]*align-items:center;[^}]*gap:var\(--gallery-gap\);/);
-  assert.match(html, /\.showcase-photo \{[^}]*aspect-ratio:3 \/ 4;[^}]*border-radius:12px;/);
-  assert.match(html, /\.showcase-photo img \{[^}]*object-fit:cover; object-position:center;[^}]*transform:scale\(1\.06\); transform-origin:center;/);
-  assert.match(html, /@media \(max-width:600px\) \{\s*\.showcase-collage \{ --gallery-card-width:78vw;/);
-  assert.doesNotMatch(html, /mobileComposition|tabletComposition|desktopComposition|config\.rotation/);
-  assert.match(html, /id="hero-upload-button"[^>]*>Upload your photos</);
-  assert.match(html, /6 printed photos \+ handmade oak frame · \$60 AUD/);
-  assert.match(html, /\.hero-upload-button \{[^}]*border-radius:8px;/);
-  assert.match(html, /function scrollToPhotoUploader\(\) \{\s*uploadSectionElement\.scrollIntoView\(\{ behavior:window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches \? "auto" : "smooth", block:"start" \}\);\s*\}/);
-  assert.match(html, /heroUploadButton\.addEventListener\("click", scrollToPhotoUploader\);/);
-  assert.doesNotMatch(html, /function openOrContinuePhotoWorkflow/);
   assert.match(html, /Assets\/vendor\/cropperjs-1\.6\.1\/cropper\.min\.js/);
   assert.doesNotMatch(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/cropperjs/);
   assert.match(html, /typeof globalThis\.Cropper !== "function"/);
@@ -127,7 +102,7 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /your selected \$\{failedCount === 1 \? "photo is" : "photos are"\} still saved/);
   assert.match(html, /replace\.addEventListener\("click", \(\) => triggerSlotPicker\(slot, replace\)\);/);
   assert.match(html, /replace\.textContent = "Replace"/);
-  assert.match(html, /picker\.textContent = "\+"/);
+  assert.match(html, /plus\.textContent = "\+"/);
   assert.match(html, /label\.textContent = `Photo set \$\{setIndex \+ 1\} · 3 photos`/);
   assert.match(html, /trackGa4EventOnce\("upload_started"/);
   assert.match(html, /trackGa4Event\("photo_uploaded"/);
@@ -935,11 +910,14 @@ function fakeJpeg(width = 1080, height = 1720) {
 
 function frameOnly(overrides = {}) {
   return {
-    productType: 'tiny_frame_only',
+    productType: 'tiny_frame_photo_sets',
     cartItemId:'ci_11111111111111111111111111111111',
     size: '80x80mm',
     frameColour: 'Natural Oak',
     quantity: 1,
+    photoSetCount:0,
+    photoCount:0,
+    uploadReference:'',
     price: 1,
     ...overrides
   };
@@ -982,7 +960,9 @@ test('legacy eight-photo carts keep their $64.95 price and client-supplied shipp
   assert.deepEqual(lineItems.map(item => item.unitAmount), [6495]);
   assert.deepEqual(lineItems.map(item => item.name), ['Frame + Eight Photos']);
   assert.equal(lineItems.filter(item => item.name === 'Shipping').length, 0);
-  assert.throws(() => buildLineItems([frameOnly()]), /invalid product type/);
+  assert.deepEqual(buildLineItems([frameOnly()]).map(item => ({ name:item.name, unitAmount:item.unitAmount, photoCount:item.photoCount })), [
+    { name:'Frame Only', unitAmount:5500, photoCount:0 }
+  ]);
 });
 
 test('variable photo-set pricing is calculated on the server from $60 including six photos plus $6 per additional set', () => {
@@ -996,6 +976,7 @@ test('variable photo-set pricing is calculated on the server from $60 including 
     'Frame + 12 Photos',
     'Frame + 15 Photos'
   ]);
+  assert.equal(buildLineItems([frameWithPhotoSets(0)])[0].unitAmount, 5500);
   assert.throws(() => buildLineItems([frameWithPhotoSets(2, { photoCount:3 })]), /photo count does not match/);
   assert.throws(() => buildLineItems([frameWithPhotoSets(1)]), /at least six photos/);
   assert.throws(() => buildLineItems([frameWithPhotoSets(6)]), /between six and 15 photos/);
@@ -1011,6 +992,7 @@ test('Stripe receives the server-calculated variable total and photo counts', ()
     assert.equal(payload.get('line_items[0][price_data][product_data][name]'), `Frame + ${photoSetCount * 3} Photos`);
     assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_set_count]'), String(photoSetCount));
     assert.equal(payload.get('line_items[0][price_data][product_data][metadata][photo_count]'), String(photoSetCount * 3));
+    assert.equal(payload.get('line_items[0][price_data][product_data][metadata][order_variant]'), 'frame_with_photos');
     assert.equal(payload.get('metadata[total_photo_count]'), String(photoSetCount * 3));
     assert.equal(payload.get('payment_intent_data[metadata][total_photo_count]'), String(photoSetCount * 3));
     assert.match(payload.get('metadata[photo_selection_map]'), new RegExp(`${photoSetCount * 3} photos \\| Upload ${uploadReference}`));

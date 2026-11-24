@@ -426,7 +426,7 @@ test('Australian photo checkout charges $64.95 plus one $10 shipping option for 
   }
 });
 
-test('Frame Only checkout is rejected before contacting Stripe', async () => {
+test('Frame Only checkout reaches Stripe at the server-calculated $55 price without photos', async () => {
   const originalFetch = globalThis.fetch;
   let stripeWasCalled = false;
   let stripeBody;
@@ -446,13 +446,19 @@ test('Frame Only checkout is rejected before contacting Stripe', async () => {
         size: '80x80mm',
         frameColor: 'Legacy finish',
         orderType: 'Frame Only',
+        photoSetCount: 0,
+        photoCount: 0,
         quantity: 1,
         artworkObjectKeys: []
       }] })
     }), testEnv);
-    assert.equal(response.status, 400);
-    assert.match((await response.json()).error, /at least six photos/);
-    assert.equal(stripeWasCalled, false);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).url, 'https://checkout.stripe.test/frame-only');
+    assert.equal(stripeWasCalled, true);
+    assert.equal(stripeBody.get('line_items[0][price_data][unit_amount]'), '5500');
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][name]'), 'Frame Only');
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][metadata][photo_count]'), '0');
+    assert.equal(stripeBody.get('line_items[0][price_data][product_data][metadata][order_variant]'), 'frame_only');
     assert.equal(testEnv.ARTWORK_BUCKET.objects.size, 0);
   } finally {
     globalThis.fetch = originalFetch;

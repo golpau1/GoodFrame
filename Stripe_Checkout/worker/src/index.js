@@ -35,6 +35,7 @@ const TINY_FRAME_PRODUCTS = Object.freeze({
     orderType: 'photo-sets',
     name: 'Frame',
     baseUnitAmount: 6000,
+    frameOnlyUnitAmount: 5500,
     includedPhotoSetCount: 2,
     additionalPhotoSetUnitAmount: 600,
     requiresPictures: false
@@ -85,6 +86,7 @@ function getTinyFrameUnitAmount(productType, photoSetCount = 0) {
   if (productType === 'tiny_frame_8_pictures') return TINY_FRAME_PRODUCTS.tiny_frame_8_pictures.unitAmount;
   if (productType !== 'tiny_frame_photo_sets' || normalizePhotoSetCount(photoSetCount) === null) return undefined;
   const product = TINY_FRAME_PRODUCTS.tiny_frame_photo_sets;
+  if (photoSetCount === 0) return product.frameOnlyUnitAmount;
   if (photoSetCount < product.includedPhotoSetCount) return undefined;
   const additionalPhotoSetCount = Math.max(0, photoSetCount - product.includedPhotoSetCount);
   const amount = product.baseUnitAmount + (additionalPhotoSetCount * product.additionalPhotoSetUnitAmount);
@@ -1508,7 +1510,7 @@ function buildLineItems(items) {
       throw new Error('A Tiny Frame requires at least six photos');
     }
 
-    if (productType === 'tiny_frame_photo_sets' && photoSetCount < tinyFrameProduct.includedPhotoSetCount) {
+    if (productType === 'tiny_frame_photo_sets' && photoSetCount !== 0 && photoSetCount < tinyFrameProduct.includedPhotoSetCount) {
       throw new Error('A Tiny Frame requires at least six photos');
     }
 
@@ -1782,6 +1784,7 @@ function createStripePayload(
       payload.set(`${prefix}[price_data][product_data][metadata][unit_index]`, String(item.unitIndex));
       payload.set(`${prefix}[price_data][product_data][metadata][photo_set_count]`, String(item.photoSetCount || 0));
       payload.set(`${prefix}[price_data][product_data][metadata][photo_count]`, String(item.photoCount || 0));
+      payload.set(`${prefix}[price_data][product_data][metadata][order_variant]`, item.photoCount > 0 ? 'frame_with_photos' : 'frame_only');
       if (item.uploadReference) {
         payload.set(`${prefix}[price_data][product_data][metadata][upload_reference]`, item.uploadReference);
         payload.set(`${prefix}[price_data][product_data][metadata][upload_session_id]`, item.uploadReference);
