@@ -39,7 +39,7 @@ jobs:
           rsync -a --exclude '.git' --exclude '.pages-site' ./ .pages-site/
           cp 'Checkout/success.html' '.pages-site/order-confirmation.html'
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: '.pages-site'
       - name: Deploy to GitHub Pages
