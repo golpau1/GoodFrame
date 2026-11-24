@@ -595,10 +595,10 @@
     .showcase-gallery::before, .showcase-gallery::after { display:none; }
     .showcase-gallery *, .showcase-gallery *::before, .showcase-gallery *::after { box-sizing:border-box; }
     .showcase-sticky { position:relative; display:block; width:100%; max-width:none; margin:0; padding:0; overflow:hidden; }
-    .showcase-collage { --gallery-card-width:calc(23vw - 15px); --gallery-gap:22px; position:relative; display:block; width:100%; margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:var(--color-background); cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-behavior:smooth; scroll-padding-inline:0; scroll-snap-type:x mandatory; }
+    .showcase-collage { --gallery-card-width:calc(23vw - 15px); --gallery-gap:22px; position:relative; display:block; width:100%; margin:0; padding:0; overflow-x:auto; overflow-y:hidden; background:var(--color-background); cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; scrollbar-width:none; overscroll-behavior-x:contain; scroll-behavior:smooth; scroll-padding-inline:24px; scroll-snap-type:x mandatory; }
     .showcase-collage::-webkit-scrollbar { display:none; }
     .showcase-collage.is-dragging { cursor:grabbing; }
-    .showcase-track { position:relative; display:flex; width:max-content; min-width:100%; align-items:center; gap:var(--gallery-gap); margin:0 0 0 -4vw; padding:56px 0; pointer-events:auto; }
+    .showcase-track { position:relative; display:flex; width:max-content; min-width:100%; align-items:center; gap:var(--gallery-gap); margin:0; padding:56px 24px; pointer-events:auto; }
     .showcase-photo { position:relative; display:block; flex:0 0 var(--gallery-card-width); width:var(--gallery-card-width); aspect-ratio:3 / 4; margin:0; padding:0; overflow:hidden; border:0; border-radius:0; background:var(--color-background); box-shadow:none; opacity:1; pointer-events:auto; scroll-snap-align:start; scroll-snap-stop:always; }
     .showcase-photo img { display:block; width:100%; height:100%; border:0; border-radius:0; box-shadow:none; object-fit:cover; object-position:center; pointer-events:none; transform:none; transform-origin:center; user-select:none; -webkit-user-drag:none; }
     .showcase-item-label, .showcase-note, .showcase-mobile-viewport { display:none; }
@@ -609,12 +609,12 @@
     .showcase-control:hover { border-color:rgba(36,28,24,.32); background:var(--color-background); color:#241C18; }
     .showcase-control:disabled { opacity:0; pointer-events:none; }
     @media (min-width:601px) and (max-width:1100px) {
-      .showcase-collage { --gallery-card-width:38vw; --gallery-gap:18px; scroll-padding-inline:0; }
-      .showcase-track { margin-left:-8vw; padding:48px 0; }
+      .showcase-collage { --gallery-card-width:38vw; --gallery-gap:18px; scroll-padding-inline:24px; }
+      .showcase-track { margin-left:0; padding:48px 24px; }
     }
     @media (max-width:600px) {
-      .showcase-collage { --gallery-card-width:72vw; --gallery-gap:16px; scroll-padding-inline:0; }
-      .showcase-track { margin-left:-12vw; padding:40px 0; }
+      .showcase-collage { --gallery-card-width:calc(40vw - 20.8px); --gallery-gap:10px; scroll-padding-inline:16px; }
+      .showcase-track { margin-left:0; padding:40px 16px; }
       .showcase-control { width:40px; height:40px; }
       .showcase-control--prev { left:8px; }
       .showcase-control--next { right:8px; }
@@ -706,7 +706,7 @@
       .palette-panel.has-pictures { padding:40px 6vw 56px; }
       .configurator { width:min(90%,760px); }
       .palette-panel:not(.has-pictures) .configurator.is-open { margin-top:20px; }
-      .showcase-track { padding:56px 0; }
+      .showcase-track { padding:56px 24px; }
       .site-footer { padding-top:32px; }
     }
     @media (min-width:1024px) {
@@ -914,7 +914,7 @@
       <div class="showcase-collage" role="region" aria-label="Editorial image carousel">
        <button class="showcase-control showcase-control--prev" type="button" aria-label="Previous gallery image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
        <div class="showcase-track">
-      <div class="showcase-photo" data-showcase-image="Assets/coffee/gallery-new-01-worktable.webp" aria-label="Printed photographs arranged on a workshop cutting mat"><img src="Assets/coffee/gallery-new-01-worktable.webp" srcset="Assets/coffee/gallery-new-01-worktable-480.webp 480w, Assets/coffee/gallery-new-01-worktable.webp 1080w" sizes="(max-width:600px) 72vw, (max-width:1100px) 38vw, (max-width:1440px) 23vw, 320px" width="1080" height="1534" loading="lazy" decoding="async" alt="Printed photographs, framing pieces and a ruler arranged on a workshop cutting mat"><span class="showcase-item-label">#01</span></div>
+      <div class="showcase-photo" data-showcase-image="Assets/coffee/gallery-new-01-couple-frame-worktable.webp" aria-label="Good Frame with a couple's photograph on a workshop cutting mat"><img src="Assets/coffee/gallery-new-01-couple-frame-worktable.webp" srcset="Assets/coffee/gallery-new-01-couple-frame-worktable-480.webp 480w, Assets/coffee/gallery-new-01-couple-frame-worktable.webp 1080w" sizes="(max-width:600px) 72vw, (max-width:1100px) 38vw, (max-width:1440px) 23vw, 320px" width="1080" height="1512" loading="lazy" decoding="async" alt="Wooden Good Frame displaying a couple's photograph on a green workshop cutting mat"><span class="showcase-item-label">#01</span></div>
       <div class="showcase-photo" data-showcase-image="Assets/coffee/gallery-new-02-photo-box-books.webp" aria-label="Good Frame photo box with loose photographs and books"><img src="Assets/coffee/gallery-new-02-photo-box-books.webp" srcset="Assets/coffee/gallery-new-02-photo-box-books-480.webp 480w, Assets/coffee/gallery-new-02-photo-box-books.webp 1080w" sizes="(max-width:600px) 72vw, (max-width:1100px) 38vw, (max-width:1440px) 23vw, 320px" width="1080" height="1621" loading="lazy" decoding="async" alt="Wooden Good Frame photo box with loose printed photographs beside stacked books"><span class="showcase-item-label">#02</span></div>
       <div class="showcase-photo" data-showcase-image="Assets/coffee/gallery-new-03-photo-box-layout.webp" aria-label="Open Good Frame photo box with printed memories"><img src="Assets/coffee/gallery-new-03-photo-box-layout.webp" srcset="Assets/coffee/gallery-new-03-photo-box-layout-480.webp 480w, Assets/coffee/gallery-new-03-photo-box-layout.webp 1080w" sizes="(max-width:600px) 72vw, (max-width:1100px) 38vw, (max-width:1440px) 23vw, 320px" width="1080" height="1523" loading="lazy" decoding="async" alt="Open wooden Good Frame photo box surrounded by printed memories on a green cutting mat"><span class="showcase-item-label">#03</span></div>
       <div class="showcase-photo" data-showcase-image="Assets/coffee/gallery-new-04-workshop-craftsperson.webp" aria-label="Craftsperson making frames in the workshop"><img src="Assets/coffee/gallery-new-04-workshop-craftsperson.webp" srcset="Assets/coffee/gallery-new-04-workshop-craftsperson-480.webp 480w, Assets/coffee/gallery-new-04-workshop-craftsperson.webp 1014w" sizes="(max-width:600px) 72vw, (max-width:1100px) 38vw, (max-width:1440px) 23vw, 320px" width="1014" height="1356" loading="lazy" decoding="async" alt="A craftsperson wearing hearing protection makes timber frames in the Good Frame workshop"><span class="showcase-item-label">#04</span></div>
