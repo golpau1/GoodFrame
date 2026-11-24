@@ -123,7 +123,7 @@
     .header { position:sticky; z-index:20; top:0; width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; height:var(--header-height); padding:0 4%; background:var(--header-background); color:var(--header-foreground); font-size:clamp(12px,1vw,15px); font-weight:500; line-height:1; }
     .navigation { width:auto; display:flex; }
     .navigation a { letter-spacing:.12em; text-transform:uppercase; }
-    .header-brand { grid-column:2; align-self:center; justify-self:center; display:flex; align-items:center; justify-content:center; color:inherit; font-size:clamp(24.5px,2.05vw,31.5px); text-align:center; }
+    .header-brand { grid-column:2; align-self:center; justify-self:center; display:flex; align-items:center; justify-content:center; color:inherit; font-size:clamp(27px,2.28vw,35px); text-align:center; }
     .header-brand, .footer-brand { font-family:var(--font-logo); font-feature-settings:"kern" 1; font-kerning:normal; font-synthesis:none; font-weight:600; letter-spacing:0; line-height:1; text-rendering:optimizeLegibility; text-transform:none; white-space:nowrap; word-spacing:0; }
     .header > #cart-link { position:relative; grid-column:3; align-self:center; justify-self:end; display:inline-flex; align-items:center; color:inherit; }
     .cart-icon { display:block; width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
@@ -750,12 +750,12 @@
     .product-option input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
     .uploader-intro[hidden] { display:none; }
     .product-name { text-align:center; scroll-margin-top:calc(var(--header-height) + 24px); }
-    .upload-section { --uploader-flow-gap:8px; position:relative; width:100%; margin:0 auto; padding:10px 0 18px; }
+    .upload-section { --uploader-flow-gap:8px; position:relative; width:100%; margin:0 auto; padding:10px 0 12px; }
     .upload-heading { margin:0; }
     .upload-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .image-slot { width:100%; min-width:0; }
     .product-name { width:min(100%,560px); margin-right:auto; margin-left:auto; padding:0; border:0; font-size:clamp(26px,2.4vw,32px); letter-spacing:.015em; line-height:1.1; text-transform:none; }
-    .uploader-support { width:min(100%,560px); max-width:40ch; margin:6px auto 0; color:var(--upload-secondary); font-size:14px; line-height:1.45; text-align:center; }
+    .uploader-support { width:min(100%,560px); max-width:40ch; margin:6px auto 18px; color:var(--upload-secondary); font-size:14px; line-height:1.45; text-align:center; }
     .upload-heading { display:flex; width:min(100%,560px); align-items:center; justify-content:flex-start; min-height:0; margin-right:auto; margin-left:auto; padding:0; letter-spacing:.02em; text-transform:none; }
     .upload-heading:has(.reset-images-button[hidden]) { display:none; }
     .reset-images-button { align-self:center; }
@@ -774,9 +774,9 @@
     .slot-preview { cursor:pointer; }
     .slot-preview:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
     .add-photo-set-button { width:fit-content; max-width:100%; margin-right:auto; margin-left:auto; }
-    .purchase-row { display:grid; width:min(100%,560px); grid-template-columns:minmax(0,1fr); justify-items:center; gap:12px; margin:0 auto; padding:10px 0 10px; border-top:0; }
-    .purchase-price { grid-column:1; justify-self:center; color:var(--brown); font-family:var(--font-body); font-size:21px; font-weight:400; line-height:1.2; }
-    .purchase-button { grid-column:1; justify-self:center; width:min(100%,360px); min-height:48px; padding:11px 18px; border:1px solid var(--brown); border-radius:12px; background:var(--brown); color:var(--color-background); transition:background-color 180ms ease,opacity 180ms ease; }
+    .purchase-row { display:grid; width:min(100%,560px); grid-template-columns:minmax(0,1fr); justify-items:center; gap:11px; margin:0 auto; padding:12px 0 8px; border-top:0; }
+    .purchase-price { grid-column:1; justify-self:center; color:var(--brown); font-family:var(--font-body); font-size:24px; font-weight:400; line-height:1.2; }
+    .purchase-button { grid-column:1; justify-self:center; width:min(100%,340px); min-height:48px; padding:11px 18px; border:1px solid var(--brown); border-radius:12px; background:var(--brown); color:var(--color-background); transition:background-color 180ms ease,opacity 180ms ease; }
     .purchase-button #purchase-label { padding:0; color:inherit; }
     .purchase-button #purchase-label::after { display:none; }
     .purchase-button:not(:disabled) { background:var(--brown); color:var(--color-background); box-shadow:none; }
@@ -828,7 +828,7 @@
       .product-option { min-height:40px; padding:7px 8px; font-size:14px; }
       .product-name { font-size:clamp(26px,7.5vw,29px); line-height:1.1; }
       .uploader-support { max-width:40ch; margin-top:6px; font-size:14px; line-height:1.45; }
-      .upload-section { padding-top:10px; padding-bottom:16px; }
+      .upload-section { padding-top:10px; padding-bottom:12px; }
       .reset-images-button { min-height:36px; }
       .photo-sets, .uploader-progress-track { width:100%; }
       .add-photo-set-button { width:fit-content; }
@@ -895,7 +895,7 @@
           <div class="photo-sets" id="photo-sets" aria-label="Photo upload sets"></div>
           <button class="add-photo-set-button" id="add-photo-set" type="button">+ 3 Photos · $6</button>
         </div>
-        <div class="purchase-row"><button class="purchase-button" type="button" disabled aria-disabled="true"><span id="purchase-label">Add to cart</span></button><span class="purchase-price">$<span id="config-price">60.00</span></span><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
+        <div class="purchase-row"><span class="purchase-price">$<span id="config-price">60.00</span></span><button class="purchase-button" type="button" disabled aria-disabled="true"><span id="purchase-label">Add to cart</span></button><p class="purchase-error" id="purchase-error" role="alert" hidden></p></div>
       </div>
     </div>
   </section>
