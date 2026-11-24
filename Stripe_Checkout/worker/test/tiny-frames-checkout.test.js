@@ -69,7 +69,7 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /function prepareIndividualPhotoForUpload\(entry, delay = 0\)/);
   assert.match(html, /const prepared = await createPrintCropBlob\(entry\);/);
   assert.match(html, /crop\.rotation === 90 \? rotateCanvasClockwise\(croppedCanvas\) : croppedCanvas/);
-  assert.match(html, /id=\"cropper-progress-label\">Photo 1 of 1/);
+  assert.doesNotMatch(html, /cropper-progress-label|cropper-progress-track/);
   assert.match(html, /function startCropBatch\(files, slotIndices, returnFocus\)/);
   assert.match(html, /selectedFiles\.slice\(0, targetSlots\.length\)/);
   assert.match(html, /function appendPhotoSet\(setIndex\)/);
@@ -90,6 +90,8 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /id=\"upload-progress\"[^>]*>0 of 6 uploaded</);
   assert.match(html, /<div class=\"photo-sets\" id=\"photo-sets\" aria-label=\"Photo upload sets\"><\/div>/);
   assert.match(html, /uploadSection\.hidden = frameOnly;/);
+  assert.match(html, /localStorage\.getItem\(PRODUCT_VARIANT_STORAGE_KEY\) === "frame-only"/);
+  assert.match(html, /selectProductVariant\(selectedProductVariant, false\);/);
   assert.match(html, /const configuredPhotoSetCount = configuredPhotoCount \? photoSetCount : 0;/);
   assert.match(html, /photoSetCount >= MAX_PHOTO_SET_COUNT/);
   assert.match(html, /setIndex < INCLUDED_PHOTO_SET_COUNT/);

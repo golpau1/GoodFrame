@@ -221,11 +221,7 @@
     .upload-input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
     #cropperOverlay { display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding:24px; background:rgba(36,28,24,.78); opacity:1; transition:opacity 140ms ease-out; }
     #cropperOverlay.is-closing { opacity:0; pointer-events:none; }
-    #cropperDialog { display:flex; flex-direction:column; width:min(720px,100%); height:min(760px,calc(100vh - 48px)); gap:18px; padding:22px; border:1px solid rgba(255,247,226,.35); background:var(--cream); color:var(--brown); }
-    .cropper-progress { display:grid; gap:9px; }
-    .cropper-progress-label { margin:0; color:var(--brown); font-size:10px; font-weight:600; letter-spacing:.11em; line-height:1.2; text-align:center; text-transform:uppercase; }
-    .cropper-progress-track { width:100%; height:2px; overflow:hidden; background:rgba(169,154,140,.18); }
-    .cropper-progress-bar { width:0; height:100%; background:var(--brown); transition:width 180ms ease-out; }
+    #cropperDialog { display:flex; flex-direction:column; width:min(720px,100%); height:min(760px,calc(100vh - 48px)); gap:18px; padding:22px; overflow:hidden; border:1px solid rgba(255,247,226,.35); border-radius:16px; background:var(--cream); color:var(--brown); }
     .cropper-error { margin:0; color:#8c342b; font-size:13px; line-height:1.5; text-align:center; }
     .cropper-error button { padding:0; border:0; background:none; color:inherit; font:inherit; text-decoration:underline; }
     #cropperStage { flex:1; min-height:0; overflow:hidden; background:var(--secondary-cream); }
@@ -251,7 +247,7 @@
       .cropper-actions button:hover { text-decoration:none; }
       .cropper-actions #saveCrop { border-color:var(--brown); background:var(--brown); color:var(--light); }
     }
-    @media (prefers-reduced-motion:reduce) { .photo-set.is-new { animation:none; } #cropperOverlay, .slot-replace-button, .reset-images-button, .cropper-actions button, .cropper-progress-bar { transition:none; } }
+    @media (prefers-reduced-motion:reduce) { .photo-set.is-new { animation:none; } #cropperOverlay, .slot-replace-button, .reset-images-button, .cropper-actions button { transition:none; } }
     @media (min-width:1101px) {
       :root { --announcement-height:40px; --header-height:48px; }
       .homepage { position:relative; display:block; height:calc(100svh - var(--announcement-height) - var(--header-height)); min-height:calc(560px - var(--announcement-height) - var(--header-height)); overflow:hidden; }
@@ -743,6 +739,7 @@
     .palette-spread { margin:0; border-right:0; border-left:0; }
     .palette-panel { width:100%; padding-right:var(--page-gutter); padding-left:var(--page-gutter); }
     .configurator { width:min(100%,var(--content-max)); max-width:var(--content-max); margin-right:auto; margin-left:auto; }
+    .configurator[data-variant-ready="false"] { visibility:hidden; }
     .product-selector { display:grid; width:min(100%,560px); grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 auto 20px; padding:0; border:0; font-family:var(--font-body); }
     .product-option { position:relative; display:flex; align-items:center; justify-content:center; min-height:42px; padding:8px 10px; border:1px solid var(--divider); border-radius:4px; color:var(--brown); cursor:pointer; font-size:15px; font-weight:400; line-height:1.2; text-align:center; }
     .product-option:has(input:checked) { border-color:var(--brown); }
@@ -878,7 +875,7 @@
 
   <section class="palette-spread" id="frame-configurator" aria-label="Frame configurator">
     <div class="palette-panel">
-      <div class="configurator" id="configurator" aria-hidden="false">
+      <div class="configurator" id="configurator" data-variant-ready="false" aria-hidden="false">
         <fieldset class="product-selector" aria-label="Choose a frame option">
           <label class="product-option"><input type="radio" name="frame-option" value="frame-with-photos" checked><span>Frame + Photos</span></label>
           <label class="product-option"><input type="radio" name="frame-option" value="frame-only"><span>Frame Only</span></label>
@@ -931,7 +928,6 @@
 
   <div id="cropperOverlay" role="dialog" aria-modal="true" aria-label="Adjust image crop" aria-hidden="true">
     <section id="cropperDialog">
-      <div class="cropper-progress"><p class="cropper-progress-label" id="cropper-progress-label">Photo 1 of 1</p><div class="cropper-progress-track" role="progressbar" aria-labelledby="cropper-progress-label" aria-valuemin="1" aria-valuemax="1" aria-valuenow="1"><div class="cropper-progress-bar" id="cropper-progress-bar"></div></div></div>
       <p class="cropper-error" id="cropper-error" role="alert" hidden></p>
       <div id="cropperStage"><img id="cropperImage" alt="Image being cropped"></div>
       <div class="cropper-actions"><button class="cropper-rotate" id="rotateCrop" type="button" aria-label="Rotate crop frame 90 degrees" aria-pressed="false">Rotate Crop</button><button id="cancelCrop" type="button">Cancel</button><button id="backCrop" type="button">Back</button><button id="saveCrop" type="button">Next Photo</button></div>
@@ -1146,6 +1142,7 @@
     const PHOTO_SET_PRICE = 6;
     const INCLUDED_PHOTO_SET_COUNT = 2;
     const MAX_PHOTO_SET_COUNT = 5;
+    const PRODUCT_VARIANT_STORAGE_KEY = "goodFrameProductVariant";
     const VARIABLE_PRODUCT_ID = "tiny_frame_photo_sets";
     const LEGACY_PRODUCT_ID = "tiny_frame_8_pictures";
     const LEGACY_PRODUCT_PRICE = 64.95;
@@ -1179,13 +1176,23 @@
     }
     const FRAME_COLOUR = "Natural Oak";
     const selections = { order: "Frame + 6 Photos" };
-    let selectedProductVariant = "frame-with-photos";
+    function restoreProductVariant() {
+      try {
+        return localStorage.getItem(PRODUCT_VARIANT_STORAGE_KEY) === "frame-only"
+          ? "frame-only"
+          : "frame-with-photos";
+      } catch {
+        return "frame-with-photos";
+      }
+    }
+    let selectedProductVariant = restoreProductVariant();
     const overlay = document.getElementById("cropperOverlay");
     const cropImage = document.getElementById("cropperImage");
     const uploadedImages = Array(INCLUDED_PHOTO_SET_COUNT * 3).fill(null);
     let imageSlots = [];
     let photoSetCount = INCLUDED_PHOTO_SET_COUNT;
     const photoSetsContainer = document.getElementById("photo-sets");
+    const configuratorElement = document.getElementById("configurator");
     const uploadSection = document.getElementById("upload-section");
     const uploaderIntro = document.getElementById("uploader-intro");
     const productOptionInputs = [...document.querySelectorAll('input[name="frame-option"]')];
@@ -1201,9 +1208,6 @@
     const backCropButton = document.getElementById("backCrop");
     const saveCropButton = document.getElementById("saveCrop");
     const cancelCropButton = document.getElementById("cancelCrop");
-    const cropperProgressLabel = document.getElementById("cropper-progress-label");
-    const cropperProgressTrack = document.querySelector(".cropper-progress-track");
-    const cropperProgressBar = document.getElementById("cropper-progress-bar");
     const cropperError = document.getElementById("cropper-error");
     let draftPhotoStorageWarning = false;
     let activeSlotIndex = null;
@@ -1387,12 +1391,19 @@
       }
     }
 
-    function selectProductVariant(value) {
+    function selectProductVariant(value, persist = true) {
       selectedProductVariant = value === "frame-only" ? "frame-only" : "frame-with-photos";
       const frameOnly = selectedProductVariant === "frame-only";
+      productOptionInputs.forEach((input) => { input.checked = input.value === selectedProductVariant; });
       uploaderIntro.hidden = frameOnly;
       uploadSection.hidden = frameOnly;
       uploadSection.setAttribute("aria-hidden", String(frameOnly));
+      configuratorElement.dataset.variant = selectedProductVariant;
+      configuratorElement.dataset.variantReady = "true";
+      if (persist) {
+        try { localStorage.setItem(PRODUCT_VARIANT_STORAGE_KEY, selectedProductVariant); }
+        catch { /* A blocked storage API must not prevent product selection. */ }
+      }
       updateProductSummary();
       updateAddToCartState();
     }
@@ -1402,6 +1413,7 @@
         if (input.checked) selectProductVariant(input.value);
       });
     });
+    selectProductVariant(selectedProductVariant, false);
 
     resetImagesButton.addEventListener("click", () => {
       uploadedImages.forEach((entry, index) => {
@@ -1504,11 +1516,6 @@
       if (!cropBatch) return;
       const current = cropBatch.currentIndex + 1;
       const total = cropBatch.items.length;
-      cropperProgressLabel.textContent = `Photo ${current} of ${total}`;
-      cropperProgressTrack.setAttribute("aria-valuemin", "1");
-      cropperProgressTrack.setAttribute("aria-valuemax", String(total));
-      cropperProgressTrack.setAttribute("aria-valuenow", String(current));
-      cropperProgressBar.style.width = `${(current / total) * 100}%`;
       backCropButton.disabled = cropBatch.currentIndex === 0;
       saveCropButton.textContent = current === total ? "Finish" : "Next Photo";
     }
