@@ -6,12 +6,12 @@
   min-height: 0 !important;
   margin: 0 !important;
   overflow: hidden !important;
-  background: #000000 !important;
+  background: #181818 !important;
   background-image: none !important;
   border: 0 !important;
   border-right: 0 !important;
   box-shadow: none !important;
-  color: #ffffff !important;
+  color: #F8F4EB !important;
   font-family: 'Item Text Wide Light', Arial, sans-serif !important;
 }
 
@@ -26,7 +26,7 @@
 .site-footer a:hover,
 .site-footer a:active,
 .site-footer a:focus {
-  color: #ffffff !important;
+  color: #F8F4EB !important;
 }
 
 .site-footer-mobile {
@@ -64,7 +64,7 @@
   width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
-  color: #ffffff !important;
+  color: #F8F4EB !important;
   font-family: 'Good Frame Handmade Smooth', Arial, sans-serif !important;
   font-size: 14px !important;
   font-weight: 400 !important;
@@ -95,7 +95,7 @@
 
 .site-footer-wide a,
 .site-footer-wide p {
-  color: #ffffff !important;
+  color: #F8F4EB !important;
   font-family: 'Item Text Wide Light', Arial, sans-serif !important;
   font-size: 12px !important;
   font-weight: 400 !important;
@@ -111,7 +111,7 @@
 }
 
 .site-footer a:focus-visible {
-  outline: 2px solid #ffffff !important;
+  outline: 2px solid #F8F4EB !important;
   outline-offset: 3px !important;
 }
 
@@ -134,9 +134,9 @@
     max-width: none !important;
     margin: 0 !important;
     padding: 40px 24px calc(96px + env(safe-area-inset-bottom, 0px)) !important;
-    background: #000000 !important;
+    background: #181818 !important;
     background-image: none !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-top: 1px solid rgba(248,244,235, 0.15) !important;
     box-sizing: border-box !important;
     text-align: left !important;
   }
@@ -171,7 +171,7 @@
     align-items: center !important;
     gap: 8px !important;
     margin: 0 0 26px !important;
-    color: #f2ede6 !important;
+    color: #F8F4EB !important;
     font-family: 'Good Frame Handmade Smooth', Arial, sans-serif !important;
     font-size: 19px !important;
     font-weight: 400 !important;
@@ -184,7 +184,7 @@
     width: 6px !important;
     height: 6px !important;
     border-radius: 50% !important;
-    background: #999999 !important;
+    background: #E9D68C !important;
   }
 
   .site-footer-mobile-grid {
@@ -198,7 +198,7 @@
   .site-footer-eyebrow {
     display: block !important;
     margin: 0 0 12px !important;
-    color: #999999 !important;
+    color: #E9D68C !important;
     font-family: 'Item Text Wide Light', Arial, sans-serif !important;
     font-size: 10px !important;
     font-weight: 400 !important;
@@ -225,7 +225,7 @@
     min-height: 0 !important;
     margin: 0 !important;
     padding: 6px 0 !important;
-    color: #f2ede6 !important;
+    color: #F8F4EB !important;
     font-family: 'Gloock', 'Times New Roman', serif !important;
     font-size: 17px !important;
     font-weight: 400 !important;
@@ -248,7 +248,7 @@
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    color: #f2ede6 !important;
+    color: #F8F4EB !important;
     font-family: 'Item Text Wide Light', Arial, sans-serif !important;
     font-size: 12.5px !important;
     font-weight: 400 !important;
@@ -266,10 +266,10 @@
     width: 30px !important;
     height: 30px !important;
     flex: none !important;
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border: 1px solid rgba(248,244,235, 0.35) !important;
     border-radius: 8px !important;
-    background: rgba(242, 237, 230, 0.04) !important;
-    color: #ffffff !important;
+    background: rgba(248,244,235, 0.04) !important;
+    color: #F8F4EB !important;
   }
 
   .site-footer-icon svg {
@@ -283,7 +283,7 @@
     height: 1px !important;
     margin: 0 0 20px !important;
     padding: 0 !important;
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: rgba(248,244,235, 0.15) !important;
     border: 0 !important;
   }
 
@@ -296,7 +296,7 @@
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    color: #9b9082 !important;
+    color: #E9D68C !important;
     text-align: left !important;
   }
 
@@ -304,7 +304,7 @@
     width: auto !important;
     margin: 0 !important;
     padding: 0 !important;
-    color: #9b9082 !important;
+    color: #E9D68C !important;
     font-family: 'Item Text Wide Light', Arial, sans-serif !important;
     font-size: 11px !important;
     font-weight: 400 !important;

@@ -28,7 +28,7 @@
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
-    background: #ffffff !important;
+    background: #2846A0 !important;
     border: 0 !important;
     box-shadow: none !important;
   }
@@ -44,8 +44,8 @@
     margin: 0 !important;
     padding: 8px 16px !important;
     overflow: hidden !important;
-    background: #ffffff !important;
-    color: #000000 !important;
+    background: #2846A0 !important;
+    color: #F8F4EB !important;
     border: 0 !important;
     font-size: 0.875rem !important;
     font-weight: 400 !important;
@@ -71,8 +71,8 @@
     margin: 0 !important;
     padding: 0 15px !important;
     overflow: visible !important;
-    background: #000000 !important;
-    color: #ffffff !important;
+    background: #181818 !important;
+    color: #F8F4EB !important;
     border: 0 !important;
     box-shadow: none !important;
   }
@@ -93,14 +93,14 @@
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
-    color: #ffffff !important;
+    color: #F8F4EB !important;
     background: transparent !important;
     font-size: 1.55rem !important;
     line-height: 1 !important;
     text-decoration: none !important;
     white-space: nowrap !important;
     transform: scaleY(0.92) !important;
-    -webkit-text-fill-color: #ffffff !important;
+    -webkit-text-fill-color: #F8F4EB !important;
   }
 
   body > .secondary-header.site-navigation > .header-title.header-title--logo {
@@ -110,7 +110,7 @@
   }
 
   body > .secondary-header.site-navigation > .header-title--logo .header-logo {
-    filter: invert(1);
+    filter: brightness(0) saturate(100%) invert(96%) sepia(8%) saturate(368%) hue-rotate(349deg) brightness(103%) contrast(94%);
   }
 
   body > .secondary-header.site-navigation > .cart-nav {
@@ -127,7 +127,7 @@
     min-height: 44px !important;
     margin: 0 !important;
     padding: 0 !important;
-    color: #ffffff !important;
+    color: #F8F4EB !important;
     background: transparent !important;
     text-decoration: none !important;
     transform: none !important;
@@ -136,12 +136,12 @@
   body > .secondary-header.site-navigation > .cart-nav svg {
     width: 22px !important;
     height: 22px !important;
-    color: #ffffff !important;
-    stroke: #ffffff !important;
+    color: #F8F4EB !important;
+    stroke: #F8F4EB !important;
   }
 
   body > .secondary-header.site-navigation > .cart-nav .cart-count {
-    color: #ffffff !important;
+    color: #F8F4EB !important;
     background: transparent !important;
     font-size: 0.9rem !important;
     line-height: 1 !important;
@@ -175,7 +175,7 @@
     height: 2px !important;
     min-height: 2px !important;
     margin: 0 !important;
-    background: #ffffff !important;
+    background: #F8F4EB !important;
     border: 0 !important;
   }
 
@@ -193,6 +193,12 @@
     box-sizing: border-box !important;
     min-width: 44px !important;
     min-height: 44px !important;
+  }
+
+  body > .mobile-nav a,
+  body > .mobile-nav .mobile-nav-close {
+    color: #2846A0 !important;
+    -webkit-text-fill-color: #2846A0 !important;
   }
 }
 
@@ -229,9 +235,9 @@
     max-height: 36px !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: #FFFFFF !important;
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
+    background: #2846A0 !important;
+    color: #F8F4EB !important;
+    -webkit-text-fill-color: #F8F4EB !important;
     font-size: 12px !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;

@@ -54,12 +54,12 @@
 
 :root {
             /* Color Palette */
-            --text-primary: #2D3748;
-            --text-secondary: #718096;
-            --background-primary: #ffffff;
-            --background-secondary: #ffffff;
-            --border-color: #E2E8F0;
-            --accent-color: #070707; /* Changed to black for underline effect */
+            --text-primary: #181818;
+            --text-secondary: #181818;
+            --background-primary: #F8F4EB;
+            --background-secondary: #F8F4EB;
+            --border-color: #E9D68C;
+            --accent-color: #2846A0;
 
             /* Layout & Sizing */
             --container-gap: 50px;
@@ -75,14 +75,14 @@
             --radius-lg: 12px;
 
             /* --- Softened Shadows --- */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-accent: 0 4px 14px 0 rgba(8, 127, 140, 0.25);
+            --shadow-sm: 0 1px 2px 0 rgba(24,24,24, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(24,24,24, 0.1), 0 2px 4px -1px rgba(24,24,24, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(24,24,24, 0.1), 0 4px 6px -2px rgba(24,24,24, 0.05);
+            --shadow-accent: 0 4px 14px 0 rgba(24,24,24, 0.25);
 
             /* Additional colors for cart functionality */
-            --accent-hover: #065F69;
-            --danger-color: #D32F2F;
+            --accent-hover: #2846A0;
+            --danger-color: #181818;
         }
 
 /*
@@ -229,7 +229,7 @@ main.cart-page-container.cart-empty {
 
 .remove-item:hover {
             color: var(--danger-color);
-            background-color: rgba(220, 53, 69, 0.1);
+            background-color: rgba(24,24,24, 0.1);
         }
 
 /*
@@ -377,24 +377,24 @@ main.cart-page-container.cart-empty {
         }
 
 .checkout-button {
-            background: #070707;
-            color: #ffffff;
+            background: #181818;
+            color: #F8F4EB;
             box-shadow: var(--shadow-md);
         }
 
 .checkout-button:hover {
-            background: #070707;
+            background: #181818;
             box-shadow: var(--shadow-lg);
         }
 
 .continue-shopping {
             background: var(--background-secondary);
-            color: var(--text-primary);
-            border-color: var(--border-color);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
         }
 
 .continue-shopping:hover {
-            border-color: var(--text-secondary);
+            border-color: var(--accent-hover);
             background: var(--background-primary);
         }
 
@@ -412,8 +412,8 @@ main.cart-page-container.cart-empty {
          */
 
 .footer {
-            background: #070707;
-            color: #ffffff;
+            background: #181818;
+            color: #F8F4EB;
             padding: 40px 20px 20px 20px;
             font-family: 'Roboto Mono', monospace;
             font-size: 16px;
@@ -441,7 +441,7 @@ main.cart-page-container.cart-empty {
             font-weight: 300;
             margin-bottom: 16px;
             font-family: 'Lexend', sans-serif;
-            color: #ffffff;
+            color: #F8F4EB;
             text-decoration: underline;
         }
 
@@ -456,7 +456,7 @@ main.cart-page-container.cart-empty {
         }
 
 .footer-col a {
-            color: #ffffff;
+            color: #F8F4EB;
             text-decoration: none;
             transition: color 0.3s ease;
             font-family: 'Lexend', sans-serif;
@@ -491,7 +491,7 @@ main.cart-page-container.cart-empty {
 
 .footer-col p {
             margin: 0 0 8px 0;
-            color: #ffffff;
+            color: #F8F4EB;
             font-family: 'Roboto Mono', monospace;
             font-weight: 400;
         }
@@ -536,8 +536,8 @@ main.cart-page-container {
 /* Homepage footer match */
 
 .footer {
-            background: #070707 !important;
-            color: #fcfcfa !important;
+            background: #181818 !important;
+            color: #F8F4EB !important;
             padding: 40px 28px !important;
             font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important;
             font-size: 16px !important;
@@ -547,7 +547,7 @@ main.cart-page-container {
 
 .footer,
 .footer * {
-            color: #fcfcfa !important;
+            color: #F8F4EB !important;
         }
 
 .footer-content {
@@ -575,7 +575,7 @@ main.cart-page-container {
             font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
             letter-spacing: 0.05em !important;
             line-height: 1.1 !important;
-            color: #fcfcfa !important;
+            color: #F8F4EB !important;
             text-decoration: none !important;
         }
 
@@ -596,7 +596,7 @@ main.cart-page-container {
 .footer-col a,
 .footer-col p,
 .footer-col p a {
-            color: #fcfcfa !important;
+            color: #F8F4EB !important;
             text-decoration: none !important;
             transition: color 0.3s ease !important;
             font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
@@ -618,8 +618,8 @@ main.cart-page-container {
 /* Exact homepage footer */
 
 .footer {
-            background: #070707 !important;
-            color: #f9f2e6 !important;
+            background: #181818 !important;
+            color: #F8F4EB !important;
             padding: 40px 28px !important;
             font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important;
             font-size: 16px !important;
@@ -629,7 +629,7 @@ main.cart-page-container {
 
 .footer,
 .footer * {
-            color: #f9f2e6 !important;
+            color: #F8F4EB !important;
         }
 
 .footer-content {
@@ -658,7 +658,7 @@ main.cart-page-container {
             font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
             letter-spacing: 0.05em !important;
             line-height: 1.1 !important;
-            color: #f9f2e6 !important;
+            color: #F8F4EB !important;
             text-decoration: none !important;
         }
 
@@ -681,7 +681,7 @@ main.cart-page-container {
 .footer-col a,
 .footer-col p,
 .footer-col p a {
-            color: #f9f2e6 !important;
+            color: #F8F4EB !important;
             text-decoration: none !important;
             font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
             font-weight: 400 !important;
@@ -705,33 +705,33 @@ main.cart-page-container {
 @font-face { font-family: 'Even Mono Trial'; src: url('../Homepage/assets/CopyrightBolditalicStudio-EvenMonoRegularTrial.otf') format('opentype');   font-display: swap;
 }
 
-.legacy-top-banner { text-align: center !important; height: 40px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 1rem !important; font-weight: 300 !important; font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important; font-variant-caps: small-caps !important; color: #f9f2e6 !important; background-color: #070707 !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
+.legacy-top-banner { text-align: center !important; height: 40px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 1rem !important; font-weight: 300 !important; font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important; font-variant-caps: small-caps !important; color: #F8F4EB !important; background-color: #181818 !important; border-bottom: 1px solid rgba(24,24,24,0.08) !important; letter-spacing: 0 !important; line-height: 1.1 !important; }
 
-.legacy-page-header { background: #ffffff !important; width: 100% !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important; position: sticky !important; top: 0 !important; z-index: 1000 !important; }
+.legacy-page-header { background: #F8F4EB !important; width: 100% !important; border-bottom: 1px solid rgba(24,24,24,0.08) !important; box-shadow: 0 2px 8px rgba(24,24,24,0.04) !important; position: sticky !important; top: 0 !important; z-index: 1000 !important; }
 
-.legacy-secondary-header { display: grid !important; grid-template-columns: 1fr auto 1fr !important; align-items: center !important; height: 72px !important; padding: 0 40px !important; background: #ffffff !important; }
+.legacy-secondary-header { display: grid !important; grid-template-columns: 1fr auto 1fr !important; align-items: center !important; height: 72px !important; padding: 0 40px !important; background: #F8F4EB !important; }
 
-.legacy-header-title { justify-self: start !important; font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; font-size: 2.35rem !important; letter-spacing: 0.05em !important; line-height: 1 !important; font-weight: 400 !important; color: #070707 !important; text-decoration: none !important; }
+.legacy-header-title { justify-self: start !important; font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; font-size: 2.35rem !important; letter-spacing: 0.05em !important; line-height: 1 !important; font-weight: 400 !important; color: #181818 !important; text-decoration: none !important; }
 
 .legacy-nav { display: flex !important; gap: 40px !important; justify-self: center !important; }
 
-.legacy-nav a { color: #3b3b3b !important; text-decoration: none !important; font-size: 1.08rem !important; font-weight: 400 !important; font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; letter-spacing: -0.05em !important; line-height: 1 !important; position: relative !important; padding: 8px 4px !important; transition: color 0.3s ease !important; }
+.legacy-nav a { color: #181818 !important; text-decoration: none !important; font-size: 1.08rem !important; font-weight: 400 !important; font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; letter-spacing: -0.05em !important; line-height: 1 !important; position: relative !important; padding: 8px 4px !important; transition: color 0.3s ease !important; }
 
-.legacy-nav a::after { content: '' !important; position: absolute !important; bottom: 0 !important; left: 0 !important; width: 100% !important; height: 2px !important; background: #070707 !important; transform: scaleX(0) !important; transform-origin: center !important; transition: transform 0.3s cubic-bezier(0.19,1,0.22,1) !important; }
+.legacy-nav a::after { content: '' !important; position: absolute !important; bottom: 0 !important; left: 0 !important; width: 100% !important; height: 2px !important; background: #181818 !important; transform: scaleX(0) !important; transform-origin: center !important; transition: transform 0.3s cubic-bezier(0.19,1,0.22,1) !important; }
 
-.legacy-nav a:hover { color: #070707 !important; }
+.legacy-nav a:hover { color: #181818 !important; }
 
 .legacy-nav a:hover::after { transform: scaleX(1) !important; }
 
 .legacy-cart-nav { justify-self: end !important; display: flex !important; align-items: center !important; gap: 6px !important; text-decoration: none !important; }
 
-.legacy-cart-nav svg { width: 22px !important; height: 22px !important; stroke: #070707 !important; stroke-width: 2 !important; }
+.legacy-cart-nav svg { width: 22px !important; height: 22px !important; stroke: #181818 !important; stroke-width: 2 !important; }
 
-.legacy-cart-nav .cart-count { color: #070707 !important; background: transparent !important; font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; font-size: 0.9rem !important; font-weight: 400 !important; letter-spacing: -0.05em !important; line-height: 1.1 !important; min-width: auto !important; height: auto !important; padding: 0 !important; }
+.legacy-cart-nav .cart-count { color: #181818 !important; background: transparent !important; font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important; font-size: 0.9rem !important; font-weight: 400 !important; letter-spacing: -0.05em !important; line-height: 1.1 !important; min-width: auto !important; height: auto !important; padding: 0 !important; }
 
 .footer {
-                background: #070707 !important;
-                color: #f9f2e6 !important;
+                background: #181818 !important;
+                color: #F8F4EB !important;
                 padding: 40px 28px !important;
                 font-family: 'Even Mono Trial', 'Roboto Mono', monospace !important;
                 font-size: 16px !important;
@@ -741,7 +741,7 @@ main.cart-page-container {
 
 .footer,
 .footer * {
-                color: #f9f2e6 !important;
+                color: #F8F4EB !important;
             }
 
 .footer-content {
@@ -769,7 +769,7 @@ main.cart-page-container {
                 font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
                 letter-spacing: 0.05em !important;
                 line-height: 1.1 !important;
-                color: #f9f2e6 !important;
+                color: #F8F4EB !important;
                 text-decoration: none !important;
             }
 
@@ -796,7 +796,7 @@ main.cart-page-container {
                 letter-spacing: -0.05em !important;
                 line-height: 1.1 !important;
                 text-decoration: none !important;
-                color: #f9f2e6 !important;
+                color: #F8F4EB !important;
             }
 
 .footer-col p {
@@ -849,17 +849,17 @@ main.cart-page-container {
         font-weight: 400 !important;
         font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
         font-variant-caps: small-caps !important;
-        color: #f9f2e6 !important;
-        background-color: #070707 !important;
-        border-bottom: 1px solid #E2E8F0 !important;
+        color: #F8F4EB !important;
+        background-color: #181818 !important;
+        border-bottom: 1px solid #E9D68C !important;
         letter-spacing: 0.05em !important;
         line-height: 1.1 !important;
     }
 
     header {
-        background: #ffffff !important;
+        background: #F8F4EB !important;
         width: 100% !important;
-        border-bottom: 1px solid #E2E8F0 !important;
+        border-bottom: 1px solid #E9D68C !important;
         position: sticky !important;
         top: 0 !important;
         z-index: 1000 !important;
@@ -882,7 +882,7 @@ main.cart-page-container {
         font-weight: 400 !important;
         font-variant-caps: normal !important;
         text-transform: none !important;
-        color: #070707 !important;
+        color: #181818 !important;
         text-decoration: none !important;
         transition: all 0.3s ease !important;
         position: relative !important;
@@ -895,7 +895,7 @@ main.cart-page-container {
     }
 
     .nav a {
-        color: #070707 !important;
+        color: #181818 !important;
         text-decoration: none !important;
         font-size: 1.08rem !important;
         font-weight: 400 !important;
@@ -916,14 +916,14 @@ main.cart-page-container {
         left: 0 !important;
         width: 100% !important;
         height: 2px !important;
-        background: #070707 !important;
+        background: #181818 !important;
         transform: scaleX(0) !important;
         transform-origin: center !important;
         transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1) !important;
     }
 
     .nav a:hover {
-        color: #2D3748 !important;
+        color: #181818 !important;
     }
 
     .nav a:hover::after {
@@ -940,17 +940,17 @@ main.cart-page-container {
     }
 
     .cart-nav:hover svg {
-        stroke: #070707 !important;
+        stroke: #181818 !important;
     }
 
     .cart-nav:hover .cart-count {
-        color: #070707 !important;
+        color: #181818 !important;
     }
 
     .cart-nav svg {
         width: 22px !important;
         height: 22px !important;
-        stroke: #2D3748 !important;
+        stroke: #181818 !important;
         stroke-width: 2 !important;
         transition: stroke 0.2s ease !important;
     }
@@ -965,7 +965,7 @@ main.cart-page-container {
     }
 
     .cart-nav .cart-count {
-        color: #2D3748 !important;
+        color: #181818 !important;
         background: transparent !important;
         font-size: 0.9rem !important;
         font-weight: 600 !important;
@@ -1013,8 +1013,8 @@ header,
   box-sizing: border-box !important;
   width: 100% !important;
   margin: 0 !important;
-  background: #ffffff !important;
-  color: #070707 !important;
+  background: #F8F4EB !important;
+  color: #181818 !important;
   border: 0 !important;
   box-shadow: none !important;
   position: sticky !important;
@@ -1033,9 +1033,9 @@ header,
   height: auto !important;
   margin: 0 !important;
   padding: 8px 20px !important;
-  background: #070707 !important;
-  background-color: #070707 !important;
-  color: #f9f2e6 !important;
+  background: #181818 !important;
+  background-color: #181818 !important;
+  color: #F8F4EB !important;
   border: 0 !important;
   text-align: center !important;
   font-family: 'Item Text Wide Light', Arial, sans-serif !important;
@@ -1058,8 +1058,8 @@ header,
   height: auto !important;
   margin: 0 !important;
   padding: 10px 40px !important;
-  background: #ffffff !important;
-  color: #070707 !important;
+  background: #F8F4EB !important;
+  color: #181818 !important;
   border: 0 !important;
   border-top: 0 !important;
   border-bottom: 0 !important;
@@ -1072,7 +1072,7 @@ header,
 .legacy-header-title {
   justify-self: start !important;
   margin: 0 !important;
-  color: #070707 !important;
+  color: #181818 !important;
   text-decoration: none !important;
   font-family: 'Trolleybus Trial', 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
   font-size: 2.35rem !important;
@@ -1086,7 +1086,7 @@ header,
 
 .header-title:hover,
 .legacy-header-title:hover {
-  color: #070707 !important;
+  color: #181818 !important;
   text-decoration: none !important;
 }
 
@@ -1105,7 +1105,7 @@ header,
   display: inline-flex !important;
   align-items: center !important;
   padding: 8px 4px !important;
-  color: #070707 !important;
+  color: #181818 !important;
   text-decoration: none !important;
   font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
   font-size: 1.08rem !important;
@@ -1126,7 +1126,7 @@ header,
   bottom: 0 !important;
   width: 100% !important;
   height: 2px !important;
-  background: #070707 !important;
+  background: #181818 !important;
   transform: scaleX(0) !important;
   transform-origin: center !important;
   transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1) !important;
@@ -1134,7 +1134,7 @@ header,
 
 .nav a:hover,
 .legacy-nav a:hover {
-  color: #2D3748 !important;
+  color: #181818 !important;
 }
 
 .nav a:hover::after,
@@ -1149,7 +1149,7 @@ header,
   align-items: center !important;
   gap: 6px !important;
   margin: 0 !important;
-  color: #2D3748 !important;
+  color: #181818 !important;
   text-decoration: none !important;
   cursor: pointer !important;
 }
@@ -1158,7 +1158,7 @@ header,
 .legacy-cart-nav svg {
   width: 22px !important;
   height: 22px !important;
-  stroke: #2D3748 !important;
+  stroke: #181818 !important;
   stroke-width: 2 !important;
   transition: stroke 0.2s ease !important;
 }
@@ -1169,7 +1169,7 @@ header,
   min-width: auto !important;
   height: auto !important;
   padding: 0 !important;
-  color: #2D3748 !important;
+  color: #181818 !important;
   background: transparent !important;
   font-family: 'Cutive Mono', 'Even Mono Trial', 'Roboto Mono', monospace !important;
   font-size: 0.9rem !important;
@@ -1186,12 +1186,12 @@ header,
 .legacy-cart-nav:hover,
 .cart-nav:hover .cart-count,
 .legacy-cart-nav:hover .cart-count {
-  color: #070707 !important;
+  color: #181818 !important;
 }
 
 .cart-nav:hover svg,
 .legacy-cart-nav:hover svg {
-  stroke: #070707 !important;
+  stroke: #181818 !important;
 }
 
 .burger-menu,
@@ -1213,15 +1213,15 @@ header,
   width: 100% !important;
   margin-top: auto !important;
   padding: 40px 28px !important;
-  background: #070707 !important;
-  color: #f9f2e6 !important;
+  background: #181818 !important;
+  color: #F8F4EB !important;
   border: 0 !important;
   font-size: 16px !important;
 }
 
 .footer,
 .footer * {
-  color: #f9f2e6 !important;
+  color: #F8F4EB !important;
 }
 
 .footer-content {
@@ -1250,7 +1250,7 @@ header,
 .footer h3,
 .footer-title {
   margin: 0 !important;
-  color: #f9f2e6 !important;
+  color: #F8F4EB !important;
   font-family: 'Trolleybus Trial' !important;
   font-size: 18px !important;
   font-weight: 400 !important;
@@ -1280,7 +1280,7 @@ header,
 .footer-col a,
 .footer-col p {
   margin: 0 !important;
-  color: #f9f2e6 !important;
+  color: #F8F4EB !important;
   font-family: 'Cutive Mono' !important;
   font-size: 0.95rem !important;
   font-weight: 400 !important;
@@ -1291,7 +1291,7 @@ header,
 }
 
 .footer-col a:hover {
-  color: #f9f2e6 !important;
+  color: #F8F4EB !important;
   font-weight: 400 !important;
   text-decoration: none !important;
 }
