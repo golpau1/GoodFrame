@@ -2,18 +2,17 @@
 
 New Tiny Frame orders upload each full-resolution 54 × 86 crop individually
 while the customer continues selecting photos. The browser runs no more than
-two uploads at once, retries transient failures, and keeps recoverable drafts
-in IndexedDB. Restored drafts re-register their upload session with the Worker
-before syncing the current selection. The Worker verifies each JPEG in R2
-before reporting it uploaded.
+two uploads at once and retries transient failures during the current page
+visit. Upload sessions and photo blobs are held in memory only; refreshing or
+reopening the storefront starts with an empty uploader. The Worker verifies
+each JPEG in R2 before reporting it uploaded.
 Add to Cart finalizes the server's current ordered selection; it does not create
 or upload a print-sheet PDF.
 
-If restored credentials are malformed, expired, or no longer match the
-server-side token hash, the browser preserves the saved crops, creates one new
-authenticated session, retries selection synchronization once, and re-uploads
-the preserved JPEGs. Session creation and recovery are single-flight so
-simultaneous photo requests cannot create competing replacement sessions.
+The current storefront sends `X-Upload-Protocol: ephemeral-v1` when creating a
+session. Older cached clients are rejected before they can restore or replace a
+stale session. An existing D1 session whose R2 manifest is missing is terminal:
+the Worker never recreates that manifest or its old product folder.
 
 ## Cloudflare bindings and secrets
 
@@ -36,20 +35,20 @@ simultaneous photo requests cannot create competing replacement sessions.
 The uploader uses `X-Upload-Token`, not cookies, so cross-origin requests do
 not use credentialed CORS. The Worker handles `GET`, `POST`, `DELETE`, and
 `OPTIONS`, allows `Content-Type`, `Authorization`, `X-Upload-Token`, and
-`X-Upload-Attempt`, and returns CORS-readable JSON for upload route errors.
+`X-Upload-Attempt`, and `X-Upload-Protocol`, and returns CORS-readable JSON for
+upload route errors.
 Browser uploads go through the Worker; there are no presigned URLs or direct
 browser-to-R2 requests, so an R2 bucket CORS policy is not required.
 
 The cropper first renders a bounded preview, commits it to the local photo grid,
 and closes without waiting for a full-resolution JPEG encode. The print-quality
-crop is generated from the saved original after the close transition, persisted
-to IndexedDB, and then sent through selection synchronization and the background
-upload queue. It does not wait for Cloudflare to close. The queue runs at most two uploads
+crop is generated from the in-memory original after the close transition and
+then sent through selection synchronization and the background upload queue.
+It does not wait for Cloudflare to close. The queue runs at most two uploads
 concurrently, retries timeouts and transient network/server responses with
 jittered backoff, and leaves permanent failures available for manual retry.
-Pending local drafts include the original and print crop where browser storage
-allows; a visible warning is shown if the browser cannot save recovery data.
-Recovery depends on the browser retaining its local data.
+The page removes the obsolete `goodFrameCartPhotoPreviews` IndexedDB database
+on load so returning browsers cannot restore old upload drafts.
 
 Each upload response is checked against the `storageFolder` returned by the
 Worker (not the separate `tf_...` session ID). Upload API responses are marked

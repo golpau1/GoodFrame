@@ -94,8 +94,8 @@
   <link rel="stylesheet" href="Assets/vendor/cropperjs-1.6.1/cropper.min.css">
   <link rel="stylesheet" href="Shared/typography.css">
   <style>
-    /* Modern Retro four-colour palette. */
-    :root { --seedling:#F8F4EB; --sow:#181818; --rainfall:#E9D68C; --foliage:#181818; --sprout:#E9D68C; --mist:#E9D68C; --pebble:#2846A0; --page-background:var(--seedling); --primary-tone:var(--foliage); --accent-tone:var(--pebble); --header-tone:var(--sow); --announcement-tone:var(--pebble); --secondary-tone:var(--seedling); --text-tone:var(--sow); --color-background:var(--page-background); --color-primary-text:var(--text-tone); --color-accent:var(--pebble); --upload-background:var(--page-background); --upload-heading:var(--text-tone); --upload-secondary:var(--text-tone); --upload-tile:var(--seedling); --upload-progress:var(--rainfall); --cream:var(--seedling); --secondary-cream:var(--seedling); --brown:var(--sow); --espresso:var(--sow); --buttercream:var(--seedling); --mustard:var(--sprout); --burgundy:var(--pebble); --espresso-brown:var(--sow); --warm-sand:var(--seedling); --muted:rgba(24,24,24,.72); --light:var(--seedling); --divider:var(--mist); --line:var(--mist); --page-gradient:var(--seedling); --header-background:var(--sow); --announcement-background:var(--pebble); --header-foreground:var(--seedling); --announcement-foreground:var(--seedling); --accent:var(--pebble); --action:var(--sow); --heading-color:var(--sow); --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
+    /* Tokyo Studio four-colour palette. */
+    :root { --seedling:#F8F4EB; --sow:#181818; --rainfall:#D7D99B; --foliage:#181818; --sprout:#D7D99B; --mist:#D7D99B; --pebble:#513C60; --page-background:var(--seedling); --primary-tone:var(--foliage); --accent-tone:var(--pebble); --header-tone:var(--sow); --announcement-tone:var(--pebble); --secondary-tone:var(--seedling); --text-tone:var(--sow); --color-background:var(--page-background); --color-primary-text:var(--text-tone); --color-accent:var(--pebble); --upload-background:var(--page-background); --upload-heading:var(--text-tone); --upload-secondary:var(--text-tone); --upload-tile:var(--seedling); --upload-progress:var(--rainfall); --cream:var(--seedling); --secondary-cream:var(--seedling); --brown:var(--sow); --espresso:var(--sow); --buttercream:var(--seedling); --mustard:var(--sprout); --burgundy:var(--pebble); --espresso-brown:var(--sow); --warm-sand:var(--seedling); --muted:rgba(24,24,24,.72); --light:var(--seedling); --divider:var(--mist); --line:var(--mist); --page-gradient:var(--seedling); --header-background:var(--sow); --announcement-background:var(--pebble); --header-foreground:var(--seedling); --announcement-foreground:var(--seedling); --accent:var(--pebble); --action:var(--pebble); --heading-color:var(--sow); --checkout-meta-size:11px; --announcement-height:36px; --header-height:48px; }
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; scroll-padding-top:var(--header-height); font-family:var(--font-body); }
     body { margin:0; background:var(--page-gradient); color:var(--brown); font-family:var(--font-body); font-weight:400; letter-spacing:.02em; }
@@ -165,6 +165,7 @@
     .choice:hover, .choice.is-selected { color:var(--brown); text-decoration:underline; text-underline-offset:5px; text-decoration-thickness:1px; }
     .choice.order-choice:hover, .choice.order-choice.is-selected { text-decoration:none; }
     .order-choice:hover .order-choice-content::after, .order-choice.is-selected .order-choice-content::after { opacity:1; }
+    .order-choice.is-selected .order-choice-content::after { background:var(--rainfall); }
     .purchase-row { display:flex; flex-direction:column; align-items:stretch; margin-top:32px; padding:6px 0 clamp(48px,6vw,72px); border-top:1px solid var(--divider); }
     .upload-section[hidden] + .purchase-row { margin-top:0; border-top:0; }
     .purchase-button { display:block; width:100%; min-height:48px; padding:5px 0; border:0; background:none; color:var(--brown); font:inherit; font-family:var(--font-body); font-size:var(--checkout-meta-size); font-weight:400; letter-spacing:.13em; line-height:1.1; cursor:pointer; text-transform:uppercase; }
@@ -284,7 +285,7 @@
     dialog::backdrop { background:rgba(24,24,24,.35); }
     dialog button { padding:10px 16px; border:1px solid var(--brown); background:transparent; color:inherit; cursor:pointer; }
     .faq-button { position:absolute; top:50%; right:0; display:grid; place-items:center; width:25px; height:25px; margin:0; padding:0; border:1px solid var(--brown); border-radius:50%; background:transparent; color:var(--brown); font-family:var(--font-body); font-size:14px; font-weight:500; line-height:1; transform:translateY(-50%); }
-    .faq-button:hover { background:rgba(233,214,140,.55); }
+    .faq-button:hover { background:rgba(215,217,155,.55); }
     #faq-dialog { width:min(520px,calc(100% - 32px)); max-height:min(700px,calc(100vh - 48px)); padding:0; border:1px solid var(--divider); box-shadow:0 14px 40px rgba(24,24,24,.14); }
     #faq-dialog::backdrop { background:rgba(24,24,24,.18); }
     .faq-shell { padding:28px 30px; }
@@ -347,7 +348,7 @@
     .shipping-country-popover { position:fixed; inset:auto; box-sizing:border-box; margin:0; padding:6px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; border:1px solid var(--divider); border-radius:10px; background:var(--cream); box-shadow:0 12px 30px rgba(24,24,24,.18); color:var(--brown); scrollbar-color:rgba(24,24,24,.72) transparent; scrollbar-width:thin; }
     .shipping-country-popover:not(:popover-open) { display:none; }
     .shipping-country-option { display:flex; width:100%; min-width:0; min-height:40px; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px !important; border:0 !important; border-radius:6px; background:transparent; color:inherit; font:inherit; font-size:10px; font-weight:500; letter-spacing:.045em; line-height:1.35; text-align:left; text-transform:uppercase; cursor:pointer; }
-    .shipping-country-option:hover, .shipping-country-option:focus-visible { outline:none; background:rgba(233,214,140,.4); }
+    .shipping-country-option:hover, .shipping-country-option:focus-visible { outline:none; background:rgba(215,217,155,.4); }
     .shipping-country-option[aria-selected="true"] { background:var(--rainfall); font-weight:600; }
     .shipping-country-option[aria-selected="true"]::after { flex:0 0 auto; width:5px; height:9px; margin:0 3px 2px 0; border-right:1px solid currentColor; border-bottom:1px solid currentColor; content:""; transform:rotate(45deg); }
     @media (pointer:coarse) { .shipping-country-option { min-height:44px; padding:12px 14px !important; font-size:11px; } }
@@ -631,11 +632,12 @@
     .footer-kicker, .cart-dialog-title, .cart-item-title, .shipping-confirmation-title, .cart-action, .photo-preview-title, .checkout-result-title, .upload-progress-title { text-transform:lowercase; }
     .hero-intro-link:hover, .reset-images-button:hover { color:var(--brown); }
     .choice:hover, .choice.is-selected { color:var(--brown); text-decoration-color:var(--accent); }
+    .choice.is-selected { text-decoration-color:var(--rainfall); }
     .purchase-button #purchase-label::after { background:var(--accent); }
     .purchase-button:not(:disabled) { background:transparent; color:var(--brown); box-shadow:none; }
     .purchase-button:not(:disabled) #purchase-label, .purchase-button:not(:disabled) .purchase-price { color:inherit; }
     .purchase-button:not(:disabled):hover { background:transparent; color:var(--brown); box-shadow:none; }
-    .slot-picker:hover, .faq-button:hover { background:rgba(233,214,140,.55); }
+    .slot-picker:hover, .faq-button:hover { background:rgba(215,217,155,.55); }
     .faq-list summary:hover, .faq-list summary:hover::after { color:var(--accent); }
     .cropper-actions #saveCrop:hover, .cart-action--primary:hover { border-color:var(--espresso); background:var(--espresso); color:var(--buttercream); box-shadow:inset 0 0 0 1px var(--mustard); opacity:1; }
     .footer-contact a:hover { color:var(--light); text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:4px; opacity:1; }
@@ -739,8 +741,9 @@
     .configurator[data-variant-ready="false"] { visibility:hidden; }
     .configurator-heading, .product-name, .faq-title, .cart-dialog-title, .shipping-confirmation-title, .checkout-result-title, .upload-progress-title { color:var(--heading-color); }
     .product-selector { display:grid; width:min(100%,560px); grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 auto 20px; padding:0; border:0; font-family:var(--font-body); }
-    .product-option { position:relative; display:flex; align-items:center; justify-content:center; min-height:42px; padding:8px 10px; border:1px solid var(--foliage); border-radius:4px; background:var(--seedling); color:var(--foliage); cursor:pointer; font-size:15px; font-weight:400; line-height:1.2; text-align:center; }
-    .product-option:has(input:checked) { border-width:3px; border-color:var(--foliage); background:var(--rainfall); color:var(--espresso); }
+    .product-option { position:relative; display:flex; align-items:center; justify-content:center; min-height:42px; padding:8px 10px; border:2px solid var(--foliage); border-radius:4px; background:var(--seedling); box-shadow:0 5px 0 var(--foliage); color:var(--foliage); cursor:pointer; font-size:15px; font-weight:400; line-height:1.2; text-align:center; transition:transform 100ms ease,box-shadow 100ms ease,background-color 160ms ease; }
+    .product-option:has(input:checked) { border-color:var(--foliage); background:var(--rainfall); color:var(--espresso); }
+    .product-option:active { box-shadow:0 2px 0 var(--foliage); transform:translateY(3px); }
     .product-option:has(input:focus-visible) { outline:2px solid var(--accent); outline-offset:2px; }
     .product-option input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
     .uploader-intro[hidden] { display:none; }
@@ -762,7 +765,7 @@
     .photo-set:nth-child(-n+2) .photo-set-header { display:none; }
     .upload-grid { gap:10px; padding:0; }
     .image-slot { overflow:hidden; border:1px dashed rgba(24,24,24,.72); background:var(--upload-tile); box-shadow:none; transition:background-color 160ms ease,border-color 160ms ease; }
-    .image-slot:has(.slot-picker:hover) { border-color:var(--burgundy); background:rgba(233,214,140,.28); }
+    .image-slot:has(.slot-picker:hover) { border-color:var(--burgundy); background:rgba(215,217,155,.28); }
     .slot-picker { display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; color:var(--upload-secondary); font-family:var(--font-body); font-size:12px; font-weight:400; letter-spacing:.015em; }
     .slot-picker-plus { color:var(--accent); font-size:28px; font-weight:400; line-height:.8; }
     .slot-picker-label { color:var(--upload-secondary); font-size:12px; line-height:1; }
@@ -771,12 +774,13 @@
     .add-photo-set-button { width:fit-content; max-width:100%; margin-right:auto; margin-left:auto; }
     .purchase-row { display:grid; width:min(100%,560px); grid-template-columns:minmax(0,1fr); justify-items:center; gap:11px; margin:0 auto; padding:12px 0 8px; border-top:0; }
     .purchase-price { grid-column:1; justify-self:center; color:var(--brown); font-family:var(--font-body); font-size:24px; font-weight:400; line-height:1.2; }
-    .purchase-button { grid-column:1; justify-self:center; width:min(100%,340px); min-height:48px; padding:11px 18px; border:1px solid var(--action); border-radius:12px; background:var(--action); color:var(--buttercream); transition:background-color 180ms ease,border-color 180ms ease,opacity 180ms ease; }
+    .purchase-button { grid-column:1; justify-self:center; width:min(100%,340px); min-height:48px; padding:11px 18px; border:2px solid var(--foliage); border-radius:4px; background:var(--action); box-shadow:0 5px 0 var(--foliage); color:var(--buttercream); transition:transform 100ms ease,box-shadow 100ms ease,background-color 180ms ease,opacity 180ms ease; }
     .purchase-button #purchase-label { padding:0; color:inherit; }
     .purchase-button #purchase-label::after { display:none; }
-    .purchase-button:not(:disabled) { background:var(--action); color:var(--buttercream); box-shadow:none; }
-    .purchase-button:not(:disabled):hover { border-color:var(--espresso); background:var(--espresso); color:var(--buttercream); opacity:1; }
-    .purchase-button:disabled { border-color:rgba(24,24,24,.35); background:rgba(24,24,24,.35); color:var(--espresso); }
+    .purchase-button:not(:disabled) { background:var(--action); color:var(--buttercream); }
+    .purchase-button:not(:disabled):hover { border-color:var(--foliage); background:var(--action); color:var(--buttercream); opacity:1; }
+    .purchase-button:not(:disabled):active { box-shadow:0 2px 0 var(--foliage); transform:translateY(3px); }
+    .purchase-button:disabled { border-color:var(--foliage); background:var(--action); color:var(--buttercream); opacity:.45; }
     .purchase-button:disabled #purchase-label { color:inherit; }
     .purchase-error { grid-column:1 / -1; margin:0; }
     @media (min-width:1024px) {
@@ -1206,7 +1210,6 @@
     const saveCropButton = document.getElementById("saveCrop");
     const cancelCropButton = document.getElementById("cancelCrop");
     const cropperError = document.getElementById("cropper-error");
-    let draftPhotoStorageWarning = false;
     let activeSlotIndex = null;
     let cropper = null;
     let cropFrameIsPortrait = true;
@@ -1218,9 +1221,7 @@
     let cropperScrollRestoreFrame = null;
     let cropperCloseTimer = null;
     let individualUploadSession = null;
-    let individualUploadSessionRegistered = false;
     let individualUploadSessionPromise = null;
-    let individualUploadSessionRecoveryPromise = null;
     let photoSelectionSyncPromise = Promise.resolve();
     const individualUploadQueue = [];
     let activeIndividualUploads = 0;
@@ -1373,12 +1374,10 @@
       resetImagesButton.hidden = count === 0;
       imageQualityWarning.textContent = failedCount
         ? `${failedCount === 1 ? "One photo upload failed" : `${failedCount} photo uploads failed`}. Retry ${failedCount === 1 ? "it" : "them"} below; your selected ${failedCount === 1 ? "photo is" : "photos are"} still saved.`
-        : draftPhotoStorageWarning
-          ? "This browser could not save a local recovery copy. Keep this page open while uploads finish; your browser may not recover photos after it closes."
         : lowResolutionEntries.length
           ? `${lowResolutionEntries.length === 1 ? "One picture is" : `${lowResolutionEntries.length} pictures are`} below 200 PPI at print size. A higher-resolution original is recommended.`
           : "";
-      imageQualityWarning.hidden = lowResolutionEntries.length === 0 && failedCount === 0 && !draftPhotoStorageWarning;
+      imageQualityWarning.hidden = lowResolutionEntries.length === 0 && failedCount === 0;
       updateProductSummary();
       updateAddToCartState();
       addPhotoSetButton.hidden = photoSetCount >= MAX_PHOTO_SET_COUNT;
@@ -1421,7 +1420,6 @@
         renderSlot(imageSlots[index], null);
       });
       updateUploadProgress();
-      schedulePersistDraftUploads();
       if (individualUploadSession) {
         void synchronizeActivePhotoSelection().catch((error) => {
           console.error("Photo removal could not be synchronized", { errorName:String(error?.name || "Error") });
@@ -1669,7 +1667,6 @@
       overlay.style.display = "flex";
       overlay.setAttribute("aria-hidden", "false");
       lockCropperPageScroll();
-      void persistDraftUploads();
       void loadCurrentCropPhoto();
     }
 
@@ -1853,7 +1850,6 @@
         photoSetCount -= 1;
         renderPhotoSets();
         updateUploadProgress();
-        schedulePersistDraftUploads();
       });
       if (individualUploadSession) {
         void synchronizeActivePhotoSelection().catch((error) => {
@@ -1869,7 +1865,6 @@
         photoSetCount += 1;
         appendPhotoSet(photoSetCount - 1);
         updateUploadProgress();
-        schedulePersistDraftUploads();
       });
       if (individualUploadSession) {
         void synchronizeActivePhotoSelection().catch((error) => {
@@ -2067,7 +2062,6 @@
         entry.effectivePpi = Math.min(prepared.width / (54 / 25.4), prepared.height / (86 / 25.4));
         entry.uploadState = "queued";
         renderIndividualUploadEntry(entry);
-        await persistDraftUploads();
         if (entry.cancelled || !uploadedImages.includes(entry)) return;
         await synchronizeActivePhotoSelection();
         enqueueIndividualPhotoUpload(entry);
@@ -2112,7 +2106,6 @@
         }
         item.committed = true;
         renderSlot(imageSlots[item.slotIndex], entry);
-        void persistDraftUploads();
         void prepareIndividualPhotoForUpload(entry, finishing ? 170 : 40);
         window.dispatchEvent(new CustomEvent("image-cropped", {
           detail:{ previewBlob:entry.previewBlob, crop:entry.crop, slotIndex:item.slotIndex, aspectRatio:frameAspectRatio }
@@ -2190,7 +2183,18 @@
       try {
         const stored = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
         return Array.isArray(stored) ? stored.filter((item) => {
-          const keep = Boolean(normalizeOrderType(item?.order));
+          const orderType = normalizeOrderType(item?.order);
+          const photoCount = Number(item?.photoCount || 0);
+          const hasValidPhotoReference = orderType === "legacy-eight-photos" || photoCount === 0 || (
+            /^tf_[a-f0-9]{32}$/.test(String(item?.uploadSessionId || "")) &&
+            /^ci_[a-f0-9]{32}$/.test(String(item?.cartItemId || "")) &&
+            Array.isArray(item?.photoFiles) && item.photoFiles.length === photoCount &&
+            item.photoFiles.every((photo, index) =>
+              photo?.position === index + 1 &&
+              /^uploads\/.+\/photo-\d{2,}\.jpg$/.test(String(photo?.objectKey || ""))
+            )
+          );
+          const keep = Boolean(orderType) && hasValidPhotoReference;
           if (!keep) cartIdentityWasMigrated = true;
           return keep;
         }).slice(0, 10).map((item) => {
@@ -2527,220 +2531,17 @@
     function saveCart() {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems.slice(0, 10)));
     }
-    const CART_PREVIEW_DB_NAME = "goodFrameCartPhotoPreviews";
-    const CART_PREVIEW_STORE_NAME = "previews";
-    const DRAFT_UPLOAD_STORE_NAME = "draftUploads";
+    const OBSOLETE_PHOTO_DATABASE_NAME = "goodFrameCartPhotoPreviews";
     const cartPhotoPreviewMemory = new Map();
-    let cartPreviewDatabasePromise = null;
     let photoPreviewReturnFocus = null;
     let photoPreviewUrls = [];
 
-    function openCartPreviewDatabase() {
-      if (cartPreviewDatabasePromise) return cartPreviewDatabasePromise;
-      cartPreviewDatabasePromise = new Promise((resolve, reject) => {
-        if (!globalThis.indexedDB) {
-          reject(new Error("Picture preview storage is unavailable."));
-          return;
-        }
-        const request = indexedDB.open(CART_PREVIEW_DB_NAME, 2);
-        request.addEventListener("upgradeneeded", () => {
-          const database = request.result;
-          if (!database.objectStoreNames.contains(CART_PREVIEW_STORE_NAME)) {
-            database.createObjectStore(CART_PREVIEW_STORE_NAME, { keyPath:"cartItemId" });
-          }
-          if (!database.objectStoreNames.contains(DRAFT_UPLOAD_STORE_NAME)) {
-            database.createObjectStore(DRAFT_UPLOAD_STORE_NAME, { keyPath:"id" });
-          }
-        });
-        request.addEventListener("success", () => resolve(request.result));
-        request.addEventListener("error", () => reject(request.error || new Error("Picture preview storage could not be opened.")));
-      });
-      return cartPreviewDatabasePromise;
-    }
-
-    function runCartPreviewTransaction(mode, operation) {
-      return openCartPreviewDatabase().then((database) => new Promise((resolve, reject) => {
-        const transaction = database.transaction(CART_PREVIEW_STORE_NAME, mode);
-        const store = transaction.objectStore(CART_PREVIEW_STORE_NAME);
-        const request = operation(store);
-        let result;
-        request.addEventListener("success", () => { result = request.result; });
-        request.addEventListener("error", () => reject(request.error || new Error("Picture preview storage failed.")));
-        transaction.addEventListener("complete", () => resolve(result));
-        transaction.addEventListener("abort", () => reject(transaction.error || new Error("Picture preview storage was interrupted.")));
-      }));
-    }
-
-    function runDraftUploadTransaction(mode, operation) {
-      return openCartPreviewDatabase().then((database) => new Promise((resolve, reject) => {
-        const transaction = database.transaction(DRAFT_UPLOAD_STORE_NAME, mode);
-        const store = transaction.objectStore(DRAFT_UPLOAD_STORE_NAME);
-        const request = operation(store);
-        let result;
-        request.addEventListener("success", () => { result = request.result; });
-        request.addEventListener("error", () => reject(request.error || new Error("Draft photo storage failed.")));
-        transaction.addEventListener("complete", () => resolve(result));
-        transaction.addEventListener("abort", () => reject(transaction.error || new Error("Draft photo storage was interrupted.")));
-      }));
-    }
-
-    let draftUploadPersistenceTimer = null;
-    function schedulePersistDraftUploads() {
-      window.clearTimeout(draftUploadPersistenceTimer);
-      draftUploadPersistenceTimer = window.setTimeout(() => { void persistDraftUploads(); }, 120);
-    }
-    async function persistDraftUploads() {
-      const pendingCrop = cropBatch?.items
-        .filter((item) => !item.committed)
-        .map((item) => ({ file:item.file, slotIndex:item.slotIndex, crop:item.draft?.crop || null })) || [];
-      if (!individualUploadSession && uploadedImages.every((entry) => !entry) && !pendingCrop.length) return;
-      const entries = uploadedImages.map((entry) => entry ? {
-        originalName:String(entry.original?.name || "Photo"),
-        originalBlob:entry.uploadState === "complete"
-          ? null
-          : entry.original?.blob instanceof Blob
-            ? entry.original.blob
-            : entry.original instanceof Blob
-              ? entry.original
-              : null,
-        crop:entry.crop,
-        photoId:entry.photoId,
-        revision:entry.revision,
-        effectivePpi:entry.effectivePpi,
-        previewBlob:entry.previewBlob,
-        printBlob:entry.uploadState === "complete" ? null : entry.printBlob,
-        uploadState:entry.uploadState,
-        uploadError:entry.uploadError,
-        objectKey:entry.objectKey
-      } : null);
+    function clearObsoletePhotoStorage() {
+      if (!globalThis.indexedDB) return;
       try {
-        await runDraftUploadTransaction("readwrite", (store) => store.put({
-          id:"active",
-          session:individualUploadSession,
-          photoSetCount,
-          entries,
-          pendingCrop,
-          savedAt:Date.now()
-        }));
-        if (draftPhotoStorageWarning) {
-          draftPhotoStorageWarning = false;
-          updateUploadProgress();
-        }
-      } catch (error) {
-        console.warn("Draft photo progress could not be saved in this browser.", { errorName:String(error?.name || "Error") });
-        if (!draftPhotoStorageWarning) {
-          draftPhotoStorageWarning = true;
-          updateUploadProgress();
-        }
-      }
-    }
-    function clearPersistedDraftUploads() {
-      window.clearTimeout(draftUploadPersistenceTimer);
-      void runDraftUploadTransaction("readwrite", (store) => store.delete("active")).catch(() => {});
-    }
-    async function restoreDraftUploads() {
-      if (uploadedImages.some(Boolean)) return;
-      let draft;
-      try { draft = await runDraftUploadTransaction("readonly", (store) => store.get("active")); }
-      catch { return; }
-      if (
-        !draft ||
-        !Number.isInteger(draft.photoSetCount) || draft.photoSetCount < INCLUDED_PHOTO_SET_COUNT || draft.photoSetCount > MAX_PHOTO_SET_COUNT ||
-        !Array.isArray(draft.entries) || draft.entries.length !== draft.photoSetCount * 3 ||
-        !Array.isArray(draft.pendingCrop || []) ||
-        (!draft.session && !draft.pendingCrop?.length && !draft.entries.some(Boolean))
-      ) return;
-      if (draft.session && (
-        !/^tf_[a-f0-9]{32}$/.test(String(draft.session.uploadSessionId || "")) ||
-        !/^ut_[a-f0-9]{64}$/.test(String(draft.session.uploadToken || "")) ||
-        !/^ci_[a-f0-9]{32}$/.test(String(draft.session.cartItemId || ""))
-      )) {
-        console.info("Outdated saved upload credentials were replaced without removing saved photos.");
-        draft.session = null;
-      }
-      let storedPhotos = [];
-      if (draft.session) {
-        draft.session.selectionVersion = Number.isSafeInteger(Number(draft.session.selectionVersion))
-          ? Number(draft.session.selectionVersion)
-          : 0;
-        individualUploadSession = draft.session;
-        individualUploadSessionRegistered = false;
-        try {
-          await registerIndividualUploadSession(draft.session, 1);
-          const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });
-          const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/status?${parameters}`, {
-            headers:{ "X-Upload-Token":draft.session.uploadToken },
-            cache:"no-store"
-          });
-          if (response.ok) {
-            const result = await readUploadJson(response);
-            storedPhotos = result.photos || [];
-            draft.session.selectionVersion = Number(result.selectionVersion || 0);
-          } else {
-            console.warn("Saved photo upload status could not be restored.", { status:response.status });
-          }
-        } catch (error) {
-          console.warn("Saved photo upload session could not be reconnected yet.", {
-            errorName:String(error?.name || "Error"),
-            status:Number(error?.status) || undefined
-          });
-          if (isUploadSessionRecoveryError(error) || Number(error?.status) === 409) {
-            draft.session = await recoverIndividualUploadSession(draft.session);
-          }
-        }
-      }
-      const storedById = new Map(storedPhotos.map((photo) => [photo.photoId, photo]));
-      individualUploadSession = draft.session || null;
-      photoSetCount = draft.photoSetCount;
-      uploadedImages.splice(0, uploadedImages.length, ...draft.entries.map((saved) => {
-        if (!saved?.previewBlob || !saved.photoId || !saved.revision) return null;
-        const stored = storedById.get(saved.photoId);
-        const complete = stored?.revision === saved.revision;
-        const originalBlob = saved.originalBlob instanceof Blob ? saved.originalBlob : null;
-        const printBlob = saved.printBlob instanceof Blob ? saved.printBlob : null;
-        const canRebuildPrint = originalBlob && saved.crop?.sourceWidth && saved.crop?.sourceHeight;
-        return {
-          original:{ name:saved.originalName || "Photo", blob:originalBlob },
-          crop:saved.crop,
-          photoId:saved.photoId,
-          revision:saved.revision,
-          effectivePpi:saved.effectivePpi,
-          previewBlob:saved.previewBlob,
-          printBlob,
-          url:URL.createObjectURL(saved.previewBlob),
-          uploadState:complete ? "complete" : printBlob ? "queued" : canRebuildPrint ? "processing" : "failed",
-          uploadError:complete || printBlob || canRebuildPrint ? "" : "The original photo is unavailable. Please replace this photo.",
-          objectKey:complete ? stored.objectKey : "",
-          uploadController:null
-        };
-      }));
-      renderPhotoSets();
-      updateUploadProgress();
-      uploadedImages
-        .filter((entry) => entry?.uploadState === "processing")
-        .forEach((entry) => { void prepareIndividualPhotoForUpload(entry, 80); });
-      const queued = uploadedImages.filter((entry) => entry?.uploadState === "queued");
-      if (queued.length) {
-        try {
-          await synchronizeActivePhotoSelection();
-          queued.forEach(enqueueIndividualPhotoUpload);
-        } catch (error) {
-          queued.forEach((entry) => failIndividualPhotoUpload(entry, error));
-        }
-      }
-      const pendingCrop = draft.pendingCrop.filter((item) =>
-        item?.file instanceof Blob && Number.isInteger(item.slotIndex) &&
-        item.slotIndex >= 0 && item.slotIndex < uploadedImages.length && !uploadedImages[item.slotIndex]
-      );
-      if (pendingCrop.length) {
-        startCropBatch(
-          pendingCrop.map((item) => item.file),
-          pendingCrop.map((item) => item.slotIndex),
-          null
-        );
-        pendingCrop.forEach((item, index) => {
-          cropBatch.items[index].draft = item.crop ? { crop:item.crop, entry:null } : null;
-        });
+        indexedDB.deleteDatabase(OBSOLETE_PHOTO_DATABASE_NAME);
+      } catch {
+        // Storage cleanup must never prevent the current page from loading.
       }
     }
 
@@ -2757,30 +2558,15 @@
       })));
       const record = { cartItemId, pictures, savedAt:Date.now() };
       cartPhotoPreviewMemory.set(cartItemId, record);
-      try {
-        await runCartPreviewTransaction("readwrite", (store) => store.put(record));
-        return true;
-      } catch (error) {
-        console.warn("Cart picture previews will only remain available on this page.", { errorName:String(error?.name || "Error") });
-        return false;
-      }
+      return true;
     }
 
     async function getCartPhotoPreviews(cartItemId) {
-      if (cartPhotoPreviewMemory.has(cartItemId)) return cartPhotoPreviewMemory.get(cartItemId);
-      try {
-        const record = await runCartPreviewTransaction("readonly", (store) => store.get(cartItemId));
-        if (record) cartPhotoPreviewMemory.set(cartItemId, record);
-        return record || null;
-      } catch (error) {
-        console.warn("Cart picture previews could not be loaded.", { errorName:String(error?.name || "Error") });
-        return null;
-      }
+      return cartPhotoPreviewMemory.get(cartItemId) || null;
     }
 
     function deleteCartPhotoPreviews(cartItemId) {
       cartPhotoPreviewMemory.delete(cartItemId);
-      void runCartPreviewTransaction("readwrite", (store) => store.delete(cartItemId)).catch(() => {});
     }
 
     function clearPhotoPreviewUrls() {
@@ -2945,15 +2731,17 @@
       const index = uploadedImages.indexOf(entry);
       if (index >= 0 && imageSlots[index]) renderSlot(imageSlots[index], entry);
       updateUploadProgress();
-      schedulePersistDraftUploads();
     }
-    async function registerIndividualUploadSession(session, retryLimit = PHOTO_UPLOAD_MAX_ATTEMPTS) {
+    async function createCurrentUploadSession(session) {
       let lastError = null;
-      for (let attempt = 0; attempt < retryLimit; attempt += 1) {
+      for (let attempt = 0; attempt < PHOTO_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
         try {
           const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/session`, {
             method:"POST",
-            headers:{ "Content-Type":"application/json" },
+            headers:{
+              "Content-Type":"application/json",
+              "X-Upload-Protocol":"ephemeral-v1"
+            },
             body:JSON.stringify(session)
           });
           const result = await readUploadJson(response);
@@ -2967,8 +2755,6 @@
               ? result.storageFolder
               : session.uploadSessionId;
             individualUploadSession = session;
-            individualUploadSessionRegistered = true;
-            schedulePersistDraftUploads();
             return session;
           }
           lastError = new Error(result.error || "The photo upload could not be started.");
@@ -2979,7 +2765,7 @@
           lastError = error;
           if (!isRetryableUploadError(error)) break;
         }
-        if (attempt < retryLimit - 1) await waitForUploadRetry(attempt);
+        if (attempt < PHOTO_UPLOAD_MAX_ATTEMPTS - 1) await waitForUploadRetry(attempt);
       }
       if (lastError?.code === "UPLOAD_TIMEOUT") throw lastError;
       const sessionError = new Error(isLocalPreview
@@ -2989,66 +2775,23 @@
       sessionError.code = lastError?.code;
       throw sessionError;
     }
-    function isUploadSessionRecoveryError(error) {
-      return ["UPLOAD_SESSION_AUTH_FAILED", "UPLOAD_SESSION_CONFLICT", "UPLOAD_SESSION_INVALID", "UPLOAD_SESSION_EXPIRED"].includes(String(error?.code || "")) ||
-        String(error?.message || "").toLowerCase().includes("upload session could not be authenticated");
-    }
-    async function recoverIndividualUploadSession(staleSession) {
-      if (individualUploadSessionRecoveryPromise) return individualUploadSessionRecoveryPromise;
-      individualUploadSessionRecoveryPromise = (async () => {
-        if (individualUploadSession !== staleSession && individualUploadSessionRegistered) return individualUploadSession;
-        const replacementSession = {
-          uploadSessionId:createUploadReference(),
-          uploadToken:createUploadToken(),
-          cartItemId:createCartItemId(),
-          selectionVersion:0
-        };
-        const recoveredSession = await registerIndividualUploadSession(replacementSession);
-        uploadedImages.forEach((entry) => {
-          if (!entry) return;
-          entry.uploadController?.abort();
-          entry.uploadController = null;
-          entry.objectKey = "";
-          entry.printBlob ||= entry.previewBlob instanceof Blob ? entry.previewBlob : null;
-          entry.uploadState = entry.printBlob instanceof Blob ? "queued" : "failed";
-          entry.uploadError = entry.printBlob instanceof Blob ? "" : "This photo needs to be selected again.";
-          renderIndividualUploadEntry(entry);
-        });
-        schedulePersistDraftUploads();
-        console.info("Photo upload session recovered", {
-          previousSessionId:staleSession?.uploadSessionId || "unknown",
-          replacementSessionId:recoveredSession.uploadSessionId
-        });
-        return recoveredSession;
-      })();
-      try {
-        return await individualUploadSessionRecoveryPromise;
-      } finally {
-        individualUploadSessionRecoveryPromise = null;
-      }
-    }
     async function ensureIndividualUploadSession() {
-      if (individualUploadSession && individualUploadSessionRegistered) return individualUploadSession;
+      if (individualUploadSession) return individualUploadSession;
       if (individualUploadSessionPromise) return individualUploadSessionPromise;
-      const session = individualUploadSession || {
+      const session = {
         uploadSessionId:createUploadReference(),
         uploadToken:createUploadToken(),
         cartItemId:createCartItemId(),
         selectionVersion:0
       };
-      individualUploadSessionPromise = registerIndividualUploadSession(session).catch((error) => {
-        if (isUploadSessionRecoveryError(error) || Number(error?.status) === 409) {
-          return recoverIndividualUploadSession(session);
-        }
-        throw error;
-      });
+      individualUploadSessionPromise = createCurrentUploadSession(session);
       try {
         return await individualUploadSessionPromise;
       } finally {
         individualUploadSessionPromise = null;
       }
     }
-    async function synchronizeActivePhotoSelectionNow(authRecoveryAttempted = false) {
+    async function synchronizeActivePhotoSelectionNow() {
       const session = await ensureIndividualUploadSession();
       if (!Number.isSafeInteger(Number(session.selectionVersion))) session.selectionVersion = 0;
       for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -3084,10 +2827,6 @@
           const error = new Error(result.error || "The selected photo order could not be saved.");
           error.status = response.status;
           error.code = String(result.code || "SELECTION_SYNC_FAILED");
-          if (!authRecoveryAttempted && isUploadSessionRecoveryError(error)) {
-            await recoverIndividualUploadSession(session);
-            return synchronizeActivePhotoSelectionNow(true);
-          }
           throw error;
         }
         session.selectionVersion = Number(result.selectionVersion);
@@ -3097,10 +2836,6 @@
           frameColour:FRAME_COLOUR.toLowerCase()
         });
         if (fingerprint === currentFingerprint) {
-          schedulePersistDraftUploads();
-          if (authRecoveryAttempted) {
-            uploadedImages.filter((entry) => entry?.uploadState === "queued").forEach(enqueueIndividualPhotoUpload);
-          }
           return session;
         }
       }
@@ -3151,51 +2886,6 @@
       const escapedSessionId = escapeRegularExpression(session?.uploadSessionId || "");
       return new RegExp(`^(?:uploads/${escapedFolder}/photo-\\d{2,}\\.jpg|temporary/${escapedFolder}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg|temporary/${escapedSessionId}/photos/[a-f0-9]{32}(?:-[a-f0-9]{32})?\\.jpg)$`).test(String(objectKey || ""));
     }
-    async function readIndividualUploadStatus(session) {
-      const parameters = new URLSearchParams({ upload_session_id:session.uploadSessionId });
-      const response = await fetchWithUploadTimeout(`${checkoutApiBaseUrl}/tiny-frame-upload/status?${parameters}`, {
-        headers:{ "X-Upload-Token":session.uploadToken }
-      });
-      const result = await readUploadJson(response);
-      if (!response.ok || !result.success) {
-        const error = new Error(result.error || "The stored photo status could not be confirmed.");
-        error.status = response.status;
-        error.code = String(result.code || "UPLOAD_STATUS_FAILED");
-        throw error;
-      }
-      if (Number.isSafeInteger(Number(result.selectionVersion))) {
-        session.selectionVersion = Number(result.selectionVersion);
-      }
-      return result;
-    }
-    async function recoverIndividualPhotoFromStatus(session, entry, position) {
-      try {
-        const result = await readIndividualUploadStatus(session);
-        const stored = Array.isArray(result.photos) && result.photos.find((photo) =>
-          photo?.photoId === entry.photoId &&
-          photo?.revision === entry.revision &&
-          Number(photo?.position) === position &&
-          isExpectedIndividualPhotoObjectKey(photo?.objectKey, session)
-        );
-        if (!stored) return false;
-        entry.objectKey = stored.objectKey;
-        entry.uploadState = "complete";
-        entry.uploadError = "";
-        entry.uploadController = null;
-        renderIndividualUploadEntry(entry);
-        trackPhotoUploaded(entry);
-        logPhotoUploadDiagnostic(session, entry, "status-recovery", 1, 0, 200, "", "uploaded");
-        return true;
-      } catch (error) {
-        console.warn("Stored photo status could not be recovered", {
-          sessionId:session?.uploadSessionId || "unknown",
-          photoNumber:position,
-          status:Number(error?.status) || undefined,
-          code:String(error?.code || "UPLOAD_STATUS_FAILED")
-        });
-        return false;
-      }
-    }
     async function uploadIndividualPhoto(entry) {
       let session;
       try {
@@ -3231,12 +2921,6 @@
           });
           const result = await readUploadJson(response);
           const objectKey = String(result.photo?.objectKey || "");
-          if (!response.ok && isUploadSessionRecoveryError({ code:result.code, message:result.error })) {
-            await recoverIndividualUploadSession(session);
-            await synchronizeActivePhotoSelection();
-            enqueueIndividualPhotoUpload(entry);
-            return;
-          }
           if (response.ok && result.success) {
             entry.uploadState = "verifying";
             renderIndividualUploadEntry(entry);
@@ -3286,7 +2970,6 @@
         }
         if (attempt < PHOTO_UPLOAD_MAX_ATTEMPTS - 1) await waitForUploadRetry(attempt);
       }
-      if (await recoverIndividualPhotoFromStatus(session, entry, position)) return;
       failIndividualPhotoUpload(entry, lastError);
     }
     function pumpIndividualUploadQueue() {
@@ -3336,19 +3019,8 @@
         } catch (error) {
           lastError = error;
         }
-        const status = await readIndividualUploadStatus(session).catch(() => null);
-        const storedPhotos = Array.isArray(status?.photos) ? status.photos : [];
-        const allPhotosStored = entries.every((entry, index) => storedPhotos.some((photo) =>
-          photo?.photoId === entry.photoId &&
-          photo?.revision === entry.revision &&
-          Number(photo?.position) === index + 1 &&
-          isExpectedIndividualPhotoObjectKey(photo?.objectKey, session)
-        ));
-        if (allPhotosStored && ["finalized", "checkout_pending", "paid"].includes(status?.status)) {
-          lastError = null;
-          break;
-        }
-        if (!allPhotosStored || attempt === 1) break;
+        if (attempt === 1 || (!isRetryableUploadStatus(lastError?.status) && !isRetryableUploadError(lastError))) break;
+        await waitForUploadRetry(attempt);
       }
       if (lastError) throw lastError;
       return { ...session, photos:entries.map((entry, index) => ({
@@ -3717,7 +3389,6 @@
         if (existingItemIndex >= 0) cartItems.splice(existingItemIndex, 1, cartItem);
         else cartItems.push(cartItem);
         saveCart();
-        clearPersistedDraftUploads();
         window.goodFrameCartItem = cartItem;
         trackGa4EventOnce("add_to_cart", cartItem.cartItemId, {
           currency:"AUD",
@@ -4014,8 +3685,8 @@
       shippingCountry = restoredCheckoutShipping.country;
       shippingPrice = restoredCheckoutShipping.amount / 100;
     }
+    clearObsoletePhotoStorage();
     renderCart();
-    void restoreDraftUploads();
     void loadShippingQuote(restoredCheckoutShipping?.country || "");
     handleCheckoutReturn();
   </script>

@@ -58,11 +58,12 @@ const TINY_FRAME_PHOTOS_PER_SET = 3;
 const MAX_TINY_FRAME_PHOTO_SET_COUNT = 5;
 const TINY_FRAME_PHOTOS_PER_PAGE = 9;
 const MAX_TINY_FRAME_ORIGINAL_BYTES = 20 * 1024 * 1024;
+const CURRENT_UPLOAD_PROTOCOL = 'ephemeral-v1';
 const LEGACY_INDIVIDUAL_PHOTO_STORAGE_VERSION = 2;
 const INDIVIDUAL_PHOTO_STORAGE_VERSION = 3;
 const MAX_TINY_FRAME_UPLOAD_BYTES = 96 * 1024 * 1024;
 const CORS_ALLOWED_METHODS = Object.freeze(['GET', 'POST', 'DELETE', 'OPTIONS']);
-const CORS_ALLOWED_HEADERS = Object.freeze(['content-type', 'authorization', 'x-upload-token', 'x-upload-attempt']);
+const CORS_ALLOWED_HEADERS = Object.freeze(['content-type', 'authorization', 'x-upload-token', 'x-upload-attempt', 'x-upload-protocol']);
 const TINY_FRAME_PHOTO_WIDTH_INCHES = 54 / 25.4;
 const TINY_FRAME_PHOTO_HEIGHT_INCHES = 86 / 25.4;
 const TINY_FRAME_LOW_RESOLUTION_PPI = 200;
@@ -183,7 +184,7 @@ function getAllowedOrigin(request, env) {
 function createCorsHeaders(request, env) {
   const headers = new Headers({
     'Access-Control-Allow-Methods': CORS_ALLOWED_METHODS.join(','),
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Upload-Token, X-Upload-Attempt',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Upload-Token, X-Upload-Attempt, X-Upload-Protocol',
     'Cache-Control': 'no-store, max-age=0',
     'Content-Type': 'application/json',
     'Pragma': 'no-cache'
@@ -385,7 +386,7 @@ function getProductPdfKeyCandidates(productCode) {
 }
 
 async function deleteObjectKeys(bucket, keys) {
-  await Promise.allSettled(keys.map(key => bucket.delete(key)));
+  await Promise.all(keys.map(key => bucket.delete(key)));
 }
 
 function calculateEffectivePpi(width, height) {
@@ -444,6 +445,12 @@ async function enforceIndividualUploadRateLimit(env, uploadSessionId) {
 async function createIndividualUploadSession(request, env) {
   if (!env.ARTWORK_BUCKET || !env.PRODUCT_CODES_DB) return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
   if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
+  if (request.headers.get('X-Upload-Protocol') !== CURRENT_UPLOAD_PROTOCOL) {
+    return jsonResponse(request, env, {
+      error:'This photo uploader is outdated. Refresh the page before selecting photos.',
+      code:'UPLOAD_PROTOCOL_OUTDATED'
+    }, 426);
+  }
   let body;
   try { body = await request.json(); }
   catch { return jsonResponse(request, env, { error:'Request body must be valid JSON' }, 400); }
@@ -461,6 +468,7 @@ async function createIndividualUploadSession(request, env) {
   const tokenHash = await sha256Hex(uploadToken);
   const createdAt = new Date().toISOString();
   let sessionRecord = await getPhotoUploadSession(env.PRODUCT_CODES_DB, uploadSessionId);
+  const isNewSession = !sessionRecord;
   if (!sessionRecord) {
     const allocation = await reserveProductCodes(env.PRODUCT_CODES_DB, [{
       cartItemId,
@@ -501,6 +509,12 @@ async function createIndividualUploadSession(request, env) {
       selectionVersion:Number(sessionRecord.selection_version),
       recovered:true
     });
+  }
+  if (!isNewSession) {
+    return jsonResponse(request, env, {
+      error:'This upload session no longer has stored photos. Refresh the page to start again.',
+      code:'UPLOAD_SESSION_STORAGE_MISSING'
+    }, 410);
   }
   const stored = await env.ARTWORK_BUCKET.put(manifestKey, JSON.stringify({
     storage_version:INDIVIDUAL_PHOTO_STORAGE_VERSION,
@@ -1203,75 +1217,6 @@ async function finalizeIndividualTinyFrameUpload(request, env) {
     return jsonResponse(request, env, {
       error:error.message || 'Photo upload could not be finalized',
       code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_FINALIZATION' : 'UPLOAD_FINALIZATION_FAILED'
-    }, status);
-  }
-}
-
-async function getIndividualTinyFrameUploadStatus(request, env) {
-  if (!env.ARTWORK_BUCKET) return jsonResponse(request, env, { error:'Photo storage is not configured' }, 503);
-  if (!getAllowedOrigin(request, env)) return jsonResponse(request, env, { error:'Origin is not allowed' }, 403);
-  const uploadSessionId = normalizeUploadReference(new URL(request.url).searchParams.get('upload_session_id'));
-  try {
-    const { manifest, sessionRecord } = await requireIndividualUploadSession(request, env, uploadSessionId);
-    if (sessionRecord) {
-      const selection = photoUploadSelection(sessionRecord);
-      return jsonResponse(request, env, {
-        success:true,
-        uploadSessionId,
-        status:sessionRecord.status,
-        photoSetCount:Number(sessionRecord.photo_set_count || 0),
-        selectionVersion:Number(sessionRecord.selection_version || 0),
-        photos:selection.filter(photo => photo?.status === 'uploaded' && photo.object_key).map(photo => ({
-          photoId:photo.photo_id,
-          objectKey:photo.object_key,
-          position:Number(photo.position || 0),
-          revision:photo.revision
-        }))
-      });
-    }
-    const storedPhotos = [];
-    let cursor;
-    do {
-      const page = await env.ARTWORK_BUCKET.list({
-        prefix:`${getTinyFrameUploadPrefix(uploadSessionId)}photos/`,
-        ...(cursor ? { cursor } : {})
-      });
-      const objects = Array.isArray(page?.objects) ? page.objects : [];
-      const details = await Promise.all(objects.map(object => env.ARTWORK_BUCKET.head(object.key)));
-      details.forEach((object, index) => {
-        const metadata = object?.customMetadata || {};
-        const photoId = normalizePhotoId(metadata.photo_id);
-        if (!photoId || !isValidIndividualPhotoKey(objects[index].key, uploadSessionId)) return;
-        storedPhotos.push({
-          photoId,
-          objectKey:objects[index].key,
-          position:Number(metadata.position || 0),
-          revision:String(metadata.revision || '')
-        });
-      });
-      cursor = page?.truncated ? page.cursor : undefined;
-    } while (cursor);
-    storedPhotos.sort((a, b) => a.position - b.position);
-    return jsonResponse(request, env, {
-      success:true,
-      uploadSessionId,
-      status:manifest.status,
-      photoCount:Number(manifest.photo_count || 0),
-      photos:storedPhotos.length
-        ? storedPhotos
-        : (Array.isArray(manifest.photos) ? manifest.photos : []).map(({ photo_id, objectKey, position, revision }) => ({ photoId:photo_id, objectKey, position, revision }))
-    });
-  } catch (error) {
-    const status = error instanceof TinyFrameInputError ? 400 : 500;
-    console.error('Photo upload status check failed', {
-      sessionId:uploadSessionId || 'invalid',
-      stage:'status-read',
-      status,
-      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_STATUS' : 'UPLOAD_STATUS_FAILED'
-    });
-    return jsonResponse(request, env, {
-      error:error.message || 'Upload session could not be read',
-      code:error instanceof TinyFrameInputError ? 'INVALID_UPLOAD_STATUS' : 'UPLOAD_STATUS_FAILED'
     }, status);
   }
 }
@@ -3482,10 +3427,6 @@ async function routeWorkerRequest(request, env) {
 
     if (request.method === 'POST' && url.pathname === '/tiny-frame-upload/finalize') {
       return finalizeIndividualTinyFrameUpload(request, env);
-    }
-
-    if (request.method === 'GET' && url.pathname === '/tiny-frame-upload/status') {
-      return getIndividualTinyFrameUploadStatus(request, env);
     }
 
     if (request.method === 'GET' && url.pathname === '/checkout-session-status') {

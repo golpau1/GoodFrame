@@ -35,9 +35,6 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.ok(html.includes('\\d{4}-\\d{2}-\\d{2} - (?:0[1-9]|1[0-2])\\.[0-5]\\d (?:AM|PM) - [1-9]\\d{4}'));
   assert.match(html, /const storageFolder = session\?\.storageFolder \|\| session\?\.productCode \|\| session\?\.uploadSessionId/);
   assert.doesNotMatch(html, /session\.productCode \|\| session\.storageFolder/);
-  assert.match(html, /async function recoverIndividualPhotoFromStatus\(session, entry, position\)/);
-  assert.match(html, /if \(await recoverIndividualPhotoFromStatus\(session, entry, position\)\) return;/);
-  assert.match(html, /\["finalized", "checkout_pending", "paid"\]\.includes\(status\?\.status\)/);
   assert.match(html, /uploadState:\"processing\"/);
   assert.match(html, /PHOTO_UPLOAD_REQUEST_TIMEOUT_MS/);
   assert.match(html, /fetchWithUploadTimeout/);
@@ -46,16 +43,13 @@ test('storefront uploads cropped photos individually in the background', async (
   assert.match(html, /readUploadJson/);
   assert.match(html, /PHOTO_UPLOAD_MAX_ATTEMPTS = 5/);
   assert.match(html, /waitForUploadRetry/);
-  assert.match(html, /let individualUploadSessionRecoveryPromise = null;/);
-  assert.match(html, /function isUploadSessionRecoveryError\(error\)/);
-  assert.match(html, /async function recoverIndividualUploadSession\(staleSession\)/);
-  assert.match(html, /return synchronizeActivePhotoSelectionNow\(true\);/);
-  assert.match(html, /if \(!authRecoveryAttempted && isUploadSessionRecoveryError\(error\)\)/);
   assert.match(html, /if \(!isRetryableUploadStatus\(response\.status\)\) break;/);
-  assert.match(html, /if \(individualUploadSession && individualUploadSessionRegistered\) return individualUploadSession;/);
-  const restoreSessionIndex = html.indexOf('await registerIndividualUploadSession(draft.session, 1);');
-  const restoreStatusIndex = html.indexOf('const parameters = new URLSearchParams({ upload_session_id:draft.session.uploadSessionId });');
-  assert.ok(restoreSessionIndex >= 0 && restoreSessionIndex < restoreStatusIndex);
+  assert.match(html, /async function createCurrentUploadSession\(session\)/);
+  assert.match(html, /"X-Upload-Protocol":"ephemeral-v1"/);
+  assert.match(html, /if \(individualUploadSession\) return individualUploadSession;/);
+  assert.match(html, /indexedDB\.deleteDatabase\(OBSOLETE_PHOTO_DATABASE_NAME\)/);
+  assert.doesNotMatch(html, /indexedDB\.open|draftUploads|persistDraftUploads|restoreDraftUploads/);
+  assert.doesNotMatch(html, /recoverIndividualUploadSession|recoverIndividualPhotoFromStatus|tiny-frame-upload\/status/);
   assert.match(html, /\.catch\(\(error\) => failIndividualPhotoUpload\(entry, error\)\)/);
   assert.match(html, /Upload failed · Retry/);
   assert.match(html, /entry\?\.uploadState === \"complete\"/);
@@ -120,14 +114,22 @@ test('storefront uploads cropped photos individually in the background', async (
     html.indexOf('async function moveThroughCropBatch(direction)'),
     html.indexOf('backCropButton.addEventListener')
   );
-  assert.match(cropNavigation, /void persistDraftUploads\(\);/);
   assert.match(cropNavigation, /void prepareIndividualPhotoForUpload\(entry, finishing \? 170 : 40\);/);
-  assert.doesNotMatch(cropNavigation, /await persistDraftUploads\(\)/);
   assert.doesNotMatch(cropNavigation, /await synchronizeActivePhotoSelection\(\)/);
   assert.match(cropNavigation, /cropBatch\.committed = true;\s*closeCropper\(\{ smooth:true \}\);/);
 });
 
-test('stale and malformed upload credentials return recoverable authentication codes', async () => {
+test('refresh starts with an empty uploader and clears obsolete browser photo storage', async () => {
+  const html = await readFile(new URL('../../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /const uploadedImages = Array\(INCLUDED_PHOTO_SET_COUNT \* 3\)\.fill\(null\);/);
+  assert.match(html, /clearObsoletePhotoStorage\(\);\s*renderCart\(\);/);
+  assert.match(html, /indexedDB\.deleteDatabase\(OBSOLETE_PHOTO_DATABASE_NAME\)/);
+  assert.doesNotMatch(html, /indexedDB\.open|restoreDraftUploads|registerIndividualUploadSession/);
+  assert.match(html, /const hasValidPhotoReference = orderType === "legacy-eight-photos" \|\| photoCount === 0/);
+  assert.match(html, /Array\.isArray\(item\?\.photoFiles\) && item\.photoFiles\.length === photoCount/);
+});
+
+test('stale and malformed upload credentials fail without browser recovery', async () => {
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
   const env = {
@@ -140,7 +142,7 @@ test('stale and malformed upload credentials return recoverable authentication c
   const cartItemId = `ci_${'9'.repeat(32)}`;
   const sessionRequest = () => new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
     body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   });
   assert.equal((await worker.fetch(sessionRequest(), env)).status, 200);
@@ -196,11 +198,52 @@ test('stale and malformed upload credentials return recoverable authentication c
 
   const conflictResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
     body:JSON.stringify({ uploadSessionId, uploadToken:`ut_${'b'.repeat(64)}`, cartItemId })
   }), env);
   assert.equal(conflictResponse.status, 409);
   assert.equal((await conflictResponse.json()).code, 'UPLOAD_SESSION_CONFLICT');
+  database.close();
+});
+
+test('outdated clients and deleted upload folders cannot recreate sessions', async () => {
+  const bucket = new MemoryR2Bucket();
+  const database = createProductCodeDatabase();
+  const env = {
+    ARTWORK_BUCKET:bucket,
+    PRODUCT_CODES_DB:database,
+    ALLOWED_ORIGINS:'https://goodframe.com.au'
+  };
+  const credentials = {
+    uploadSessionId:`tf_${'4'.repeat(32)}`,
+    uploadToken:`ut_${'5'.repeat(64)}`,
+    cartItemId:`ci_${'6'.repeat(32)}`
+  };
+  const makeRequest = (includeProtocol = true) => new Request('https://worker.example/tiny-frame-upload/session', {
+    method:'POST',
+    headers:{
+      Origin:'https://goodframe.com.au',
+      'Content-Type':'application/json',
+      ...(includeProtocol ? { 'X-Upload-Protocol':'ephemeral-v1' } : {})
+    },
+    body:JSON.stringify(credentials)
+  });
+
+  const outdated = await worker.fetch(makeRequest(false), env);
+  assert.equal(outdated.status, 426);
+  assert.equal((await outdated.json()).code, 'UPLOAD_PROTOCOL_OUTDATED');
+  assert.equal(database.prepare('SELECT COUNT(*) AS count FROM photo_upload_sessions').first().count, 0);
+
+  const created = await worker.fetch(makeRequest(), env);
+  assert.equal(created.status, 200);
+  const session = await created.json();
+  const manifestKey = `uploads/${session.storageFolder}/manifest.json`;
+  await bucket.delete(manifestKey);
+
+  const stale = await worker.fetch(makeRequest(), env);
+  assert.equal(stale.status, 410);
+  assert.equal((await stale.json()).code, 'UPLOAD_SESSION_STORAGE_MISSING');
+  assert.equal(await bucket.head(manifestKey), null);
   database.close();
 });
 
@@ -226,7 +269,7 @@ test('individual photo upload CORS allows configured storefront origins and read
       headers:{
         Origin:origin,
         'Access-Control-Request-Method':'POST',
-        'Access-Control-Request-Headers':'content-type,x-upload-token,x-upload-attempt'
+        'Access-Control-Request-Headers':'content-type,x-upload-token,x-upload-attempt,x-upload-protocol'
       }
     }), env);
     assert.equal(preflight.status, 204);
@@ -235,6 +278,7 @@ test('individual photo upload CORS allows configured storefront origins and read
     assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /Content-Type/i);
     assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /X-Upload-Token/i);
     assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /X-Upload-Attempt/i);
+    assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /X-Upload-Protocol/i);
     assert.equal(preflight.headers.get('Access-Control-Allow-Credentials'), null);
 
     const uploadSessionId = `tf_${String(index + 1).repeat(32)}`;
@@ -242,7 +286,7 @@ test('individual photo upload CORS allows configured storefront origins and read
     const cartItemId = `ci_${String(index + 1).repeat(32)}`;
     const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
       method:'POST',
-      headers:{ Origin:origin, 'Content-Type':'application/json' },
+      headers:{ Origin:origin, 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
       body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
     }), env);
     assert.equal(response.status, 200);
@@ -294,7 +338,7 @@ test('individual photo upload CORS allows configured storefront origins and read
   try {
     failedResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
       method:'POST',
-      headers:{ Origin:origins[0], 'Content-Type':'application/json' },
+      headers:{ Origin:origins[0], 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
       body:JSON.stringify({
         uploadSessionId:`tf_${'f'.repeat(32)}`,
         uploadToken:`ut_${'f'.repeat(64)}`,
@@ -333,7 +377,7 @@ test('photo upload folders support the readable Brisbane format and remain uniqu
   database.close();
 });
 
-test('individual cropped photos are authenticated, resumable, finalized, and promoted after payment', async () => {
+test('individual cropped photos are authenticated, retryable, finalized, and promoted after payment', async () => {
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
   const env = {
@@ -352,7 +396,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   const headers = { Origin:'https://goodframe.com.au', 'X-Upload-Token':uploadToken };
   const sessionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
     body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   }), env);
   assert.equal(sessionResponse.status, 200);
@@ -422,11 +466,6 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   assert.equal((await bucket.list({ prefix:`uploads/${storageFolder}/photo-` })).objects.length, 6);
   assert.equal((await bucket.list({ prefix:'temporary/' })).objects.length, 0);
 
-  const statusResponse = await worker.fetch(new Request(`https://worker.example/tiny-frame-upload/status?upload_session_id=${uploadSessionId}`, { headers }), env);
-  const status = await statusResponse.json();
-  assert.equal(status.photos.length, 6);
-  assert.deepEqual(status.photos.map(photo => photo.position), [1, 2, 3, 4, 5, 6]);
-
   const reorderedSelection = selection.slice().reverse();
   const reorderResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
     method:'POST',
@@ -484,7 +523,7 @@ test('individual cropped photos are authenticated, resumable, finalized, and pro
   try {
     checkout = await worker.fetch(new Request('https://worker.example/create-checkout-session', {
       method:'POST',
-      headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+      headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
       body:JSON.stringify({
         checkoutRequestId:'co_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa01',
         shippingCountry:'AU',
@@ -582,7 +621,7 @@ test('a replaced photo cannot become active when its in-flight upload finishes l
   const authHeaders = { Origin:'https://goodframe.com.au', 'X-Upload-Token':uploadToken };
   const session = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
     body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   }), env);
   assert.equal(session.status, 200);
@@ -624,12 +663,10 @@ test('a replaced photo cannot become active when its in-flight upload finishes l
   assert.equal((await staleResponse.json()).code, 'PHOTO_SUPERSEDED');
   assert.equal((await bucket.list({ prefix:`temporary/${uploadSessionId}/photos/` })).objects.length, 0);
 
-  const status = await worker.fetch(new Request(
-    `https://worker.example/tiny-frame-upload/status?upload_session_id=${uploadSessionId}`,
-    { headers:authHeaders }
-  ), env);
-  const active = await status.json();
-  assert.equal(active.photos.length, 0);
+  const active = database.prepare(
+    'SELECT selection_json FROM photo_upload_sessions WHERE upload_session_id = ?'
+  ).bind(uploadSessionId).first();
+  assert.equal(JSON.parse(active.selection_json).filter(photo => photo?.status === 'uploaded').length, 0);
   const removeResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/selection', {
     method:'POST',
     headers:{ ...authHeaders, 'Content-Type':'application/json' },
@@ -660,7 +697,7 @@ test('individual photo sets are capped at 15 photos in the cart and upload selec
   const cartItemId = `ci_${'8'.repeat(32)}`;
   const create = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
     body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   }), { ARTWORK_BUCKET:bucket, PRODUCT_CODES_DB:database, ALLOWED_ORIGINS:'https://goodframe.com.au' });
   assert.equal(create.status, 200);
@@ -806,7 +843,7 @@ test('individual upload never reports success unless R2 confirms the stored obje
   const cartItemId = `ci_${'f'.repeat(32)}`;
   const sessionResponse = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
     method:'POST',
-    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+    headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
     body:JSON.stringify({ uploadSessionId, uploadToken, cartItemId })
   }), env);
   assert.equal(sessionResponse.status, 200);
@@ -1129,6 +1166,25 @@ test('cleanup removes stale pending sessions but preserves paid uploads', async 
   assert.equal(bucket.objects.has(`tinyframes/${paidId}/01.jpg`), true);
 });
 
+test('cleanup reports R2 deletion failures instead of claiming success', async () => {
+  const bucket = new MemoryR2Bucket();
+  const uploadSessionId = `tf_${'9'.repeat(32)}`;
+  const manifestKey = `tinyframes/${uploadSessionId}/manifest.json`;
+  await bucket.put(manifestKey, JSON.stringify({
+    upload_session_id:uploadSessionId,
+    status:'pending',
+    uploaded_at:'2026-09-01T00:00:00.000Z',
+    files:[]
+  }), { httpMetadata:{ contentType:'application/json' } });
+  bucket.delete = async () => { throw new Error('R2 deletion failed'); };
+
+  await assert.rejects(
+    cleanupPendingUploads({ ARTWORK_BUCKET:bucket, PENDING_UPLOAD_TTL_DAYS:'7' }, Date.parse('2026-10-06T00:00:00.000Z')),
+    /R2 deletion failed/
+  );
+  assert.equal(bucket.objects.has(manifestKey), true);
+});
+
 test('seven-day cleanup removes abandoned drafts but retains active checkouts and paid-order photos', async () => {
   const bucket = new MemoryR2Bucket();
   const database = createProductCodeDatabase();
@@ -1144,7 +1200,7 @@ test('seven-day cleanup removes abandoned drafts but retains active checkouts an
     const token = `ut_${String(index + 1).repeat(64)}`;
     const response = await worker.fetch(new Request('https://worker.example/tiny-frame-upload/session', {
       method:'POST',
-      headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json' },
+      headers:{ Origin:'https://goodframe.com.au', 'Content-Type':'application/json', 'X-Upload-Protocol':'ephemeral-v1' },
       body:JSON.stringify({
         uploadSessionId:session.id,
         uploadToken:token,

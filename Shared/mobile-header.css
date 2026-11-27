@@ -28,7 +28,7 @@
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
-    background: #2846A0 !important;
+    background: #513C60 !important;
     border: 0 !important;
     box-shadow: none !important;
   }
@@ -44,7 +44,7 @@
     margin: 0 !important;
     padding: 8px 16px !important;
     overflow: hidden !important;
-    background: #2846A0 !important;
+    background: #513C60 !important;
     color: #F8F4EB !important;
     border: 0 !important;
     font-size: 0.875rem !important;
@@ -197,8 +197,8 @@
 
   body > .mobile-nav a,
   body > .mobile-nav .mobile-nav-close {
-    color: #2846A0 !important;
-    -webkit-text-fill-color: #2846A0 !important;
+    color: #513C60 !important;
+    -webkit-text-fill-color: #513C60 !important;
   }
 }
 
@@ -235,7 +235,7 @@
     max-height: 36px !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: #2846A0 !important;
+    background: #513C60 !important;
     color: #F8F4EB !important;
     -webkit-text-fill-color: #F8F4EB !important;
     font-size: 12px !important;

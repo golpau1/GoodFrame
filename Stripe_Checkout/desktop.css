@@ -58,8 +58,8 @@
             --text-secondary: #181818;
             --background-primary: #F8F4EB;
             --background-secondary: #F8F4EB;
-            --border-color: #E9D68C;
-            --accent-color: #2846A0;
+            --border-color: #D7D99B;
+            --accent-color: #513C60;
 
             /* Layout & Sizing */
             --container-gap: 50px;
@@ -81,7 +81,7 @@
             --shadow-accent: 0 4px 14px 0 rgba(24,24,24, 0.25);
 
             /* Additional colors for cart functionality */
-            --accent-hover: #2846A0;
+            --accent-hover: #513C60;
             --danger-color: #181818;
         }
 
@@ -377,13 +377,13 @@ main.cart-page-container.cart-empty {
         }
 
 .checkout-button {
-            background: #181818;
+            background: var(--accent-color);
             color: #F8F4EB;
             box-shadow: var(--shadow-md);
         }
 
 .checkout-button:hover {
-            background: #181818;
+            background: var(--accent-color);
             box-shadow: var(--shadow-lg);
         }
 
@@ -851,7 +851,7 @@ main.cart-page-container {
         font-variant-caps: small-caps !important;
         color: #F8F4EB !important;
         background-color: #181818 !important;
-        border-bottom: 1px solid #E9D68C !important;
+        border-bottom: 1px solid #D7D99B !important;
         letter-spacing: 0.05em !important;
         line-height: 1.1 !important;
     }
@@ -859,7 +859,7 @@ main.cart-page-container {
     header {
         background: #F8F4EB !important;
         width: 100% !important;
-        border-bottom: 1px solid #E9D68C !important;
+        border-bottom: 1px solid #D7D99B !important;
         position: sticky !important;
         top: 0 !important;
         z-index: 1000 !important;

@@ -588,8 +588,8 @@ body .girthquake-heading {
   justify-content: center !important;
   width: 100% !important;
   margin: 0 !important;
-  background: #2846A0 !important;
-  background-color: #2846A0 !important;
+  background: #513C60 !important;
+  background-color: #513C60 !important;
   color: #F8F4EB !important;
   border: 0 !important;
   border-top: 0 !important;
@@ -1296,7 +1296,7 @@ body .faq-section .faq-nav .nav-btn {
 /* Final cascade lock for the isolated homepage editorial heroes. */
 body.homepage .editorial-hero-pair {
   box-sizing: border-box !important;
-  border-top: 1px solid #E9D68C !important;
+  border-top: 1px solid #D7D99B !important;
 }
 
 @media (min-width: 1101px) {
@@ -2092,7 +2092,7 @@ body.homepage .editorial-hero-pair {
   }
 
   body > .secondary-header.site-navigation::after {
-    background: #E9D68C !important;
+    background: #D7D99B !important;
   }
 
   body > .secondary-header.site-navigation > .nav a,
@@ -2105,4 +2105,21 @@ body.homepage .editorial-hero-pair {
   body > .secondary-header.site-navigation > .header-title--logo .header-logo {
     filter: brightness(0) saturate(100%) invert(96%) sepia(8%) saturate(368%) hue-rotate(349deg) brightness(103%) contrast(94%) !important;
   }
+}
+
+/* Tokyo Studio primary actions and active controls. */
+body :is(
+  .primary-button,
+  .checkout-button,
+  .nav-btn.active,
+  #addToCartButton,
+  #reopenCropperButton,
+  #saveCropButton,
+  #cropperOverlay #saveCropButton,
+  .mobile-home-hero__primary,
+  .mobile-section-button
+) {
+  background: #513C60 !important;
+  background-color: #513C60 !important;
+  border-color: #513C60 !important;
 }
